@@ -13,6 +13,7 @@ export const PALETTE = {
   domeCladding: '#b8b2aa', // dome upper enclosure panels
   buildingWhite: '#eeeae7', // service building / dome drum
   baffleBlack: '#121314',
+  trunkAmber: '#c07f22', // utility trunk (official exploded view)
   cameraGold: '#c8952c', // gold bands on the camera body (photos + LSSTCam CAD views)
 };
 

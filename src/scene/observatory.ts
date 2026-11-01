@@ -83,6 +83,11 @@ export const OBS_MAT = {
   whiteNoClip: new THREE.MeshStandardMaterial({ color: PALETTE.buildingWhite, metalness: 0.05, roughness: 0.7, side: THREE.DoubleSide }),
   white: new THREE.MeshStandardMaterial({ color: PALETTE.buildingWhite, metalness: 0.05, roughness: 0.7, clippingPlanes: clip, side: THREE.DoubleSide }),
   whiteRoof: new THREE.MeshStandardMaterial({ color: 0xdedad6, metalness: 0.3, roughness: 0.55, side: THREE.DoubleSide }),
+  drum: new THREE.MeshStandardMaterial({ color: 0xe9e6e2, bumpMap: corrBump, bumpScale: 0.5, metalness: 0.25, roughness: 0.55, clippingPlanes: clip, side: THREE.DoubleSide }),
+  bldg: new THREE.MeshStandardMaterial({ color: 0xe6e3df, bumpMap: corrBump, bumpScale: 0.5, metalness: 0.25, roughness: 0.55, side: THREE.DoubleSide }),
+  bldgGrey: new THREE.MeshStandardMaterial({ color: 0x8b8f94, bumpMap: corrBump, bumpScale: 0.5, metalness: 0.3, roughness: 0.6 }),
+  grating: new THREE.MeshStandardMaterial({ color: 0x5c6066, metalness: 0.6, roughness: 0.5, clippingPlanes: clip, side: THREE.DoubleSide }),
+  yellow: new THREE.MeshStandardMaterial({ color: 0xe8b81c, metalness: 0.2, roughness: 0.5, clippingPlanes: clip }),
   ringBand: new THREE.MeshStandardMaterial({ color: 0x6b4c3c, metalness: 0.4, roughness: 0.6, clippingPlanes: clip }),
   teal: new THREE.MeshStandardMaterial({ color: PALETTE.rubinTeal, metalness: 0.25, roughness: 0.5, clippingPlanes: clip }),
   lws: new THREE.MeshStandardMaterial({ color: 0x2b2d31, metalness: 0.4, roughness: 0.7, clippingPlanes: clip, side: THREE.DoubleSide }),
@@ -105,6 +110,22 @@ function panel(pts: [number, number][], origin: THREE.Vector3, U: THREE.Vector3,
     p.copy(origin).addScaledVector(U, u).addScaledVector(V, v);
     pos.setXYZ(i, p.x, p.y, p.z);
   }
+  g.computeVertexNormals();
+  return new THREE.Mesh(g, mat);
+}
+/** Quad strip between two polylines with the same number of points. */
+function quadStrip(bot: THREE.Vector3[], top: THREE.Vector3[], mat: THREE.Material) {
+  const pos: number[] = [];
+  const idx: number[] = [];
+  for (let i = 0; i < bot.length; i++) pos.push(bot[i].x, bot[i].y, bot[i].z, top[i].x, top[i].y, top[i].z);
+  for (let i = 0; i < bot.length - 1; i++) idx.push(2 * i, 2 * i + 2, 2 * i + 1, 2 * i + 1, 2 * i + 2, 2 * i + 3);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  // planar UVs in metres for the corrugation
+  const uv: number[] = [];
+  for (let i = 0; i < pos.length; i += 3) uv.push(pos[i] + pos[i + 2], pos[i + 1]);
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
   g.computeVertexNormals();
   return new THREE.Mesh(g, mat);
 }
@@ -154,7 +175,7 @@ export function terrainHeight(x: number, z: number) {
   const da = Math.hypot(x - AUXTEL_POS.x, z - AUXTEL_POS.y);
   h = Math.max(h, 2 - Math.max(0, da - 9) * 0.5);
   // summit platform (r < 45 m) + the service-building pad stepping down to the saddle (+x)
-  const padY = (xx: number) => -Math.max(0, Math.min(125, Math.max(10, xx)) - 30) * 0.11;
+  const padY = (xx: number) => (xx < 24 ? 0 : xx < 40 ? -((xx - 24) / 16) * 9 : xx < 70 ? -9 : -9 - Math.min(5, (xx - 70) * 0.4));
   const dPlat = Math.max(0, r - 45);
   const dPad = Math.hypot(Math.max(10 - x, 0, x - 125), Math.max(Math.abs(z) - 32, 0));
   const target = dPad < dPlat ? padY(x) : 0;
@@ -214,6 +235,7 @@ function buildDome(): Dome {
   const c = S.chamfer;
   const slopeY = (z: number) => S.slopeLow + ((S.frontZ - z) * (H - S.slopeLow)) / (S.frontZ - S.roofBreak);
   const inset = 0.45;
+  const hc = 3; // rear roof hip
 
   const shell = (mat: THREE.Material, d: number) => {
     const o = new THREE.Group();
@@ -226,19 +248,31 @@ function buildDome(): Dome {
         [S.frontZ, S.chinTop],
         [S.frontZ, S.slopeLow],
         [S.roofBreak, H],
-        [-(W - c), H],
+        [-(W - c) + hc, H],
+        [-(W - c), H - hc],
       ];
       o.add(panel(prof.map(([z, y]) => [z, y] as [number, number]), new THREE.Vector3(sg * (W - d), 0, 0), Z, Y, mat));
     }
     // back wall + chamfers
-    o.add(panel([[-(W - c), 0], [W - c, 0], [W - c, H], [-(W - c), H]], new THREE.Vector3(0, 0, -W + d), X, Y, mat));
+    o.add(panel([[-(W - c), 0], [W - c, 0], [W - c, H - hc], [-(W - c), H - hc]], new THREE.Vector3(0, 0, -W + d), X, Y, mat));
     for (const sg of [-1, 1]) {
       const a = new THREE.Vector3(sg * (W - d), 0, -(W - c));
       const b = new THREE.Vector3(sg * (W - c), 0, -W + d);
       const U = b.clone().sub(a);
       const L = U.length();
       U.normalize();
-      o.add(panel([[0, 0], [L, 0], [L, H], [0, H]], a, U, Y, mat));
+      o.add(panel([[0, 0], [L, 0], [L, H - hc], [0, H - hc]], a, U, Y, mat));
+    }
+    // rear hip: sloped strip from the top of the back walls to the roof
+    {
+      const bot = [
+        new THREE.Vector3(W - d, H - hc, -(W - c)),
+        new THREE.Vector3(W - c, H - hc, -W + d),
+        new THREE.Vector3(-(W - c), H - hc, -W + d),
+        new THREE.Vector3(-(W - d), H - hc, -(W - c)),
+      ];
+      const top = bot.map((p) => new THREE.Vector3(p.x, H - d, p.z + hc));
+      o.add(quadStrip(bot, top, mat));
     }
     // front face strip above the chin, either side of the slit
     for (const sg of [-1, 1]) {
@@ -276,10 +310,10 @@ function buildDome(): Dome {
           [sh, S.slitBack],
           [sh, S.roofBreak],
           [W - d, S.roofBreak],
-          [W - d, -(W - c)],
-          [W - c, -(W - d)],
-          [-(W - c), -(W - d)],
-          [-(W - d), -(W - c)],
+          [W - d, -(W - c) + hc],
+          [W - c, -(W - d) + hc],
+          [-(W - c), -(W - d) + hc],
+          [-(W - d), -(W - c) + hc],
         ],
         new THREE.Vector3(0, H - d, 0),
         X,
@@ -484,7 +518,11 @@ function buildDome(): Dome {
 function buildDrum() {
   const S = SITE;
   const g = new THREE.Group();
-  const drum = new THREE.Mesh(new THREE.CylinderGeometry(S.drumR, S.drumR, S.drumH, 128, 1, true), OBS_MAT.white);
+  const drumGeo = new THREE.CylinderGeometry(S.drumR, S.drumR, S.drumH, 160, 1, true);
+  // UVs in metres so the corrugation keeps its 0.2 m pitch
+  const uvA = drumGeo.attributes.uv;
+  for (let i = 0; i < uvA.count; i++) uvA.setXY(i, uvA.getX(i) * 2 * Math.PI * S.drumR, uvA.getY(i) * S.drumH);
+  const drum = new THREE.Mesh(drumGeo, OBS_MAT.drum);
   drum.position.y = S.drumH / 2;
   g.add(drum);
   const band = new THREE.Mesh(new THREE.CylinderGeometry(S.drumR + 0.12, S.drumR + 0.12, 0.9, 128, 1, true), OBS_MAT.ringBand);
@@ -498,7 +536,23 @@ function buildDrum() {
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = S.azFloor - 0.6;
   g.add(floor);
-  // entrance and stair tower (teal stairs seen on the aerial photo)
+  // exterior stair spiralling up the drum (teal, photos)
+  {
+    const steps = 40;
+    for (let k = 0; k < steps; k++) {
+      const a0 = 2.1 + (k / steps) * 0.75;
+      const y = 0.3 + (k / steps) * (S.drumH - 4);
+      const st = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.08, 0.9), OBS_MAT.teal);
+      st.position.set((S.drumR + 0.8) * Math.sin(a0), y, (S.drumR + 0.8) * Math.cos(a0));
+      st.rotation.y = a0;
+      g.add(st);
+    }
+    const lAnd = new THREE.Mesh(new THREE.BoxGeometry(3, 0.12, 1.6), OBS_MAT.teal);
+    lAnd.position.set((S.drumR + 0.8) * Math.sin(2.88), S.drumH - 3.7, (S.drumR + 0.8) * Math.cos(2.88));
+    lAnd.rotation.y = 2.88;
+    g.add(lAnd);
+  }
+  // entrance
   const door = new THREE.Mesh(new THREE.BoxGeometry(5, 4.5, 0.3), new THREE.MeshStandardMaterial({ color: 0x2a2c30, roughness: 0.6 }));
   door.position.set(-S.drumR * Math.sin(0.5), 2.25, S.drumR * Math.cos(0.5));
   door.rotation.y = -0.5;
@@ -506,42 +560,64 @@ function buildDrum() {
   return g;
 }
 
-/** Hip-roofed tier: rectangle footprint with chamfered eaves. Extruded along x. */
-function tier(x0: number, x1: number, halfZ: number, y0: number, h: number, eave: number, rise: number, mat: THREE.Material, roofMat: THREE.Material) {
-  const g = new THREE.Group();
-  const s = new THREE.Shape();
-  s.moveTo(-halfZ, 0);
-  s.lineTo(halfZ, 0);
-  s.lineTo(halfZ, h);
-  s.lineTo(halfZ - eave, h + rise);
-  s.lineTo(-halfZ + eave, h + rise);
-  s.lineTo(-halfZ, h);
-  s.closePath();
-  const geo = new THREE.ExtrudeGeometry(s, { depth: x1 - x0, bevelEnabled: false });
-  geo.rotateY(Math.PI / 2);
+/**
+ * Faceted bar extruded along +x from x0 to x1. `section` is the (z, y) outline (closed).
+ * `prow` shears the far end: vertices at x1 move by prow·(y − yPivot), giving the undercut
+ * "ship's bow" end seen in the photos.
+ */
+function facetedBar(section: [number, number][], x0: number, x1: number, y0: number, mat: THREE.Material, prow = 0, yPivot = 0) {
+  const shape = new THREE.Shape(section.map(([z, y]) => new THREE.Vector2(z, y)));
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: x1 - x0, bevelEnabled: false });
+  geo.rotateY(Math.PI / 2); // extrusion (+z) → +x ; shape x → −z
   geo.translate(x0, y0, 0);
-  // two materials: walls white, but keep it simple with one mesh + a roof overlay
-  g.add(new THREE.Mesh(geo, mat));
-  const roof = panel([[x0, -halfZ + eave], [x1, -halfZ + eave], [x1, halfZ - eave], [x0, halfZ - eave]], new THREE.Vector3(0, y0 + h + rise + 0.02, 0), X, Z, roofMat);
-  g.add(roof);
-  return g;
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    if (Math.abs(p.getX(i) - x1) < 1e-3) p.setX(i, x1 + prow * (p.getY(i) - y0 - yPivot));
+  }
+  // planar UVs in metres (corrugation runs vertically on walls)
+  const uv: number[] = [];
+  for (let i = 0; i < p.count; i++) uv.push(p.getX(i) + p.getZ(i), p.getY(i));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.computeVertexNormals();
+  return new THREE.Mesh(geo, mat);
 }
 
 function buildServiceBuilding() {
   const g = new THREE.Group();
-  const W = OBS_MAT.whiteNoClip;
-  const R = OBS_MAT.whiteRoof;
-  // block next to the dome (platform lift shaft & clean room access)
-  g.add(tier(12, 27, 9, 0, 22, 2.2, 2.5, W, R));
-  // long service & operations building stepping down to the saddle (+x)
-  g.add(tier(27, 62, 15, -1.5, 12, 3, 3, W, R));
-  g.add(tier(27, 62, 11, 13.5, 4.5, 2.2, 2, W, R));
-  g.add(tier(62, 104, 15, -6, 11, 3, 3, W, R));
-  g.add(tier(62, 104, 11, 8, 4, 2.2, 2, W, R));
-  // grey basement level visible at the low end
-  const base = new THREE.Mesh(new THREE.BoxGeometry(30, 6, 26), new THREE.MeshStandardMaterial({ color: 0x8e9195, roughness: 0.8 }));
-  base.position.set(92, -9, 0);
+  const M = OBS_MAT.bldg;
+  // tall block against the drum (platform-lift shaft, camera & coating access), slanted top
+  const tall = facetedBar([[-10, 0], [10, 0], [10, 13.5], [7, 15.5], [-10, 15.5]], 11, 27, 0, M);
+  g.add(tall);
+  // long service & operations building: stacked, outward-flaring bands (cross-section in z, y)
+  const sec: [number, number][] = [
+    [-9, 0], [9, 0], // undercut base
+    [9, 3], [13.5, 6.5], // first band flares out
+    [13.5, 8], [15.5, 9.5], // second band
+    [15.5, 11], [12, 14.5], // sloped upper roof
+    [-12, 14.5], [-15.5, 11],
+    [-15.5, 9.5], [-13.5, 8],
+    [-13.5, 6.5], [-9, 3],
+  ];
+  const yb = -9; // the building steps down toward the saddle
+  const bar = facetedBar(sec, 22, 92, yb, M, 0.75, 7);
+  g.add(bar);
+  // flat top roof strip (slightly darker) and a ribbon of small windows
+  const roof = facetedBar([[-12, 14.5], [12, 14.5], [10, 15.6], [-10, 15.6]], 22, 92, yb, OBS_MAT.whiteRoof, 0.75, 7);
+  g.add(roof);
+  const winMat = new THREE.MeshStandardMaterial({ color: 0x2a3a48, metalness: 0.6, roughness: 0.2, emissive: 0x000000 });
+  for (let x = 30; x < 88; x += 3.2) {
+    const w = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.7, 0.1), winMat);
+    w.position.set(x, yb + 9.0, 15.55);
+    g.add(w);
+  }
+  // grey lower level at the far end (maintenance / loading)
+  const base = facetedBar([[-9, 0], [9, 0], [9, 5], [-9, 5]], 70, 96, yb - 5, OBS_MAT.bldgGrey);
   g.add(base);
+  // big roll-up door on the near side
+  const door = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 0.2), new THREE.MeshStandardMaterial({ color: 0x55595f, metalness: 0.4, roughness: 0.6 }));
+  door.position.set(40, yb + 3, 9.1);
+  g.add(door);
+  g.userData.windows = winMat;
   return g;
 }
 

@@ -8,6 +8,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import GUI from 'lil-gui';
 import { Rubin, Band, BANDS, TraceResult } from '../optics/trace';
 import { buildTelescope } from '../scene/telescope';
+import { buildAzimuth } from '../scene/mount';
 import { cutPlane, MAT } from '../scene/materials';
 import { RayBundle } from '../scene/rays';
 import { ocs, ocsv, tube } from '../scene/util';
@@ -114,18 +115,7 @@ const mount = new THREE.Group();
   const floor = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 0.3, 96), MAT.floor);
   floor.position.y = -0.75;
   scene.add(floor);
-  const azPlat = new THREE.Mesh(new THREE.CylinderGeometry(8.2, 8.4, 0.6, 96), MAT.paintBlue);
-  azPlat.position.y = -0.3;
-  azGroup.add(azPlat);
-  for (const sg of [-1, 1]) {
-    const yoke = new THREE.Mesh(new THREE.BoxGeometry(1.2, AXIS_HEIGHT + 0.6, 3.2), MAT.paint);
-    yoke.position.set(sg * 6.6, (AXIS_HEIGHT - 0.6) / 2 + 0.3, 0);
-    azGroup.add(yoke);
-    const trunnion = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.9, 64), MAT.steelSolid);
-    trunnion.rotation.z = Math.PI / 2;
-    trunnion.position.set(sg * 5.95, AXIS_HEIGHT, 0);
-    azGroup.add(trunnion);
-  }
+  azGroup.add(buildAzimuth());
 }
 scene.add(mount);
 

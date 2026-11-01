@@ -9,6 +9,9 @@ import { annulusMesh, beam, box, lathe, ocs, sagProfile, tube, cylinderBetween }
 import { buildLSSTCam } from './lsstcam';
 import { perforatedAlpha } from './textures';
 
+/** Elevation axis height above the M1 vertex (inferred from the M1M3 actuator table). */
+export const ELEV_AXIS_ABOVE_M1 = 1.69;
+
 export interface Label {
   id: string;
   title: string;
@@ -91,7 +94,7 @@ export function buildTelescope(rubin: Rubin): Telescope {
   // ------------------------------------------------------------------ Mirror cell (APPROX envelope)
   const cell = new THREE.Group();
   const cellTop = zBack - 0.05;
-  const cellBot = -2.35;
+  const cellBot = cellTop - 2.0; // media kit: 9 m × 9 m × 2 m steel structure
   const oct = (hw: number) => {
     const s = new THREE.Shape();
     const c = hw * Math.tan(Math.PI / 8);
@@ -111,12 +114,24 @@ export function buildTelescope(rubin: Rubin): Telescope {
     return s;
   };
   {
-    const sh = oct(4.95);
+    const sh = oct(4.5);
     const g = new THREE.ExtrudeGeometry(sh, { depth: cellTop - cellBot, bevelEnabled: false });
     g.rotateX(-Math.PI / 2); // extrude along +Y (OCS z)
     g.translate(0, cellBot, 0);
-    const m = new THREE.Mesh(g, MAT.paintCut);
+    const m = new THREE.Mesh(g, MAT.cellGrey);
     cell.add(m);
+    // vertical stiffening ribs on the outer faces (dark grey cell seen between the teal structures)
+    for (let k = 0; k < 8; k++) {
+      const a = (k * Math.PI) / 4;
+      const nx = Math.cos(a);
+      const ny = Math.sin(a);
+      const half = 4.5 * Math.tan(Math.PI / 8);
+      for (let j = -3; j <= 3; j++) {
+        const t = (j / 3.5) * half;
+        const r = box(4.52 * nx - t * ny, 4.52 * ny + t * nx, (cellTop + cellBot) / 2, 0.06, 0.06, cellTop - cellBot - 0.1, MAT.cellGrey);
+        cell.add(r);
+      }
+    }
     // actuator field (156 force actuators on a ~0.6 m grid inside r ≤ 4.03, schematic positions)
     const act = new THREE.CylinderGeometry(0.05, 0.05, 0.5, 10);
     let count = 0;
@@ -152,6 +167,67 @@ export function buildTelescope(rubin: Rubin): Telescope {
     groups.center = cs;
     // inner black baffle surface
     ota.add(tube(4.29, 4.301, z0, z1, MAT.blackCut));
+    // ---------------------------------------------------------------- elevation rings + lower cross-box (photos)
+    // Two large rings centred on the elevation axis carry the whole tube; a teal box with oval
+    // lightening holes closes the bottom of the cradle under the dark-grey mirror cell.
+    const zAx = ELEV_AXIS_ABOVE_M1;
+    const rOut = 6.25;
+    const rIn = 5.45;
+    for (const sg of [-1, 1]) {
+      const ring = new THREE.Shape();
+      ring.absarc(0, 0, rOut, 0, Math.PI * 2, false);
+      const inner = new THREE.Path();
+      inner.absarc(0, 0, rIn, 0, Math.PI * 2, true);
+      ring.holes.push(inner);
+      const ringGeo = new THREE.ExtrudeGeometry(ring, { depth: 0.7, bevelEnabled: false, curveSegments: 128 });
+      const rm = new THREE.Mesh(ringGeo, MAT.paintCut);
+      rm.rotation.y = Math.PI / 2; // shape plane → three YZ, extrusion along X
+      rm.position.set(sg > 0 ? 5.75 : -6.45, zAx, 0);
+      ota.add(rm);
+      // dark bearing track on the rim
+      const track = new THREE.Mesh(new THREE.CylinderGeometry(rOut + 0.02, rOut + 0.02, 0.5, 160, 1, true), MAT.steel);
+      track.rotation.z = Math.PI / 2;
+      track.position.set(sg * 6.1, zAx, 0);
+      ota.add(track);
+      // round lightening holes, drawn as dark discs on both faces
+      for (let k = 0; k < 18; k++) {
+        const a = (k / 18) * Math.PI * 2;
+        const hole = new THREE.Mesh(new THREE.CircleGeometry(0.26, 24), MAT.holeDark);
+        hole.rotation.y = (sg * Math.PI) / 2;
+        hole.position.copy(ocs(sg * 6.46, 5.85 * Math.cos(a), zAx + 5.85 * Math.sin(a)));
+        ota.add(hole);
+      }
+    }
+    {
+      // lower cross-box: octagonal section in (OCS y, z), extruded along x between the rings
+      const zt = cellBot - 0.05;
+      const zb = zAx - rOut + 0.35;
+      const hy = 3.2;
+      const ch = 0.9;
+      const sec = new THREE.Shape();
+      const pts: [number, number][] = [[-hy + ch, zb], [hy - ch, zb], [hy, zb + ch], [hy, zt], [-hy, zt], [-hy, zb + ch]];
+      sec.moveTo(pts[0][0], pts[0][1]);
+      for (const p of pts.slice(1)) sec.lineTo(p[0], p[1]);
+      sec.closePath();
+      const bg = new THREE.ExtrudeGeometry(sec, { depth: 11.5, bevelEnabled: false });
+      // shape x = OCS y → three −Z ; shape y = OCS z → three Y ; extrusion → three X
+      bg.applyMatrix4(new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0)));
+      bg.translate(-5.75, 0, 0);
+      const lb = new THREE.Mesh(bg, MAT.paintCut);
+      ota.add(lb);
+      // oval lightening holes along both long faces
+      for (const sy of [-1, 1])
+        for (let k = 0; k < 7; k++) {
+          const x = -4.5 + k * 1.5;
+          const o = new THREE.Mesh(new THREE.CircleGeometry(0.34, 28), MAT.holeDark);
+          o.scale.set(k % 2 ? 0.75 : 1.0, 1.25, 1);
+          o.position.copy(ocs(x, sy * (hy + 0.01), (zt + zb + ch) / 2));
+          o.rotation.y = sy > 0 ? Math.PI : 0;
+          ota.add(o);
+        }
+      groups.lowerBox = lb;
+    }
+    L('elring', 'Elevation rings', 'Two huge rings centred on the elevation axis carry the whole 350-tonne tube. The mirror cell (dark grey) sits between the centre section and the lower teal box.', ocs(6.2, 0, zAx + 6.25));
     L('center', 'Elevation centre section', 'Stiff steel ring that carries the mirror cell below and the four top-end piers above. The elevation axis runs through it.', ocs(5.55, 0, 2.2));
   }
 
@@ -159,46 +235,39 @@ export function buildTelescope(rubin: Rubin): Telescope {
   const piers = new THREE.Group();
   const zP0 = 2.878;
   const zP1 = 7.263;
+  // round teal tubes in V pairs (photos), from the centre section up to the top-end ring
   for (let k = 0; k < 4; k++) {
     const a = Math.PI / 4 + (k * Math.PI) / 2;
-    const rad = 5.0;
-    const half = 0.75;
-    const ca = Math.cos(a);
-    const sa = Math.sin(a);
-    const tx = -sa;
-    const ty = ca;
-    const P = (s: number, z: number, rr = rad) => ocs(rr * ca + s * tx, rr * sa + s * ty, z);
-    for (const s of [-half, half]) piers.add(beam(P(s, zP0), P(s, zP1), 0.28, 0.28, MAT.paint));
-    const nb = 4;
-    for (let i = 0; i < nb; i++) {
-      const za = zP0 + ((zP1 - zP0) * i) / nb;
-      const zb = zP0 + ((zP1 - zP0) * (i + 1)) / nb;
-      piers.add(beam(P(-half, za), P(half, zb), 0.12, 0.12, MAT.paint));
-      piers.add(beam(P(half, za), P(-half, zb), 0.12, 0.12, MAT.paint));
+    const P = (da: number, z: number, rr: number) => ocs(rr * Math.cos(a + da), rr * Math.sin(a + da), z);
+    for (const sg of [-1, 1]) {
+      piers.add(cylinderBetween(P(sg * 0.32, zP0, 5.05), P(sg * 0.04, zP1, 4.85), 0.24, MAT.paint, 20));
+      // end plates
+      const plate = box(0, 0, 0, 0.7, 0.7, 0.12, MAT.paint);
+      plate.position.copy(P(sg * 0.32, zP0 + 0.06, 5.05));
+      piers.add(plate);
     }
-    // V brace across (radial)
-    piers.add(beam(P(0, zP0, rad + 0.6), P(0, (zP0 + zP1) / 2, rad), 0.14, 0.14, MAT.paint));
   }
   ota.add(piers);
   groups.piers = piers;
-  L('tea', 'Top-end piers', 'Four X-braced steel trusses hold the top end (M2 + camera) about 6 m above the primary mirror.', ocs(5.0 * Math.cos(Math.PI / 4), 5.0 * Math.sin(Math.PI / 4), 4.6));
+  L('tea', 'Top-end piers', 'Eight round steel tubes in V pairs hold the top end (M2 + camera) about 6 m above the primary mirror.', ocs(5.0 * Math.cos(Math.PI / 4), 5.0 * Math.sin(Math.PI / 4), 4.6));
 
   // Mid-level baffle ring
   const mid = BF.find((b) => b.name === 'MidLevel')!;
   ota.add(annulusMesh(mid.inner, mid.outer, mid.z, MAT.black, 0.03));
+  ota.add(tube(5.0, 5.125, mid.z - 0.45, mid.z, MAT.paint));
 
   // ------------------------------------------------------------------ Top-end ring (I-beam: flanges are the two baffles)
   const ter = new THREE.Group();
   const up = BF.find((b) => b.name === 'UpperTopEnd')!;
   const lo = BF.find((b) => b.name === 'LowerTopEnd')!;
   // flanges = the two batoid baffles; the ring itself is unpainted metal (photos)
-  ter.add(annulusMesh(up.inner, up.outer, up.z, MAT.bare, 0.04));
-  ter.add(annulusMesh(lo.inner, lo.outer, lo.z, MAT.bare, 0.04));
+  ter.add(annulusMesh(up.inner, up.outer, up.z, MAT.bare, 0.04)); // sky-facing flange: bare metal
+  ter.add(annulusMesh(lo.inner, lo.outer, lo.z, MAT.black, 0.04)); // lower flange: black baffle
   // box-section webs perforated with round lightening holes
   const webH = up.z - lo.z - 0.04;
   const zMid = (up.z + lo.z) / 2;
   for (const [rw, holes] of [[4.47, 36], [4.88, 40]] as [number, number][]) {
-    const m = MAT.bare.clone();
+    const m = (rw > 4.6 ? MAT.paint : MAT.bare).clone();
     m.alphaMap = perforatedAlpha(holes, 0.6);
     m.alphaTest = 0.5;
     m.side = THREE.DoubleSide;
@@ -209,7 +278,7 @@ export function buildTelescope(rubin: Rubin): Telescope {
   // radial diaphragms between the webs
   for (let k = 0; k < 36; k++) {
     const a = ((k + 0.5) / 36) * Math.PI * 2;
-    const d = box(4.675 * Math.cos(a), 4.675 * Math.sin(a), zMid, 0.4, 0.015, webH, MAT.bare);
+    const d = box(4.675 * Math.cos(a), 4.675 * Math.sin(a), zMid, 0.4, 0.015, webH, MAT.paint);
     d.rotation.y = a;
     ter.add(d);
   }

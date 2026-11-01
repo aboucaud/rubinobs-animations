@@ -74,6 +74,8 @@ export const MAT = {
   bare: std({ color: PALETTE.bareMetal, metalness: 0.6, roughness: 0.55, roughnessMap: brushedRoughness() }),
   // spider vanes: non-reflective dark grey
   spiderGrey: std({ color: PALETTE.spiderGrey, metalness: 0.1, roughness: 0.92 }),
+  cellGrey: std({ color: 0x3b3d40, metalness: 0.35, roughness: 0.6 }, true),
+  holeDark: new THREE.MeshBasicMaterial({ color: 0x1c2326, side: THREE.DoubleSide, clippingPlanes: cut }),
   cameraBlack: std({ color: PALETTE.cameraBlack, metalness: 0.45, roughness: 0.48 }, true),
   cartYellow: std({ color: PALETTE.cartYellow, metalness: 0.2, roughness: 0.5 }),
   paintBlue: std({ color: PALETTE.rubinTeal, metalness: 0.25, roughness: 0.5 }),

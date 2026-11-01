@@ -8,6 +8,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import GUI from 'lil-gui';
 import { Rubin } from '../optics/trace';
 import { buildTelescope } from '../scene/telescope';
+import { buildAzimuth } from '../scene/mount';
 import { MAT } from '../scene/materials';
 import { RayBundle } from '../scene/rays';
 import { buildObservatory, SITE, domeCut } from '../scene/observatory';
@@ -123,21 +124,7 @@ tel.ota.position.y = -ELEV_AXIS_ABOVE_M1;
 elGroup.add(tel.ota);
 azGroup.add(elGroup);
 scene.add(azGroup);
-// mount placeholder (same as the telescope page)
-{
-  const azPlat = new THREE.Mesh(new THREE.CylinderGeometry(8.2, 8.4, 0.6, 96), MAT.paintBlue);
-  azPlat.position.y = -0.3;
-  azGroup.add(azPlat);
-  for (const sg of [-1, 1]) {
-    const yoke = new THREE.Mesh(new THREE.BoxGeometry(1.2, AXIS_ABOVE_FLOOR + 0.6, 3.2), MAT.paint);
-    yoke.position.set(sg * 6.6, (AXIS_ABOVE_FLOOR - 0.6) / 2 + 0.3, 0);
-    azGroup.add(yoke);
-    const tr = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.9, 64), MAT.steelSolid);
-    tr.rotation.z = Math.PI / 2;
-    tr.position.set(sg * 5.95, AXIS_ABOVE_FLOOR, 0);
-    azGroup.add(tr);
-  }
-}
+azGroup.add(buildAzimuth());
 
 // starlight: a glowing column along the optical axis, plus live-traced rays inside the telescope
 const beamMat = new THREE.ShaderMaterial({
@@ -180,6 +167,8 @@ const state = {
   targetEl: 60,
   phase: 'idle' as 'idle' | 'slew' | 'settle' | 'expose',
   phaseT: 0,
+  nextAz: null as number | null,
+  nextEl: 60,
   visits: 0,
   realClock: 0, // seconds of simulated night
   labels: true,
@@ -248,16 +237,36 @@ function tick(dt: number) {
     state.realClock += sdt;
     state.phaseT += sdt;
     if (state.phase === 'idle') {
-      nextField();
+      if (state.nextAz !== null) {
+        state.targetAz = state.nextAz;
+        state.targetEl = state.nextEl;
+        state.nextAz = null;
+      } else nextField();
       state.phase = 'slew';
       state.phaseT = 0;
     }
     // telescope: az 10.5°/s, el 5.25°/s; dome 1.5°/s
     state.telAz = stepToward(state.telAz, state.targetAz, 10.5 * sdt, true);
     state.telEl = stepToward(state.telEl, state.targetEl, 5.25 * sdt);
-    state.domeAz = stepToward(state.domeAz, state.telAz, 1.5 * sdt, true);
+    // the slower dome pre-positions toward the next field while the telescope is still exposing,
+    // keeping the beam inside the slit (≤ 3° lead), then the telescope catches up (media kit)
+    if (state.phase === 'expose' && state.phaseT > 12) {
+      if (state.nextAz === null) {
+        const keepAz = state.telAz;
+        const keepEl = state.telEl;
+        nextField();
+        state.nextAz = state.targetAz;
+        state.nextEl = state.targetEl;
+        state.targetAz = keepAz;
+        state.targetEl = keepEl;
+      }
+      const lead = THREE.MathUtils.clamp(angDiff(state.nextAz, state.telAz), -3, 3);
+      state.domeAz = stepToward(state.domeAz, state.telAz + lead, 1.5 * sdt, true);
+    } else {
+      state.domeAz = stepToward(state.domeAz, state.telAz, 1.5 * sdt, true);
+    }
     const onTarget = Math.abs(angDiff(state.telAz, state.targetAz)) < 0.01 && Math.abs(state.telEl - state.targetEl) < 0.01;
-    const domeOk = Math.abs(angDiff(state.domeAz, state.telAz)) < 2.5;
+    const domeOk = Math.abs(angDiff(state.domeAz, state.telAz)) < 3.5;
     if (state.phase === 'slew' && onTarget && domeOk) {
       state.phase = 'settle';
       state.phaseT = 0;
@@ -371,7 +380,7 @@ function updateHud() {
     <div>${phase}</div>
     <div>Telescope az <b>${(((state.telAz % 360) + 360) % 360).toFixed(1)}°</b> el <b>${state.telEl.toFixed(1)}°</b> · Dome az <b>${(((state.domeAz % 360) + 360) % 360).toFixed(1)}°</b></div>
     ${state.observing ? `<div>Visits tonight: <b>${state.visits}</b> · local time <b>${fmtClock(state.realClock)}</b> <span class="k">(×${TIME_SCALE} speed)</span></div>` : ''}
-    <div class="k">The telescope slews at up to 10.5°/s; the dome only manages 1.5°/s, so it is kept moving to stay ahead.</div>`;
+    <div class="k">The 350 t telescope slews at up to 10.5°/s; the 600 t dome only manages 1.5°/s, so it starts turning toward the next field before the exposure ends.</div>`;
   (document.getElementById('bOpen') as HTMLButtonElement).textContent = state.wantOpen ? 'Close the dome' : 'Open the dome';
   (document.getElementById('bObs') as HTMLButtonElement).textContent = state.observing ? '■ Stop the survey' : '▶ Start the survey';
 }

@@ -7,7 +7,7 @@ import { Rubin, Band } from '../optics/trace';
 import { Surface } from '../optics/surfaces';
 import prescription from '../data/prescription.json';
 import { MAT, cutPlane } from './materials';
-import { cameraSkin } from './textures';
+import { cameraSkin, PALETTE } from './textures';
 import { annulusMesh, box, lathe, ocs, tube, cylinderBetween } from './util';
 import { buildFocalPlane, LAYOUT, RAFT_PITCH } from './focalplane';
 import type { Label } from './telescope';
@@ -341,8 +341,9 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
     const skin = cameraSkin([0.08, 0.5, 0.92], 6);
     const m = (MAT.cameraBlack as THREE.MeshStandardMaterial).clone();
     m.clippingPlanes = [cutPlane]; // clone() copies planes, keep the shared one
-    m.color.set(0xffffff); // colour comes from the map
-    m.map = skin.map;
+    m.color.set(PALETTE.trunkAmber); // amber thermal skin, as in the official exploded view
+    m.metalness = 0.55;
+    m.roughness = 0.4;
     m.bumpMap = skin.bumpMap;
     const c = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, len, 96, 1, true), m);
     c.position.y = CAM.zBodyTop + len / 2;

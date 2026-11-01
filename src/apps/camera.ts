@@ -176,9 +176,9 @@ function visitSteps(): Step[] {
   const close: 'A' | 'B' = open === 'A' ? 'B' : 'A';
   const set = (s: 'A' | 'B', f: number) => (s === 'A' ? (cam.state.shutterA = f) : (cam.state.shutterB = f));
   return [
-    { label: 'Opening the shutter', anim: 1.4, real: 1, run: (t) => { state.shutter = 'moving'; set(open, 1 - ease(t)); state.exposure = 0; fpImage.clear(); } },
+    { label: 'Opening the shutter (0.9 s)', anim: 1.4, real: 0.9, run: (t) => { state.shutter = 'moving'; set(open, 1 - ease(t)); state.exposure = 0; fpImage.clear(); } },
     { label: 'Exposing — light piles up in the pixels', anim: 7, real: 30, run: (t) => { state.shutter = 'open'; state.exposure = t; fpImage.drawExposure(Math.sqrt(t)); } },
-    { label: 'Closing the shutter (the other blade stack)', anim: 1.4, real: 1, run: (t) => { state.shutter = 'moving'; set(close, ease(t)); }, done: () => { state.shutter = 'closed'; state.coverStack = close; } },
+    { label: 'Closing the shutter with the other blade stack (0.9 s)', anim: 1.4, real: 0.9, run: (t) => { state.shutter = 'moving'; set(close, ease(t)); }, done: () => { state.shutter = 'closed'; state.coverStack = close; } },
     { label: 'Reading out 3.2 gigapixels through 3,216 amplifiers', anim: 4.5, real: 2, run: (t) => { state.readout = t; fpImage.drawReadout(t); }, done: () => { state.readout = -1; fpImage.clear(); } },
   ];
 }
