@@ -13,6 +13,7 @@ export const PALETTE = {
   domeCladding: '#b8b2aa', // dome upper enclosure panels
   buildingWhite: '#eeeae7', // service building / dome drum
   baffleBlack: '#121314',
+  cameraGold: '#c8952c', // gold bands on the camera body (photos + LSSTCam CAD views)
 };
 
 const cache = new Map<string, THREE.Texture>();
@@ -73,8 +74,8 @@ export function brushedRoughness() {
  * Black anodised camera skin: circumferential joints with bolt rows and vertical panel seams.
  * u wraps around the body, v runs along the optical axis. `rings` are v positions (0..1) of joints.
  */
-export function cameraSkin(rings: number[], seams = 8) {
-  const key = 'camSkin' + rings.join(',') + seams;
+export function cameraSkin(rings: number[], seams = 8, gold: number[] = []) {
+  const key = 'camSkin' + rings.join(',') + seams + '|' + gold.join(',');
   const W = 2048;
   const H = 512;
   const color = canvasTex(key, W, H, (g) => {
@@ -87,6 +88,28 @@ export function cameraSkin(rings: number[], seams = 8) {
       g.fillRect(r() * W, r() * H, 2 + r() * 30, 1 + r() * 3);
     }
     drawJoints(g, W, H, rings, seams, false);
+    // gold (kapton-like) circumferential bands, with a stepped tab on the first one
+    g.fillStyle = PALETTE.cameraGold;
+    gold.forEach((v, i) => {
+      const y = (1 - v) * H;
+      g.fillRect(0, y - 6, W, 12);
+      if (i === 0) {
+        const x0 = W * 0.18;
+        g.fillRect(x0, y - 6, 12, -H * 0.12);
+        g.fillRect(x0, y - 6 - H * 0.12, W * 0.06, 12);
+        g.fillRect(x0 + W * 0.06 - 12, y - 6 - H * 0.12, 12, -H * 0.1);
+      }
+    });
+    // access hatches (rounded rectangles) between the bands
+    g.strokeStyle = 'rgba(0,0,0,0.9)';
+    g.lineWidth = 2;
+    for (let k = 0; k < 6; k++) {
+      const x = ((k + 0.25) / 6) * W;
+      const y = (1 - 0.7) * H;
+      g.beginPath();
+      g.roundRect(x, y - 28, 46, 56, 10);
+      g.stroke();
+    }
   });
   const bump = canvasTex(key + 'b', W, H, (g) => {
     g.fillStyle = '#808080';
@@ -106,7 +129,7 @@ function drawJoints(g: CanvasRenderingContext2D, W: number, H: number, rings: nu
     // bolt rows just either side of the joint
     for (const dy of [-7, 7]) {
       for (let x = 6; x < W; x += 16) {
-        g.fillStyle = bump ? '#d0d0d0' : 'rgba(170,170,165,0.55)';
+        g.fillStyle = bump ? '#d0d0d0' : 'rgba(170,170,165,0.3)';
         g.beginPath();
         g.arc(x, y + dy, 2.1, 0, Math.PI * 2);
         g.fill();
@@ -118,7 +141,7 @@ function drawJoints(g: CanvasRenderingContext2D, W: number, H: number, rings: nu
     g.fillStyle = bump ? '#404040' : 'rgba(0,0,0,0.7)';
     g.fillRect(x - 1, 0, 2, H);
     for (let y = 8; y < H; y += 18) {
-      g.fillStyle = bump ? '#c8c8c8' : 'rgba(170,170,165,0.45)';
+      g.fillStyle = bump ? '#c8c8c8' : 'rgba(170,170,165,0.25)';
       g.beginPath();
       g.arc(x + 6, y, 1.8, 0, Math.PI * 2);
       g.fill();

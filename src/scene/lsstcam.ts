@@ -171,9 +171,10 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
     // black anodised skin with bolted joints (from photos), inner wall plain
     const z0 = CAM.zBody0 + 0.08;
     const len = CAM.zBodyTop - z0;
-    const skin = cameraSkin([0.06, 0.27, 0.5, 0.79, 0.95], 8);
+    const skin = cameraSkin([0.06, 0.27, 0.5, 0.79, 0.95], 8, [0.55, 0.9]);
     const m = (MAT.cameraBlack as THREE.MeshStandardMaterial).clone();
     m.clippingPlanes = [cutPlane]; // clone() copies planes, keep the shared one
+    m.color.set(0xffffff); // colour comes from the map
     m.map = skin.map;
     m.bumpMap = skin.bumpMap;
     m.bumpScale = 1.2;
@@ -183,7 +184,6 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
     body.add(tube(rB - 0.02, rB - 0.005, z0, CAM.zBodyTop, MAT.aluDark));
   }
   body.add(lathe([[0.8, CAM.zBody0 - 0.02], [0.86, CAM.zBody0 + 0.02], [0.86, CAM.zBody0 + 0.1], [0.8, CAM.zBody0 + 0.12]], 128, MAT.cameraBlack)); // front flange
-  for (const z of [4.05, 4.6, 5.1]) body.add(tube(rB, rB + 0.025, z - 0.03, z + 0.03, MAT.cameraBlack));
   for (let k = 0; k < 8; k++) {
     const a = (k / 8) * Math.PI * 2 + Math.PI / 8;
     void a; // (longerons are inside the skin on the real camera)
@@ -324,7 +324,7 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
       ac.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 80, 0.011, 8, false), MAT.steel));
     }
   // motorised linear rails along the axis (drive the articulated linkage)
-  for (const sg of [-1, 1]) ac.add(box(sg * 0.5, 0.66, (zC + zBeamRef) / 2 + 0.15, 0.04, 0.05, 0.9, MAT.blueCut));
+  for (const sg of [-1, 1]) ac.add(box(sg * 0.42, 0.62, (zC + zBeamRef) / 2 + 0.15, 0.04, 0.05, 0.9, MAT.blueCut));
   const trucks: THREE.Mesh[] = [];
   for (const sg of [-1, 1]) {
     const t = box(0, 0, 0, 0.06, 0.07, 0.09, MAT.blueCut);
@@ -341,6 +341,7 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
     const skin = cameraSkin([0.08, 0.5, 0.92], 6);
     const m = (MAT.cameraBlack as THREE.MeshStandardMaterial).clone();
     m.clippingPlanes = [cutPlane]; // clone() copies planes, keep the shared one
+    m.color.set(0xffffff); // colour comes from the map
     m.map = skin.map;
     m.bumpMap = skin.bumpMap;
     const c = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, len, 96, 1, true), m);
