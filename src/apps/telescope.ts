@@ -183,7 +183,7 @@ function retrace() {
 // ---------------------------------------------------------------- post-processing
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), state.bloom, 0.3, 1.05);
+const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), state.bloom, 0.3, 1.3);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 

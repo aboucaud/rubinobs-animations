@@ -7,6 +7,7 @@ import { Rubin, Band } from '../optics/trace';
 import { Surface } from '../optics/surfaces';
 import prescription from '../data/prescription.json';
 import { MAT, cutPlane } from './materials';
+import { cameraSkin } from './textures';
 import { annulusMesh, box, lathe, ocs, tube, cylinderBetween } from './util';
 import { buildFocalPlane, LAYOUT, RAFT_PITCH } from './focalplane';
 import type { Label } from './telescope';
@@ -149,7 +150,7 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
   l1l2.add(lensL1, lensL2);
   // L1 toroidal ring with triangular section
   const zL1e = S.L1_entrance.zAt(0.785, 0);
-  l1l2.add(lathe([[0.785, zL1e - 0.02], [0.84, zL1e + 0.06], [0.785, zL1e + 0.12], [0.785, zL1e - 0.02]], 128, MAT.aluDark));
+  l1l2.add(lathe([[0.785, zL1e - 0.02], [0.84, zL1e + 0.06], [0.785, zL1e + 0.12], [0.785, zL1e - 0.02]], 128, MAT.cameraBlack));
   // L2 ring
   l1l2.add(tube(0.56, 0.6, zL2 - 0.01, zL2 + 0.07, MAT.aluDark, 96));
   // tubular space-frame cone between the rings
@@ -166,14 +167,28 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
   // ---------------------------------------------------------------- camera body (skin + front flange + internal rings)
   const body = mk('body');
   const rB = CAM.rBody;
-  body.add(tube(rB - 0.02, rB, CAM.zBody0 + 0.08, CAM.zBodyTop, MAT.alu));
-  body.add(lathe([[0.8, CAM.zBody0 - 0.02], [0.86, CAM.zBody0 + 0.02], [0.86, CAM.zBody0 + 0.1], [0.8, CAM.zBody0 + 0.12]], 128, MAT.aluDark)); // front flange
-  for (const z of [4.05, 4.6, 5.1]) body.add(tube(rB, rB + 0.025, z - 0.03, z + 0.03, MAT.aluDark));
+  {
+    // black anodised skin with bolted joints (from photos), inner wall plain
+    const z0 = CAM.zBody0 + 0.08;
+    const len = CAM.zBodyTop - z0;
+    const skin = cameraSkin([0.06, 0.27, 0.5, 0.79, 0.95], 8);
+    const m = (MAT.cameraBlack as THREE.MeshStandardMaterial).clone();
+    m.clippingPlanes = [cutPlane]; // clone() copies planes, keep the shared one
+    m.map = skin.map;
+    m.bumpMap = skin.bumpMap;
+    m.bumpScale = 1.2;
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(rB, rB, len, 160, 1, true), m);
+    c.position.y = z0 + len / 2;
+    body.add(c);
+    body.add(tube(rB - 0.02, rB - 0.005, z0, CAM.zBodyTop, MAT.aluDark));
+  }
+  body.add(lathe([[0.8, CAM.zBody0 - 0.02], [0.86, CAM.zBody0 + 0.02], [0.86, CAM.zBody0 + 0.1], [0.8, CAM.zBody0 + 0.12]], 128, MAT.cameraBlack)); // front flange
+  for (const z of [4.05, 4.6, 5.1]) body.add(tube(rB, rB + 0.025, z - 0.03, z + 0.03, MAT.cameraBlack));
   for (let k = 0; k < 8; k++) {
     const a = (k / 8) * Math.PI * 2 + Math.PI / 8;
-    body.add(box(0.825 * Math.cos(a), 0.825 * Math.sin(a), 4.75, 0.04, 0.04, 1.3, MAT.aluDark)); // longerons
+    void a; // (longerons are inside the skin on the real camera)
   }
-  body.add(annulusMesh(0.0, rB + 0.02, CAM.zBodyTop, MAT.aluDark, 0.06)); // back flange
+  body.add(annulusMesh(0.0, rB + 0.02, CAM.zBodyTop, MAT.cameraBlack, 0.06)); // back flange
   L('body', 'Camera body', 'Aluminium housing, 1.65 m wide. Holds the lenses, shutter and filter exchanger around the cryostat. Total camera mass: 3 t.', ocs(-0.7, -0.45, 4.75), body);
 
   // ---------------------------------------------------------------- shutter
@@ -321,7 +336,18 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
 
   // ---------------------------------------------------------------- utility trunk + hexapod/rotator
   const trunk = mk('trunk');
-  trunk.add(tube(0.57, 0.6, CAM.zBodyTop, CAM.zTrunkTop - 0.28, MAT.alu, 72));
+  {
+    const len = CAM.zTrunkTop - 0.28 - CAM.zBodyTop;
+    const skin = cameraSkin([0.08, 0.5, 0.92], 6);
+    const m = (MAT.cameraBlack as THREE.MeshStandardMaterial).clone();
+    m.clippingPlanes = [cutPlane]; // clone() copies planes, keep the shared one
+    m.map = skin.map;
+    m.bumpMap = skin.bumpMap;
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, len, 96, 1, true), m);
+    c.position.y = CAM.zBodyTop + len / 2;
+    trunk.add(c);
+    trunk.add(tube(0.57, 0.595, CAM.zBodyTop, CAM.zTrunkTop - 0.28, MAT.aluDark, 72));
+  }
   trunk.add(annulusMesh(0, 0.6, CAM.zTrunkTop - 0.28, MAT.aluDark, 0.04, 72));
   for (let k = 0; k < 6; k++) {
     const a = (k / 6) * Math.PI * 2;
@@ -334,8 +360,9 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
   }
   L('trunk', 'Utility trunk', 'Refrigeration heat exchangers, vacuum pumps and readout electronics. Fits through the 1.8 m hole in the secondary mirror.', ocs(0.6, 0, 6.3), trunk);
   const hex = mk('hexapod');
-  hex.add(tube(0.62, 0.95, CAM.zTrunkTop - 0.25, CAM.zTrunkTop - 0.17, MAT.steel, 96));
-  hex.add(tube(0.62, 0.95, CAM.zTrunkTop - 0.06, CAM.zTrunkTop, MAT.steel, 96));
+  // camera rotator + hexapod: Rubin teal (photos)
+  hex.add(tube(0.62, 0.95, CAM.zTrunkTop - 0.25, CAM.zTrunkTop - 0.17, MAT.paintCut, 96));
+  hex.add(tube(0.62, 0.95, CAM.zTrunkTop - 0.06, CAM.zTrunkTop, MAT.paintCut, 96));
   for (let k = 0; k < 6; k++) {
     const a0 = (k / 6) * Math.PI * 2 + (k % 2 ? 0.2 : -0.2);
     const a1 = (k / 6) * Math.PI * 2 + (k % 2 ? -0.35 : 0.35);

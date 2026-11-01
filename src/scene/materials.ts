@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { PALETTE, paintBump, brushedRoughness } from './textures';
+
+const bump = paintBump();
+bump.repeat.set(24, 24);
 
 /** Shared cutaway plane (world space). Updated every frame to face the viewer. */
 export const cutPlane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 1e6);
@@ -44,8 +48,9 @@ export const MAT = {
     thickness: 0.06,
     transparent: true,
     opacity: 1,
-    envMapIntensity: 0.25,
-    specularIntensity: 0.25,
+    envMapIntensity: 0.6,
+    specularIntensity: 0.35,
+    specularColor: new THREE.Color('#d8c060'),
     side: THREE.DoubleSide,
     clippingPlanes: cut,
   }),
@@ -62,12 +67,19 @@ export const MAT = {
     side: THREE.DoubleSide,
   }),
   // Painted TMA steel
-  paint: std({ color: 0xbfc3c7, metalness: 0.15, roughness: 0.55 }),
-  paintCut: std({ color: 0xbfc3c7, metalness: 0.15, roughness: 0.55 }, true),
-  paintBlue: std({ color: 0x2f5d8a, metalness: 0.2, roughness: 0.5 }),
-  blueCut: std({ color: 0x2f5d8a, metalness: 0.2, roughness: 0.5 }, true),
+  // Rubin teal: TMA, piers, centre section, cell, camera rotator (all steel is this colour on site)
+  paint: std({ color: PALETTE.rubinTeal, metalness: 0.25, roughness: 0.5, bumpMap: bump, bumpScale: 0.6 }),
+  paintCut: std({ color: PALETTE.rubinTeal, metalness: 0.25, roughness: 0.5, bumpMap: bump, bumpScale: 0.6 }, true),
+  // unpainted top-end ring
+  bare: std({ color: PALETTE.bareMetal, metalness: 0.6, roughness: 0.55, roughnessMap: brushedRoughness() }),
+  // spider vanes: non-reflective dark grey
+  spiderGrey: std({ color: PALETTE.spiderGrey, metalness: 0.1, roughness: 0.92 }),
+  cameraBlack: std({ color: PALETTE.cameraBlack, metalness: 0.45, roughness: 0.48 }, true),
+  cartYellow: std({ color: PALETTE.cartYellow, metalness: 0.2, roughness: 0.5 }),
+  paintBlue: std({ color: PALETTE.rubinTeal, metalness: 0.25, roughness: 0.5 }),
+  blueCut: std({ color: PALETTE.rubinTeal, metalness: 0.25, roughness: 0.5 }, true),
   // Black anodised baffles
-  black: std({ color: 0x0d0e10, metalness: 0.3, roughness: 0.7, side: THREE.DoubleSide }),
+  black: std({ color: PALETTE.baffleBlack, metalness: 0.3, roughness: 0.7, side: THREE.DoubleSide }),
   blackCut: std({ color: 0x0d0e10, metalness: 0.3, roughness: 0.7 }, true),
   // Camera aluminium skin
   alu: std({ color: 0xc9ccd0, metalness: 0.6, roughness: 0.42 }, true),

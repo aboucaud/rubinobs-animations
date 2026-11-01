@@ -80,7 +80,7 @@ root.add(cam.group);
 
 // cart (schematic)
 {
-  const m = MAT.paintBlue;
+  const m = MAT.cartYellow;
   for (const x of [-1.3, 0.2, 1.4]) {
     const saddle = new THREE.Mesh(new THREE.BoxGeometry(0.18, HEIGHT - 0.78, 1.3), m);
     saddle.position.set(x, (HEIGHT - 0.78) / 2, 0);

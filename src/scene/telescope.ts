@@ -7,6 +7,7 @@ import { Rubin, SPIDER } from '../optics/trace';
 import { MAT } from './materials';
 import { annulusMesh, beam, box, lathe, ocs, sagProfile, tube, cylinderBetween } from './util';
 import { buildLSSTCam } from './lsstcam';
+import { perforatedAlpha } from './textures';
 
 export interface Label {
   id: string;
@@ -190,9 +191,28 @@ export function buildTelescope(rubin: Rubin): Telescope {
   const ter = new THREE.Group();
   const up = BF.find((b) => b.name === 'UpperTopEnd')!;
   const lo = BF.find((b) => b.name === 'LowerTopEnd')!;
-  ter.add(annulusMesh(up.inner, up.outer, up.z, MAT.black, 0.04));
-  ter.add(annulusMesh(lo.inner, lo.outer, lo.z, MAT.black, 0.04));
-  ter.add(tube(4.86, 4.9, lo.z, up.z, MAT.paint));
+  // flanges = the two batoid baffles; the ring itself is unpainted metal (photos)
+  ter.add(annulusMesh(up.inner, up.outer, up.z, MAT.bare, 0.04));
+  ter.add(annulusMesh(lo.inner, lo.outer, lo.z, MAT.bare, 0.04));
+  // box-section webs perforated with round lightening holes
+  const webH = up.z - lo.z - 0.04;
+  const zMid = (up.z + lo.z) / 2;
+  for (const [rw, holes] of [[4.47, 36], [4.88, 40]] as [number, number][]) {
+    const m = MAT.bare.clone();
+    m.alphaMap = perforatedAlpha(holes, 0.6);
+    m.alphaTest = 0.5;
+    m.side = THREE.DoubleSide;
+    const web = new THREE.Mesh(new THREE.CylinderGeometry(rw, rw, webH, 256, 1, true), m);
+    web.position.y = zMid;
+    ter.add(web);
+  }
+  // radial diaphragms between the webs
+  for (let k = 0; k < 36; k++) {
+    const a = ((k + 0.5) / 36) * Math.PI * 2;
+    const d = box(4.675 * Math.cos(a), 4.675 * Math.sin(a), zMid, 0.4, 0.015, webH, MAT.bare);
+    d.rotation.y = a;
+    ter.add(d);
+  }
   ota.add(ter);
   groups.topEnd = ter;
   L('ter', 'Top-end ring', 'Steel I-beam ring 9.8 m across. Its two flanges double as light baffles at the top of the telescope.', ocs(0, 4.9, 8.06));
@@ -203,7 +223,7 @@ export function buildTelescope(rubin: Rubin): Telescope {
   spider.add(tube(1.05, 1.1, 6.95, zCap, MAT.paint, 64));
   spider.add(annulusMesh(0, 1.1, zCap, MAT.paint, 0.05, 64));
   for (const r of SPIDER.rects.slice(0, 4)) {
-    const m = box(0, 0, SPIDER.z, r.w, r.h, 0.06, MAT.black);
+    const m = box(0, 0, SPIDER.z, r.w, r.h, 0.06, MAT.spiderGrey);
     m.rotation.y = r.th; // OCS rotation about z == rotation about Y (sign flip of y absorbed)
     spider.add(m);
   }
@@ -219,7 +239,7 @@ export function buildTelescope(rubin: Rubin): Telescope {
     for (const sg of [-1, 1]) {
       const a = ocs(fx + sg * s0 * ux, fy + sg * s0 * uy, SPIDER.z - 0.22);
       const b = ocs(fx + sg * s1 * ux, fy + sg * s1 * uy, SPIDER.z - 0.22);
-      spider.add(beam(a, b, 0.05, 0.44, MAT.black));
+      spider.add(beam(a, b, 0.05, 0.44, MAT.spiderGrey));
     }
   }
   ota.add(spider);
