@@ -4,25 +4,15 @@
 // Schematic: internal mechanics (rails, sockets, shutter frame, cryostat interior, utility trunk).
 import * as THREE from 'three';
 import { Rubin, Band } from '../optics/trace';
-import { Surface } from '../optics/surfaces';
-import prescription from '../data/prescription.json';
 import { MAT, cutPlane } from './materials';
 import { cameraSkin, PALETTE } from './textures';
 import { annulusMesh, box, lathe, ocs, tube, cylinderBetween } from './util';
 import { buildFocalPlane, LAYOUT, RAFT_PITCH } from './focalplane';
 import type { Label } from './telescope';
+import { buildFES, FilterExchanger, FESState } from './fes';
 
-const P = prescription as unknown as Record<Band, { surfaces: any[] }>;
 
-/** Band display colours (i, z, y are false colour) */
-export const BAND_HEX: Record<Band, string> = {
-  u: '#9b6bff',
-  g: '#34b8ff',
-  r: '#ff6a2e',
-  i: '#ff2f5e',
-  z: '#e04bff',
-  y: '#ffd43a',
-};
+export { BAND_HEX } from './fes';
 
 export const CAM = {
   zL1: 3.3974725882045593,
@@ -46,47 +36,12 @@ function lensSolid(front: (r: number) => number, back: (r: number) => number, rC
   return lathe(prof, 128, mat);
 }
 
-function filterMaterial(b: Band) {
-  const c = new THREE.Color(BAND_HEX[b]);
-  return new THREE.MeshPhysicalMaterial({
-    color: c.clone().lerp(new THREE.Color(1, 1, 1), 0.35),
-    metalness: 0.3,
-    roughness: 0.06,
-    transmission: 0.45,
-    ior: 1.458,
-    thickness: 0.02,
-    iridescence: 1,
-    iridescenceIOR: 1.9,
-    iridescenceThicknessRange: [250, 700],
-    envMapIntensity: 0.8,
-    side: THREE.DoubleSide,
-    clippingPlanes: [cutPlane],
-  });
-}
-
-/** One physical filter: meniscus from the batoid surfaces of its band, in a frame. Origin = front vertex. */
-function buildFilter(b: Band): THREE.Group {
-  const s = P[b].surfaces;
-  const fe = new Surface(s.find((x: any) => x.name === 'Filter_entrance'));
-  const fx = new Surface(s.find((x: any) => x.name === 'Filter_exit'));
-  const z0 = fe.z0;
-  const g = new THREE.Group();
-  g.name = `filter-${b}`;
-  const lens = lensSolid((r) => fe.zAt(r, 0) - z0, (r) => fx.zAt(r, 0) - z0, 0.375, 0.375, filterMaterial(b));
-  g.add(lens);
-  g.add(tube(0.375, 0.392, -0.01, fx.z0 - z0 + 0.035, MAT.aluDark, 72));
-  // two side pins for the autochanger trucks (±x)
-  for (const sg of [-1, 1]) g.add(box(sg * 0.405, 0, 0.01, 0.03, 0.06, 0.04, MAT.steel));
-  g.userData.thickness = fx.z0 - z0;
-  g.userData.zBeam = z0;
-  return g;
-}
-
 export interface LSSTCam {
   group: THREE.Group;
   labels: Label[];
   parts: Record<string, THREE.Object3D>;
   filters: Record<Band, THREE.Group>;
+  fes: FilterExchanger;
   state: CamState;
   update(): void;
   setExplode(t: number): void;
@@ -95,35 +50,10 @@ export interface LSSTCam {
   focalPlaneImage: { canvas: HTMLCanvasElement; texture: THREE.CanvasTexture; mesh: THREE.Mesh };
 }
 
-export interface CamState {
-  sockets: (Band | null)[]; // 5 carousel sockets, socket 0 at standby when carouselAngle = 0
-  home: Partial<Record<Band, number>>; // socket each loaded filter belongs to
-  beam: Band | null; // filter clamped in the beam
-  transit: { band: Band; s: number } | null; // s: 0 = standby socket, 1 = in beam
-  carouselAngle: number;
+export interface CamState extends FESState {
   shutterA: number; // coverage fraction of blade stack A (+x side), 0 = stowed, 1 = closed
   shutterB: number;
   explode: number;
-}
-
-const SOCKET_ANGLE = (k: number, carousel: number) => carousel + (k * 2 * Math.PI) / 5 + Math.PI / 2;
-
-/** Autochanger path in the (y, z) plane from the standby socket (s=0) to the beam (s=1). */
-export function autochangerPose(s: number, zBeam: number) {
-  const { rSocket: R, zCarousel: zC, rTurn: rt } = CAM;
-  const L1 = zC - (zBeam + rt);
-  const L2 = (Math.PI / 2) * rt;
-  const L3 = R - rt;
-  const L = L1 + L2 + L3;
-  let d = s * L;
-  if (d <= L1) return { y: R, z: zC - d, w: 1, length: L };
-  d -= L1;
-  if (d <= L2) {
-    const a = d / rt; // 0..π/2
-    return { y: R - rt + rt * Math.cos(a), z: zBeam + rt - rt * Math.sin(a), w: 1 - a / (Math.PI / 2), length: L };
-  }
-  d -= L2;
-  return { y: R - rt - d, z: zBeam, w: 0, length: L };
 }
 
 export function buildLSSTCam(rubin: Rubin): LSSTCam {
@@ -153,16 +83,33 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
   l1l2.add(lathe([[0.785, zL1e - 0.02], [0.84, zL1e + 0.06], [0.785, zL1e + 0.12], [0.785, zL1e - 0.02]], 128, MAT.cameraBlack));
   // L2 ring
   l1l2.add(tube(0.56, 0.6, zL2 - 0.01, zL2 + 0.07, MAT.aluDark, 96));
-  // tubular space-frame cone between the rings
-  for (let k = 0; k < 12; k++) {
-    const a0 = (k / 12) * Math.PI * 2;
-    const a1 = ((k + 0.5) / 12) * Math.PI * 2;
-    l1l2.add(cylinderBetween(ocs(0.8 * Math.cos(a0), 0.8 * Math.sin(a0), zL1e + 0.11), ocs(0.6 * Math.cos(a1), 0.6 * Math.sin(a1), zL2 + 0.03), 0.012, MAT.alu));
-    l1l2.add(cylinderBetween(ocs(0.8 * Math.cos(a0), 0.8 * Math.sin(a0), zL1e + 0.11), ocs(0.6 * Math.cos(a1 - Math.PI / 6), 0.6 * Math.sin(a1 - Math.PI / 6), zL2 + 0.03), 0.012, MAT.alu));
+  // slatted light baffle right behind L1 (photos): concentric black vanes hide the L1–L2 support frame
+  {
+    const z0 = zL1e + 0.14;
+    const z1 = zL2 - 0.03;
+    const n = 22;
+    for (let i = 0; i < n; i++) {
+      const t = i / (n - 1);
+      const z = z0 + (z1 - z0) * t;
+      const rIn = 0.792 - (0.792 - 0.585) * t;
+      l1l2.add(annulusMesh(rIn, 0.8, z, MAT.blackCut, 0.004, 128));
+    }
+    l1l2.add(tube(0.796, 0.8, z0 - 0.02, z1, MAT.blackCut, 128));
+    // bright retaining ring and bolt circle on the front of the L1 cell
+    l1l2.add(annulusMesh(0.776, 0.79, zL1e - 0.024, MAT.alu, 0.006, 128));
+    const bolts = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.006, 0.006, 0.01, 8), MAT.steel, 48);
+    const m4 = new THREE.Matrix4();
+    for (let i = 0; i < 48; i++) {
+      const a = (i / 48) * Math.PI * 2;
+      const v = ocs(0.815 * Math.cos(a), 0.815 * Math.sin(a), zL1e - 0.025);
+      m4.makeTranslation(v.x, v.y, v.z);
+      bolts.setMatrixAt(i, m4);
+    }
+    l1l2.add(bolts);
   }
   parts.lenses = new THREE.Group();
   L('L1', 'L1 — 1.57 m lens', 'The largest high-performance optical lens ever made: fused silica, 1.57 m wide, 82 mm thick. It is the camera’s front window to the telescope.', ocs(0, -0.84, zL1e + 0.06), l1l2);
-  L('L2', 'L2 lens', '1.1 m fused-silica lens with one aspheric face. L1 and L2 share a light aluminium space-frame mount.', ocs(0.58, 0, zL2 + 0.03), l1l2);
+  L('L2', 'L2 lens', '1.1 m fused-silica lens with one aspheric face. L1 and L2 share one assembly; a stack of black vanes behind L1 stops stray light.', ocs(0.58, 0, zL2 + 0.03), l1l2);
 
   // ---------------------------------------------------------------- camera body (skin + front flange + internal rings)
   const body = mk('body');
@@ -196,10 +143,10 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
   const zSh = CAM.zShutter;
   {
     const fr = new THREE.Shape();
-    fr.moveTo(-0.72, -0.5);
-    fr.lineTo(0.72, -0.5);
-    fr.lineTo(0.72, 0.5);
-    fr.lineTo(-0.72, 0.5);
+    fr.moveTo(-0.72, -0.4);
+    fr.lineTo(0.72, -0.4);
+    fr.lineTo(0.72, 0.4);
+    fr.lineTo(-0.72, 0.4);
     fr.closePath();
     const hole = new THREE.Path();
     hole.absarc(0, 0, CAM.shutterHalf, 0, Math.PI * 2, true);
@@ -275,64 +222,14 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
   fpImg.renderOrder = 12;
   cryo.add(fpImg);
 
-  // ---------------------------------------------------------------- filter carousel (rotates about the axis)
-  const carousel = mk('carousel');
-  const zC = CAM.zCarousel;
-  {
-    // ring bearing Ø1.4 m with gear teeth at the back
-    carousel.add(tube(0.66, 0.7, zC + 0.42, zC + 0.47, MAT.steel));
-    const teeth = new THREE.InstancedMesh(new THREE.BoxGeometry(0.012, 0.05, 0.018), MAT.steel, 180);
-    const m = new THREE.Matrix4();
-    for (let i = 0; i < 180; i++) {
-      const a = (i / 180) * Math.PI * 2;
-      m.makeRotationY(-a);
-      m.setPosition(ocs(0.708 * Math.cos(a), 0.708 * Math.sin(a), zC + 0.445));
-      teeth.setMatrixAt(i, m);
-    }
-    carousel.add(teeth);
-    carousel.add(tube(0.62, 0.66, zC - 0.43, zC - 0.39, MAT.aluDark));
-    // 5 sockets: posts + clamps
-    for (let k = 0; k < 5; k++) {
-      const a = (k * 2 * Math.PI) / 5 + Math.PI / 2;
-      const c = Math.cos(a);
-      const s = Math.sin(a);
-      for (const sg of [-1, 1]) {
-        const tx = -s * sg * 0.41;
-        const ty = c * sg * 0.41;
-        carousel.add(box(CAM.rSocket * c + tx, CAM.rSocket * s + ty, zC, 0.035, 0.035, 0.86, MAT.aluDark)); // posts
-        carousel.add(box(CAM.rSocket * c + tx * 0.97, CAM.rSocket * s + ty * 0.97, zC, 0.05, 0.05, 0.07, MAT.blueCut)); // clamps
-      }
-      carousel.add(box(CAM.rSocket * c, CAM.rSocket * s, zC + 0.4, 0.08, 0.08, 0.05, MAT.blueCut)); // bottom guide
-    }
-  }
-  L('carousel', 'Filter carousel', 'Stores five 75 cm filters (25–38 kg each) standing in a pentagon around the cryostat. It turns 1/5 or 2/5 of a turn to bring the next filter to the “standby” socket.', ocs(0, -0.75, zC), carousel);
-
-  // ---------------------------------------------------------------- autochanger rails (fixed in the body, at the standby socket)
-  const ac = mk('autochanger');
-  const zBeamRef = CAM.zFilterBeam;
-  const railPts = (dx: number) => {
-    const pts: THREE.Vector3[] = [];
-    for (let i = 0; i <= 60; i++) {
-      const p = autochangerPose(i / 60, zBeamRef);
-      pts.push(ocs(dx, p.y, p.z));
-    }
-    return new THREE.CatmullRomCurve3(pts);
-  };
-  for (const sg of [-1, 1])
-    for (const off of [0.0, 0.035]) {
-      const curve = railPts(sg * (0.43 + off));
-      ac.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 80, 0.011, 8, false), MAT.steel));
-    }
-  // motorised linear rails along the axis (drive the articulated linkage)
-  for (const sg of [-1, 1]) ac.add(box(sg * 0.42, 0.62, (zC + zBeamRef) / 2 + 0.15, 0.04, 0.05, 0.9, MAT.blueCut));
-  const trucks: THREE.Mesh[] = [];
-  for (const sg of [-1, 1]) {
-    const t = box(0, 0, 0, 0.06, 0.07, 0.09, MAT.blueCut);
-    t.userData.sg = sg;
-    ac.add(t);
-    trucks.push(t);
-  }
-  L('autochanger', 'Autochanger', 'Pulls the chosen filter out of the carousel and drives it along curved double rails around the front of the cryostat into the beam: 91 cm in about 6 s, positioned to 0.1 mm.', ocs(0.47, 0.5, 4.55), ac);
+  // ---------------------------------------------------------------- filter exchange system (IN2P3/CNRS)
+  const fes = buildFES();
+  group.add(fes.carousel, fes.autochanger, fes.filterRoot, fes.fixed);
+  parts.carousel = fes.carousel;
+  parts.autochanger = fes.autochanger;
+  parts.filters = fes.filterRoot;
+  parts.fesFixed = fes.fixed;
+  labels.push(...fes.labels);
 
   // ---------------------------------------------------------------- utility trunk + hexapod/rotator
   const trunk = mk('trunk');
@@ -372,85 +269,18 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
   }
   L('hexapod', 'Hexapod & rotator', 'Moves the whole 3 t camera by micrometres to keep it in focus, and rotates it to follow the sky.', ocs(0.95, 0, CAM.zTrunkTop - 0.12), hex);
 
-  // ---------------------------------------------------------------- filters
-  const BANDS: Band[] = ['u', 'g', 'r', 'i', 'z', 'y'];
-  const filters = {} as Record<Band, THREE.Group>;
-  const filterRoot = mk('filters');
-  for (const b of BANDS) {
-    filters[b] = buildFilter(b);
-    filterRoot.add(filters[b]);
-  }
-  L('filter', 'Filter in the beam', 'Only one colour band (u, g, r, i, z or y) reaches the sensors at a time. Interference coatings on a curved fused-silica disc.', ocs(0.0, 0.42, CAM.zFilterBeam), filterRoot);
-
   // ---------------------------------------------------------------- state & update
-  const state: CamState = {
-    sockets: ['u', 'g', 'r', 'i', 'z'],
-    home: { u: 0, g: 1, r: 2, i: 3, z: 4 },
-    beam: null,
-    transit: null,
-    carouselAngle: 0,
-    shutterA: 1,
-    shutterB: 0,
-    explode: 0,
-  };
-
-  const qTmp = new THREE.Quaternion();
-  const qY = new THREE.Quaternion();
-  const AX = new THREE.Vector3(1, 0, 0);
-  const AY = new THREE.Vector3(0, 1, 0);
-
-  function placeFilterAt(f: THREE.Group, socketK: number | null, s: number) {
-    // s = 0 → standing in socket at standby, 1 → in beam. socketK given → stored at that socket.
-    const zBeam = f.userData.zBeam as number;
-    const th = f.userData.thickness as number;
-    if (socketK !== null) {
-      const a = SOCKET_ANGLE(socketK, state.carouselAngle);
-      qY.setFromAxisAngle(AY, a - Math.PI / 2);
-      qTmp.setFromAxisAngle(AX, -Math.PI / 2);
-      f.quaternion.copy(qY).multiply(qTmp);
-      // centre the disc thickness on the socket radius
-      f.position.copy(ocs((CAM.rSocket - th / 2) * Math.cos(a), (CAM.rSocket - th / 2) * Math.sin(a), zC));
-      return;
-    }
-    const p = autochangerPose(s, zBeam);
-    qTmp.setFromAxisAngle(AX, -Math.PI / 2 * p.w);
-    f.quaternion.copy(qTmp);
-    f.position.copy(ocs(0, p.y - (th / 2) * p.w, p.z));
-  }
+  const filters = fes.filters;
+  const state = Object.assign(fes.state, { shutterA: 1, shutterB: 0, explode: 0 }) as CamState;
 
   function update() {
     const ex = state.explode;
     // exploded offsets along the optical axis
-    const dz: Record<string, number> = { l1l2: -1.25, shutter: -0.55, filters: -0.85, cryostat: 0.25, carousel: 0.95, autochanger: 0, trunk: 1.7, hexapod: 2.1, body: 0 };
+    const dz: Record<string, number> = { l1l2: -1.25, shutter: -0.55, cryostat: 0.25, autochanger: 0, fesFixed: 0.95, trunk: 1.7, hexapod: 2.1, body: 0 };
     for (const [k, v] of Object.entries(dz)) parts[k].position.copy(ocs(0, 0, v * ex));
-    // carousel filters need to follow the carousel, the in-beam/transit filter follows "filters"
     (parts.body as THREE.Group).visible = ex < 0.02;
     parts.autochanger.visible = ex < 0.6;
-    carousel.rotation.y = state.carouselAngle;
-    for (const b of BANDS) {
-      const f = filters[b];
-      const k = state.home[b];
-      f.visible = k !== undefined;
-      if (k === undefined) continue;
-      if (state.transit && state.transit.band === b) placeFilterAt(f, null, state.transit.s);
-      else if (state.beam === b) placeFilterAt(f, null, 1);
-      else {
-        placeFilterAt(f, k, 0);
-        f.position.add(ocs(0, 0, (dz.carousel - dz.filters) * ex)); // stored filters travel with the carousel
-      }
-    }
-    // trucks follow the moving filter
-    const moving = state.transit ? { b: state.transit.band, s: state.transit.s } : state.beam ? { b: state.beam, s: 1 } : null;
-    for (const t of trucks) {
-      if (!moving) {
-        const p = autochangerPose(0, zBeamRef);
-        t.position.copy(ocs(t.userData.sg * 0.43, p.y, p.z));
-        continue;
-      }
-      const p = autochangerPose(moving.s, filters[moving.b].userData.zBeam);
-      t.position.copy(ocs(t.userData.sg * 0.43, p.y, p.z + 0.01));
-      t.quaternion.setFromAxisAngle(AX, -Math.PI / 2 * p.w);
-    }
+    fes.update({ carouselDz: 0.95 * ex, beamDz: -0.85 * ex });
     // shutter blades: stack A on +x, stack B on −x, three telescoping panels each
     const H = CAM.shutterHalf;
     const w = 0.275;
@@ -469,17 +299,7 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
   }
 
   function instantBeam(b: Band) {
-    if (state.home[b] === undefined) {
-      // swap with the loader: the 6th filter replaces the one in socket of u↔y (typical lunar-cycle swap)
-      const out: Band = b === 'y' ? 'u' : b === 'u' ? 'y' : 'u';
-      const k = state.home[out] ?? 0;
-      delete state.home[out];
-      state.home[b] = k;
-      state.sockets[k] = b;
-    }
-    state.beam = b;
-    state.transit = null;
-    state.carouselAngle = -((state.home[b]! * 2 * Math.PI) / 5);
+    fes.instantBeam(b);
     update();
   }
 
@@ -487,7 +307,7 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
   state.shutterA = 1;
   update();
 
-  return { group, labels, parts, filters, state, update, setExplode, instantBeam, focalPlaneImage: { canvas: fpCanvas, texture: fpTex, mesh: fpImg } };
+  return { group, labels, parts, filters, fes, state, update, setExplode, instantBeam, focalPlaneImage: { canvas: fpCanvas, texture: fpTex, mesh: fpImg } };
 }
 
 export { LAYOUT };

@@ -314,8 +314,8 @@ type L = { title: string; text: string; pos: THREE.Vector3; parent: THREE.Object
 const LABELS: L[] = [
   ...obs.dome.labels.map((l) => ({ ...l, parent: obs.dome.group })),
   { title: 'Lower enclosure', text: 'Fixed concrete drum, 30 m across. The dome rotates on bogies on top of it; the telescope pier rises inside, isolated from the building.', pos: new THREE.Vector3(SITE.drumR, 8, 4), parent: obs.root },
-  { title: 'Service & operations building', text: 'About 3,000 m²: control room, mirror coating chamber, clean room for the camera, and an 80-tonne platform lift that carries mirrors and the camera up to the telescope floor.', pos: new THREE.Vector3(60, 22, 0), parent: obs.root },
-  { title: 'Auxiliary Telescope', text: 'A 1.2 m telescope on its own hill. It takes spectra of bright stars all night to measure how much the atmosphere dims each colour.', pos: new THREE.Vector3(-95, 18, 70), parent: obs.root },
+  { title: 'Service & operations building', text: 'About 3,000 m²: control room, mirror coating chamber, clean room for the camera, and a 72.5-tonne platform lift that carries mirrors and the camera up to the telescope floor, five levels up.', pos: new THREE.Vector3(42, 8, 0), parent: obs.root },
+  { title: 'Auxiliary Telescope', text: 'A 1.2 m telescope on its own hill. It takes spectra of bright stars all night to measure how much the atmosphere dims each colour.', pos: new THREE.Vector3(68.7, 4, -115.8), parent: obs.root },
   { title: 'Simonyi Survey Telescope', text: '8.4 m primary mirror, 350 t moving mass. It slews 3.5° and settles in about 5 s, then takes a 30 s exposure, around 1,000 times a night.', pos: new THREE.Vector3(0, 10, 0), parent: tel.ota },
 ];
 const labelLayer = document.getElementById('labels')!;
@@ -424,6 +424,8 @@ document.getElementById('bObs')!.onclick = () => {
 type View = { pos: THREE.Vector3; tgt: THREE.Vector3; cut?: boolean; domeFrame?: boolean };
 const VIEWS: Record<string, View> = {
   Summit: { pos: new THREE.Vector3(150, 85, 200), tgt: new THREE.Vector3(25, 12, 0) },
+  'Map view (with AuxTel)': { pos: new THREE.Vector3(60, 300, 40), tgt: new THREE.Vector3(55, -10, -45) },
+  'AuxTel & roads': { pos: new THREE.Vector3(150, 70, 10), tgt: new THREE.Vector3(50, -5, -70) },
   'Aerial (south-east)': { pos: new THREE.Vector3(-70, 110, 190), tgt: new THREE.Vector3(25, 8, 10) },
   Dome: { pos: new THREE.Vector3(-48, 46, 62), tgt: new THREE.Vector3(0, 30, 0), domeFrame: true },
   'Into the slit': { pos: new THREE.Vector3(0, 70, 52), tgt: new THREE.Vector3(0, 27, 0), domeFrame: true },

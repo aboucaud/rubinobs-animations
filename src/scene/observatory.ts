@@ -162,9 +162,19 @@ function fbm(x: number, y: number, oct = 6) {
   }
   return s;
 }
-export const AUXTEL_POS = new THREE.Vector2(-95, 70);
-/** Terrain height (m) relative to the summit platform at y = 0. */
-export function terrainHeight(x: number, z: number) {
+// Layout from a satellite view (north up, ~0.12 m/px), rotated so the service building runs along +x:
+// AuxTel ~135 m away on its hill, roads loop around the west and south of the building, climb to
+// AuxTel and continue down the mountain to the south-east.
+export const AUXTEL_POS = new THREE.Vector2(68.7, -115.8);
+const AUXTEL_TOP = -6;
+export const ROADS: [number, number][][] = [
+  [[-8.4, 32.1], [-0.5, 48.3], [10.1, 64.5], [19.7, 77.5], [34.1, 80.8], [45.0, 70.2], [58.2, 33.8], [63.9, -3.7], [64.2, -37.2], [70.8, -54.1], [85.4, -66.8], [110.8, -87.5], [129.8, -111.5], [161.7, -128.9], [181.1, -140.5], [230, -175], [300, -205]],
+  [[64.2, -37.2], [53.6, -46.7], [48.8, -58.6], [53.8, -76.2], [65.7, -83.6], [82.4, -87.2], [94.9, -102.4], [94.5, -118.8], [84.6, -125.9], [72.0, -122.2], [67.6, -116.4]],
+  [[34.6, -25.4], [42.8, -41.5], [47.2, -55.4]],
+];
+const ROAD_HALF = 3.5;
+
+function baseTerrain(x: number, z: number) {
   const r = Math.hypot(x, z);
   // regional relief: the summit ridge drops away; distant peaks rise again
   let h = -Math.pow(Math.max(0, r - 40), 1.08) * 0.42;
@@ -173,11 +183,11 @@ export function terrainHeight(x: number, z: number) {
   h += Math.max(0, r - 900) * 0.25 * fbm(x / 900 + 3, z / 900, 3); // far ranges
   // calibration hill for AuxTel
   const da = Math.hypot(x - AUXTEL_POS.x, z - AUXTEL_POS.y);
-  h = Math.max(h, 2 - Math.max(0, da - 9) * 0.5);
-  // summit platform (r < 45 m) + the service-building pad stepping down to the saddle (+x)
-  const padY = (xx: number) => (xx < 24 ? 0 : xx < 40 ? -((xx - 24) / 16) * 9 : xx < 70 ? -9 : -9 - Math.min(5, (xx - 70) * 0.4));
+  h = Math.max(h, AUXTEL_TOP - Math.max(0, da - 10) * 0.45);
+  // summit platform (r < 45 m) + the service-building pad stepping down toward the south-east (+x)
+  const padY = (xx: number) => (xx < 24 ? 0 : xx < 40 ? -((xx - 24) / 16) * 9 : -9 - Math.min(5, Math.max(0, xx - 55) * 0.4));
   const dPlat = Math.max(0, r - 45);
-  const dPad = Math.hypot(Math.max(10 - x, 0, x - 125), Math.max(Math.abs(z) - 32, 0));
+  const dPad = Math.hypot(Math.max(10 - x, 0, x - 72), Math.max(Math.abs(z) - 30, 0));
   const target = dPad < dPlat ? padY(x) : 0;
   const d = Math.min(dPlat, dPad);
   const k = Math.min(1, d / 30);
@@ -185,9 +195,107 @@ export function terrainHeight(x: number, z: number) {
   return target * (1 - ks) + h * ks;
 }
 
+/** Densified, smoothed road centre-lines with their heights. */
+export const ROAD_PATHS: { x: number; z: number; h: number }[][] = ROADS.map((poly) => {
+  const pts: { x: number; z: number; h: number }[] = [];
+  for (let i = 0; i < poly.length - 1; i++) {
+    const [x0, z0] = poly[i];
+    const [x1, z1] = poly[i + 1];
+    const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 2));
+    for (let j = 0; j < n; j++) {
+      const t = j / n;
+      pts.push({ x: x0 + (x1 - x0) * t, z: z0 + (z1 - z0) * t, h: 0 });
+    }
+  }
+  const last = poly[poly.length - 1];
+  pts.push({ x: last[0], z: last[1], h: 0 });
+  // Catmull-Rom-ish smoothing of the corners
+  for (let it = 0; it < 3; it++)
+    for (let i = 1; i < pts.length - 1; i++) {
+      pts[i].x = (pts[i - 1].x + 2 * pts[i].x + pts[i + 1].x) / 4;
+      pts[i].z = (pts[i - 1].z + 2 * pts[i].z + pts[i + 1].z) / 4;
+    }
+  const raw = pts.map((p) => baseTerrain(p.x, p.z));
+  const W = 8;
+  pts.forEach((p, i) => {
+    let s = 0;
+    let n = 0;
+    for (let j = Math.max(0, i - W); j <= Math.min(pts.length - 1, i + W); j++) {
+      s += raw[j];
+      n++;
+    }
+    p.h = s / n;
+  });
+  return pts;
+});
+
+function nearestRoad(x: number, z: number) {
+  let best = Infinity;
+  let h = 0;
+  for (const path of ROAD_PATHS)
+    for (let i = 0; i < path.length - 1; i++) {
+      const a = path[i];
+      const b = path[i + 1];
+      const ex = b.x - a.x;
+      const ez = b.z - a.z;
+      const L2 = ex * ex + ez * ez || 1;
+      const t = Math.max(0, Math.min(1, ((x - a.x) * ex + (z - a.z) * ez) / L2));
+      const px = a.x + t * ex;
+      const pz = a.z + t * ez;
+      const d = Math.hypot(x - px, z - pz);
+      if (d < best) {
+        best = d;
+        h = a.h + t * (b.h - a.h);
+      }
+    }
+  return { d: best, h };
+}
+
+/** Terrain height (m) relative to the summit platform at y = 0, with the roads cut in. */
+export function terrainHeight(x: number, z: number) {
+  const h = baseTerrain(x, z);
+  if (Math.hypot(x, z) > 420) return h;
+  const r = nearestRoad(x, z);
+  if (r.d > ROAD_HALF + 12) return h;
+  const k = THREE.MathUtils.smoothstep(r.d, ROAD_HALF + 0.5, ROAD_HALF + 12);
+  return r.h * (1 - k) + h * k;
+}
+
+/** Dirt road ribbons draped on the smoothed road profile. */
+function buildRoads() {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x8c7b69, roughness: 1, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2 });
+  for (const path of ROAD_PATHS) {
+    const pos: number[] = [];
+    const idx: number[] = [];
+    for (let i = 0; i < path.length; i++) {
+      const a = path[Math.max(0, i - 1)];
+      const b = path[Math.min(path.length - 1, i + 1)];
+      let tx = b.x - a.x;
+      let tz = b.z - a.z;
+      const l = Math.hypot(tx, tz) || 1;
+      tx /= l;
+      tz /= l;
+      const nx = -tz;
+      const nz = tx;
+      const p = path[i];
+      pos.push(p.x + nx * ROAD_HALF, p.h + 0.35, p.z + nz * ROAD_HALF, p.x - nx * ROAD_HALF, p.h + 0.35, p.z - nz * ROAD_HALF);
+      if (i < path.length - 1) idx.push(2 * i, 2 * i + 2, 2 * i + 1, 2 * i + 1, 2 * i + 2, 2 * i + 3);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, mat);
+    m.material.side = THREE.DoubleSide;
+    g.add(m);
+  }
+  return g;
+}
+
 function buildTerrain() {
   const size = 3200;
-  const seg = 320;
+  const seg = 420;
   const g = new THREE.PlaneGeometry(size, size, seg, seg);
   g.rotateX(-Math.PI / 2);
   const pos = g.attributes.position;
@@ -201,14 +309,15 @@ function buildTerrain() {
     let x = pos.getX(i);
     let z = pos.getZ(i);
     const r = Math.hypot(x, z) / (size / 2);
-    const w = Math.pow(r, 1.5) / Math.max(r, 1e-6);
+    const w = Math.pow(r, 2.0) / Math.max(r, 1e-6);
     x *= w;
     z *= w;
     const y = terrainHeight(x, z);
     pos.setXYZ(i, x, y, z);
     const n = fbm(x / 30, z / 30, 3);
     c.copy(cA).lerp(cB, Math.min(1, Math.max(0, n * 1.4 - 0.2)));
-    if (Math.hypot(x, z) < 46 || (x > 10 && x < 125 && Math.abs(z) < 33)) c.lerp(cC, 0.7);
+    if (Math.hypot(x, z) < 46 || (x > 10 && x < 72 && Math.abs(z) < 31)) c.lerp(cC, 0.7);
+    if (Math.hypot(x - AUXTEL_POS.x, z - AUXTEL_POS.y) < 11) c.lerp(cC, 0.6);
     col.push(c.r, c.g, c.b);
   }
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
@@ -599,19 +708,19 @@ function buildServiceBuilding() {
     [-13.5, 6.5], [-9, 3],
   ];
   const yb = -9; // the building steps down toward the saddle
-  const bar = facetedBar(sec, 22, 92, yb, M, 0.75, 7);
+  const bar = facetedBar(sec, 22, 60, yb, M, 0.75, 7);
   g.add(bar);
   // flat top roof strip (slightly darker) and a ribbon of small windows
-  const roof = facetedBar([[-12, 14.5], [12, 14.5], [10, 15.6], [-10, 15.6]], 22, 92, yb, OBS_MAT.whiteRoof, 0.75, 7);
+  const roof = facetedBar([[-12, 14.5], [12, 14.5], [10, 15.6], [-10, 15.6]], 22, 60, yb, OBS_MAT.whiteRoof, 0.75, 7);
   g.add(roof);
   const winMat = new THREE.MeshStandardMaterial({ color: 0x2a3a48, metalness: 0.6, roughness: 0.2, emissive: 0x000000 });
-  for (let x = 30; x < 88; x += 3.2) {
+  for (let x = 26; x < 58; x += 3.2) {
     const w = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.7, 0.1), winMat);
     w.position.set(x, yb + 9.0, 15.55);
     g.add(w);
   }
   // grey lower level at the far end (maintenance / loading)
-  const base = facetedBar([[-9, 0], [9, 0], [9, 5], [-9, 5]], 70, 96, yb - 5, OBS_MAT.bldgGrey);
+  const base = facetedBar([[-9, 0], [9, 0], [9, 5], [-9, 5]], 44, 66, yb - 5, OBS_MAT.bldgGrey);
   g.add(base);
   // big roll-up door on the near side
   const door = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 0.2), new THREE.MeshStandardMaterial({ color: 0x55595f, metalness: 0.4, roughness: 0.6 }));
@@ -645,6 +754,7 @@ export function buildObservatory() {
   root.add(dome.group);
   const building = buildServiceBuilding();
   root.add(building);
+  root.add(buildRoads());
   const auxtel = buildAuxTel();
   root.add(auxtel);
   return { root, dome, drum, building, auxtel, terrain };

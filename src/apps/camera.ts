@@ -7,7 +7,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import GUI from 'lil-gui';
 import { Rubin, Band, TraceResult } from '../optics/trace';
-import { buildLSSTCam, CAM, BAND_HEX, autochangerPose } from '../scene/lsstcam';
+import { buildLSSTCam, CAM, BAND_HEX } from '../scene/lsstcam';
 import { cutPlane, MAT } from '../scene/materials';
 import { RayBundle } from '../scene/rays';
 import { ocs } from '../scene/util';
@@ -184,33 +184,17 @@ function visitSteps(): Step[] {
 }
 
 function filterSteps(target: Band): Step[] {
-  const cs = cam.state;
-  const from = cs.beam!;
-  const kT = cs.home[target]!;
-  const a0 = cs.carouselAngle;
-  let a1 = -(kT * 2 * Math.PI) / 5;
-  // shortest rotation
-  while (a1 - a0 > Math.PI) a1 -= 2 * Math.PI;
-  while (a1 - a0 < -Math.PI) a1 += 2 * Math.PI;
-  const slots = Math.round(Math.abs(a1 - a0) / ((2 * Math.PI) / 5));
-  return [
-    { label: `Releasing the ${from} filter clamps`, anim: 0.8, real: 4, run: () => {} },
-    { label: `Autochanger returns ${from} to its socket`, anim: 3.2, real: 16, run: (t) => { cs.beam = null; cs.transit = { band: from, s: 1 - ease(t) }; }, done: () => { cs.transit = null; } },
-    { label: `Carousel turns ${slots}/5 of a turn`, anim: 2.4, real: 18 + 6 * slots, run: (t) => { cs.carouselAngle = a0 + (a1 - a0) * ease(t); } },
-    { label: `Autochanger brings ${target} into the beam (91 cm, ≈ 6 s)`, anim: 3.2, real: 26, run: (t) => { cs.transit = { band: target, s: ease(t) }; } },
-    {
-      label: 'Clamping to 0.1 mm',
-      anim: 0.8,
-      real: 84 - 4 - 16 - (18 + 6 * slots) - 26,
-      run: () => {},
-      done: () => {
-        cs.transit = null;
-        cs.beam = target;
-        state.band = target;
-        retrace();
-      },
-    },
-  ];
+  // the real FES sequence (shared with the filter-exchange page), shown ~8× faster than real time
+  const steps = cam.fes.stepsTo(target);
+  const out: Step[] = steps.map((st) => ({ label: st.label, real: st.real, anim: Math.max(0.6, st.real / 8), run: st.run, done: st.done }));
+  const last = out[out.length - 1];
+  const prev = last.done;
+  last.done = () => {
+    prev?.();
+    state.band = target;
+    retrace();
+  };
+  return out;
 }
 
 // ---------------------------------------------------------------- post-processing
@@ -337,14 +321,7 @@ fo.add(state, 'speed', 0.1, 3, 0.05).name('light speed (m/s)');
 fo.add({ swap: () => { if (queue.length) return; swapLoader(cam.state.home.y !== undefined ? 'u' : 'y'); } }, 'swap').name('daytime: swap u ↔ y (loader)');
 
 function swapLoader(incoming: Band) {
-  const cs = cam.state;
-  const out: Band = incoming === 'y' ? 'u' : 'y';
-  if (cs.home[out] === undefined) return;
-  if (cs.beam === out) return;
-  const k = cs.home[out]!;
-  delete cs.home[out];
-  cs.home[incoming] = k;
-  cs.sockets[k] = incoming;
+  cam.fes.swapLoader(incoming);
   cam.update();
   updateHud();
 }
@@ -434,7 +411,6 @@ window.addEventListener('resize', () => {
   composer.setSize(window.innerWidth, window.innerHeight);
 });
 
-void autochangerPose;
 retrace();
 cam.update();
 updateHud();

@@ -13,6 +13,7 @@ export default defineConfig({
         telescope: resolve(__dirname, 'telescope/index.html'),
         camera: resolve(__dirname, 'camera/index.html'),
         observatory: resolve(__dirname, 'observatory/index.html'),
+        filters: resolve(__dirname, 'filters/index.html'),
       },
     },
   },
