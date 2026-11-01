@@ -2,6 +2,8 @@
 
 Interactive, physically accurate outreach animations of the Vera C. Rubin Observatory, the Simonyi Survey Telescope and the LSST Camera (LSSTCam).
 
+**Live site:** https://aboucaud.github.io/rubinobs-animations/ (rebuilt automatically on every push to `main`)
+
 ## Stack
 
 - [Three.js](https://threejs.org) (WebGL 2) + TypeScript, built with [Vite](https://vitejs.dev) into a static site
