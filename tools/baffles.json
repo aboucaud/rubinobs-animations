@@ -1,0 +1,164 @@
+[
+{
+"name": "UpperTopEnd",
+"z": 8.063,
+"inner": 4.448,
+"outer": 4.9
+},
+{
+"name": "LowerTopEnd",
+"z": 7.263,
+"inner": 4.423,
+"outer": 5.025
+},
+{
+"name": "MidLevel",
+"z": 5.377,
+"inner": 4.357,
+"outer": 5.125
+},
+{
+"name": "M2Baffle0",
+"z": 6.3747,
+"inner": 1.7,
+"outer": 1.71
+},
+{
+"name": "M2Baffle1",
+"z": 6.323565,
+"inner": 1.734425,
+"outer": 1.744425
+},
+{
+"name": "M2Baffle2",
+"z": 6.27243,
+"inner": 1.76885,
+"outer": 1.77885
+},
+{
+"name": "M2Baffle3",
+"z": 6.221295,
+"inner": 1.803275,
+"outer": 1.813275
+},
+{
+"name": "M2Baffle4",
+"z": 6.17016,
+"inner": 1.8377,
+"outer": 1.8477
+},
+{
+"name": "M2Baffle5",
+"z": 6.119025,
+"inner": 1.872125,
+"outer": 1.882125
+},
+{
+"name": "M2Baffle6",
+"z": 6.06789,
+"inner": 1.90655,
+"outer": 1.91655
+},
+{
+"name": "M2Baffle7",
+"z": 6.016755,
+"inner": 1.940975,
+"outer": 1.950975
+},
+{
+"name": "M2Baffle8",
+"z": 5.96562,
+"inner": 1.9754,
+"outer": 1.9854
+},
+{
+"name": "M2Baffle9",
+"z": 5.914485,
+"inner": 2.009825,
+"outer": 2.019825
+},
+{
+"name": "M2Baffle10",
+"z": 5.86335,
+"inner": 2.04425,
+"outer": 2.05425
+},
+{
+"name": "M2Baffle11",
+"z": 5.812215,
+"inner": 2.078675,
+"outer": 2.088675
+},
+{
+"name": "M2Baffle12",
+"z": 5.76108,
+"inner": 2.1131,
+"outer": 2.1231
+},
+{
+"name": "M2Baffle13",
+"z": 5.709945,
+"inner": 2.147525,
+"outer": 2.157525
+},
+{
+"name": "M2Baffle14",
+"z": 5.65881,
+"inner": 2.18195,
+"outer": 2.19195
+},
+{
+"name": "M2Baffle15",
+"z": 5.607675,
+"inner": 2.216375,
+"outer": 2.226375
+},
+{
+"name": "M2Baffle16",
+"z": 5.55654,
+"inner": 2.2508,
+"outer": 2.2608
+},
+{
+"name": "M2Baffle17",
+"z": 5.505405,
+"inner": 2.285225,
+"outer": 2.295225
+},
+{
+"name": "M2Baffle18",
+"z": 5.45427,
+"inner": 2.31965,
+"outer": 2.32965
+},
+{
+"name": "M2Baffle19",
+"z": 5.403135,
+"inner": 2.354075,
+"outer": 2.364075
+},
+{
+"name": "M2Baffle20",
+"z": 5.352,
+"inner": 2.3885,
+"outer": 2.3985
+},
+{
+"name": "Center",
+"z": 2.878,
+"inner": 4.301,
+"outer": 10.0
+},
+{
+"name": "M1CaBaffle",
+"z": 0.4394,
+"inner": 4.18,
+"outer": 4.675
+},
+{
+"name": "M1CaBaffle2",
+"z": 0.4394,
+"inner": 4.185,
+"outer": 4.675
+}
+]

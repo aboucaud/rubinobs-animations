@@ -1,0 +1,32 @@
+html, body { margin: 0; height: 100%; overflow: hidden; background: #05070d; color: #e8ecf2;
+  font: 13px/1.4 "Inter", system-ui, -apple-system, sans-serif; }
+#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+header { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 14px; pointer-events: none; }
+header h1 { margin: 0; font-size: 15px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
+header p { margin: 2px 0 0; font-size: 11px; opacity: .6; }
+#info { position: fixed; left: 14px; top: calc(max(12px, env(safe-area-inset-top)) + 44px); max-width: 330px;
+  background: rgba(8,12,22,.72); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; font-size: 12px; }
+#info .band { font-size: 22px; font-weight: 700; color: var(--c); display: flex; align-items: baseline; gap: 8px; }
+#info .band span { font-size: 11px; font-weight: 400; color: #c9d1dc; }
+#info .k { opacity: .65; font-size: 11px; }
+#insetWrap { position: fixed; left: 14px; bottom: max(14px, env(safe-area-inset-bottom)); }
+#inset { width: 170px; height: 170px; display: block; cursor: crosshair; background: rgba(8,12,22,.72);
+  border-radius: 10px; border: 1px solid rgba(255,255,255,.08); }
+#insetWrap div { font-size: 10px; opacity: .6; margin-top: 4px; max-width: 170px; }
+#labels { position: fixed; inset: 0; pointer-events: none; }
+.label { position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; white-space: nowrap;
+  font: 600 11px/1 system-ui, sans-serif; color: #fff; background: rgba(10,16,30,.72);
+  border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 4px 8px; margin: -10px 0 0 8px; }
+.label::before { content: ""; position: absolute; left: -9px; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+#tip { position: fixed; right: 14px; bottom: max(14px, env(safe-area-inset-bottom)); max-width: 320px; display: none;
+  background: rgba(8,12,22,.9); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 10px 12px; }
+#tip.show { display: block; }
+#tip p { margin: 6px 0 0; opacity: .85; }
+.lil-gui.root { position: fixed; top: max(10px, env(safe-area-inset-top)); right: 10px; }
+@media (max-width: 720px) {
+  #info { max-width: 62vw; font-size: 11px; padding: 8px 10px; }
+  #info .band { font-size: 18px; }
+  #inset { width: 130px; height: 130px; }
+  #insetWrap div { max-width: 130px; }
+}
