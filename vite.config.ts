@@ -12,6 +12,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         telescope: resolve(__dirname, 'telescope/index.html'),
         camera: resolve(__dirname, 'camera/index.html'),
+        observatory: resolve(__dirname, 'observatory/index.html'),
       },
     },
   },

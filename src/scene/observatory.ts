@@ -1,0 +1,575 @@
+// Summit facility on Cerro Pachón: terrain, fixed lower enclosure, rotating dome (EIE), service
+// building and the Auxiliary Telescope. Proportions from published numbers (30 m dome, 11 m slit,
+// top of dome ≈ 38–40 m) and Alexandre's photos (reference only). Everything here is schematic.
+import * as THREE from 'three';
+import { PALETTE } from './textures';
+
+export const SITE = {
+  drumR: 15, // 30 m lower enclosure
+  drumH: 14, // fixed drum height above the summit platform
+  azFloor: 16, // top of the 16 m telescope pier
+  domeH: 25, // rotating part height above the drum (top ≈ 39 m)
+  slitHalf: 5.5, // 11 m clear slit
+  frontZ: 11, // front face of the dome box
+  chinZ: 14.5, // front of the light/wind screen housing
+  chinTop: 10,
+  slopeLow: 12.5, // height of the slope's lower edge (dome-local)
+  roofBreak: -4, // z where the sloped roof meets the flat roof
+  slitBack: -7.5, // slit continues over the flat roof to here
+  halfW: 15,
+  chamfer: 4,
+};
+
+/** a dome-wide cut plane (used for the "inside" views); only dome/drum/building materials use it */
+export const domeCut = new THREE.Plane(new THREE.Vector3(0, 1, 0), 1e6);
+
+// ------------------------------------------------------------------ textures
+function tex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void, srgb = false) {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  draw(c.getContext('2d')!);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 8;
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+// corrugated cladding: vertical ribs every 0.2 m (texture spans 1 m)
+const corrBump = tex(64, 4, (g) => {
+  for (let x = 0; x < 64; x++) {
+    const v = 128 + 110 * Math.sin((x / 64) * Math.PI * 2 * 5);
+    g.fillStyle = `rgb(${v},${v},${v})`;
+    g.fillRect(x, 0, 1, 4);
+  }
+});
+// panel seams every 3 m for the cladding colour map (texture spans 3 m × 3 m)
+const claddingMap = tex(
+  192,
+  192,
+  (g) => {
+    g.fillStyle = PALETTE.domeCladding;
+    g.fillRect(0, 0, 192, 192);
+    for (let i = 0; i < 400; i++) {
+      g.fillStyle = `rgba(${Math.random() < 0.5 ? '255,255,255' : '60,55,50'},0.03)`;
+      g.fillRect(Math.random() * 192, Math.random() * 192, 20, 2);
+    }
+    g.fillStyle = 'rgba(40,40,40,0.35)';
+    g.fillRect(0, 0, 192, 1.5);
+    g.fillRect(0, 0, 1.5, 192);
+  },
+  true,
+);
+claddingMap.repeat.set(1 / 3, 1 / 3);
+// black interior louvers (horizontal blades every 0.5 m)
+const louverMap = tex(
+  8,
+  64,
+  (g) => {
+    for (let y = 0; y < 64; y++) {
+      const v = 10 + 26 * Math.max(0, Math.sin((y / 64) * Math.PI * 2 * 2));
+      g.fillStyle = `rgb(${v},${v},${v + 2})`;
+      g.fillRect(0, y, 8, 1);
+    }
+  },
+  true,
+);
+
+const clip = [domeCut];
+export const OBS_MAT = {
+  cladding: new THREE.MeshStandardMaterial({ color: 0xffffff, map: claddingMap, bumpMap: corrBump, bumpScale: 0.6, metalness: 0.4, roughness: 0.5, clippingPlanes: clip, side: THREE.DoubleSide }),
+  louvers: new THREE.MeshStandardMaterial({ color: 0xffffff, map: louverMap, metalness: 0.2, roughness: 0.85, clippingPlanes: clip, side: THREE.DoubleSide }),
+  doors: new THREE.MeshStandardMaterial({ color: 0x4a4d52, bumpMap: corrBump, bumpScale: 1, metalness: 0.5, roughness: 0.55, clippingPlanes: clip, side: THREE.DoubleSide }),
+  whiteNoClip: new THREE.MeshStandardMaterial({ color: PALETTE.buildingWhite, metalness: 0.05, roughness: 0.7, side: THREE.DoubleSide }),
+  white: new THREE.MeshStandardMaterial({ color: PALETTE.buildingWhite, metalness: 0.05, roughness: 0.7, clippingPlanes: clip, side: THREE.DoubleSide }),
+  whiteRoof: new THREE.MeshStandardMaterial({ color: 0xdedad6, metalness: 0.3, roughness: 0.55, side: THREE.DoubleSide }),
+  ringBand: new THREE.MeshStandardMaterial({ color: 0x6b4c3c, metalness: 0.4, roughness: 0.6, clippingPlanes: clip }),
+  teal: new THREE.MeshStandardMaterial({ color: PALETTE.rubinTeal, metalness: 0.25, roughness: 0.5, clippingPlanes: clip }),
+  lws: new THREE.MeshStandardMaterial({ color: 0x2b2d31, metalness: 0.4, roughness: 0.7, clippingPlanes: clip, side: THREE.DoubleSide }),
+  slat: new THREE.MeshStandardMaterial({ color: 0xa9a49d, metalness: 0.7, roughness: 0.45, clippingPlanes: clip, side: THREE.DoubleSide }),
+  ventBack: new THREE.MeshStandardMaterial({ color: 0x0b0c0d, roughness: 1, clippingPlanes: clip }),
+  concrete: new THREE.MeshStandardMaterial({ color: 0x8f8d8a, roughness: 0.95, clippingPlanes: clip, side: THREE.DoubleSide }),
+  floor: new THREE.MeshStandardMaterial({ color: 0x3a3d42, roughness: 0.8, clippingPlanes: clip, side: THREE.DoubleSide }),
+};
+
+// ------------------------------------------------------------------ helpers
+/** Flat polygon panel. pts are 2D (u, v) in metres, mapped to 3D with origin + u·U + v·V. UVs in metres. */
+function panel(pts: [number, number][], origin: THREE.Vector3, U: THREE.Vector3, V: THREE.Vector3, mat: THREE.Material) {
+  const s = new THREE.Shape(pts.map(([u, v]) => new THREE.Vector2(u, v)));
+  const g = new THREE.ShapeGeometry(s);
+  const pos = g.attributes.position;
+  const p = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    const u = pos.getX(i);
+    const v = pos.getY(i);
+    p.copy(origin).addScaledVector(U, u).addScaledVector(V, v);
+    pos.setXYZ(i, p.x, p.y, p.z);
+  }
+  g.computeVertexNormals();
+  return new THREE.Mesh(g, mat);
+}
+const X = new THREE.Vector3(1, 0, 0);
+const Y = new THREE.Vector3(0, 1, 0);
+const Z = new THREE.Vector3(0, 0, 1);
+
+// ------------------------------------------------------------------ terrain
+function hash(x: number, y: number) {
+  const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+  return s - Math.floor(s);
+}
+function vnoise(x: number, y: number) {
+  const xi = Math.floor(x);
+  const yi = Math.floor(y);
+  const xf = x - xi;
+  const yf = y - yi;
+  const u = xf * xf * (3 - 2 * xf);
+  const v = yf * yf * (3 - 2 * yf);
+  const a = hash(xi, yi);
+  const b = hash(xi + 1, yi);
+  const c = hash(xi, yi + 1);
+  const d = hash(xi + 1, yi + 1);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+function fbm(x: number, y: number, oct = 6) {
+  let s = 0;
+  let a = 0.5;
+  let f = 1;
+  for (let i = 0; i < oct; i++) {
+    s += a * vnoise(x * f, y * f);
+    f *= 2.03;
+    a *= 0.5;
+  }
+  return s;
+}
+export const AUXTEL_POS = new THREE.Vector2(-95, 70);
+/** Terrain height (m) relative to the summit platform at y = 0. */
+export function terrainHeight(x: number, z: number) {
+  const r = Math.hypot(x, z);
+  // regional relief: the summit ridge drops away; distant peaks rise again
+  let h = -Math.pow(Math.max(0, r - 40), 1.08) * 0.42;
+  h += (fbm(x / 400, z / 400, 5) - 0.5) * 140 * Math.min(1, r / 500);
+  h += (fbm(x / 60, z / 60, 4) - 0.5) * 14 * Math.min(1, Math.max(0, r - 45) / 40);
+  h += Math.max(0, r - 900) * 0.25 * fbm(x / 900 + 3, z / 900, 3); // far ranges
+  // calibration hill for AuxTel
+  const da = Math.hypot(x - AUXTEL_POS.x, z - AUXTEL_POS.y);
+  h = Math.max(h, 2 - Math.max(0, da - 9) * 0.5);
+  // summit platform (r < 45 m) + the service-building pad stepping down to the saddle (+x)
+  const padY = (xx: number) => -Math.max(0, Math.min(125, Math.max(10, xx)) - 30) * 0.11;
+  const dPlat = Math.max(0, r - 45);
+  const dPad = Math.hypot(Math.max(10 - x, 0, x - 125), Math.max(Math.abs(z) - 32, 0));
+  const target = dPad < dPlat ? padY(x) : 0;
+  const d = Math.min(dPlat, dPad);
+  const k = Math.min(1, d / 30);
+  const ks = k * k * (3 - 2 * k);
+  return target * (1 - ks) + h * ks;
+}
+
+function buildTerrain() {
+  const size = 3200;
+  const seg = 320;
+  const g = new THREE.PlaneGeometry(size, size, seg, seg);
+  g.rotateX(-Math.PI / 2);
+  const pos = g.attributes.position;
+  const col: number[] = [];
+  const cA = new THREE.Color('#9a7b64'); // dusty brown
+  const cB = new THREE.Color('#6f6460'); // grey rock
+  const cC = new THREE.Color('#b8a48d'); // platform gravel
+  const c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    // denser sampling near the summit: warp radius
+    let x = pos.getX(i);
+    let z = pos.getZ(i);
+    const r = Math.hypot(x, z) / (size / 2);
+    const w = Math.pow(r, 1.5) / Math.max(r, 1e-6);
+    x *= w;
+    z *= w;
+    const y = terrainHeight(x, z);
+    pos.setXYZ(i, x, y, z);
+    const n = fbm(x / 30, z / 30, 3);
+    c.copy(cA).lerp(cB, Math.min(1, Math.max(0, n * 1.4 - 0.2)));
+    if (Math.hypot(x, z) < 46 || (x > 10 && x < 125 && Math.abs(z) < 33)) c.lerp(cC, 0.7);
+    col.push(c.r, c.g, c.b);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.97, metalness: 0 }));
+  m.receiveShadow = true;
+  return m;
+}
+
+// ------------------------------------------------------------------ rotating dome
+export interface Dome {
+  group: THREE.Group; // rotates in azimuth; slit faces local +z
+  setOpen(t: number): void; // 0 closed .. 1 open (doors)
+  setVents(t: number): void;
+  setLWS(elevationDeg: number, open: number): void;
+  labels: { title: string; text: string; pos: THREE.Vector3 }[];
+}
+
+function buildDome(): Dome {
+  const S = SITE;
+  const g = new THREE.Group();
+  const W = S.halfW;
+  const H = S.domeH;
+  const c = S.chamfer;
+  const slopeY = (z: number) => S.slopeLow + ((S.frontZ - z) * (H - S.slopeLow)) / (S.frontZ - S.roofBreak);
+  const inset = 0.45;
+
+  const shell = (mat: THREE.Material, d: number) => {
+    const o = new THREE.Group();
+    // side walls (x = ±W)
+    for (const sg of [-1, 1]) {
+      const prof: [number, number][] = [
+        [-(W - c), 0],
+        [S.chinZ, 0],
+        [S.chinZ, S.chinTop],
+        [S.frontZ, S.chinTop],
+        [S.frontZ, S.slopeLow],
+        [S.roofBreak, H],
+        [-(W - c), H],
+      ];
+      o.add(panel(prof.map(([z, y]) => [z, y] as [number, number]), new THREE.Vector3(sg * (W - d), 0, 0), Z, Y, mat));
+    }
+    // back wall + chamfers
+    o.add(panel([[-(W - c), 0], [W - c, 0], [W - c, H], [-(W - c), H]], new THREE.Vector3(0, 0, -W + d), X, Y, mat));
+    for (const sg of [-1, 1]) {
+      const a = new THREE.Vector3(sg * (W - d), 0, -(W - c));
+      const b = new THREE.Vector3(sg * (W - c), 0, -W + d);
+      const U = b.clone().sub(a);
+      const L = U.length();
+      U.normalize();
+      o.add(panel([[0, 0], [L, 0], [L, H], [0, H]], a, U, Y, mat));
+    }
+    // front face strip above the chin, either side of the slit
+    for (const sg of [-1, 1]) {
+      const x0 = sg * S.slitHalf;
+      const x1 = sg * (W - d);
+      o.add(panel([[Math.min(x0, x1), S.chinTop], [Math.max(x0, x1), S.chinTop], [Math.max(x0, x1), S.slopeLow], [Math.min(x0, x1), S.slopeLow]], new THREE.Vector3(0, 0, S.frontZ - d), X, Y, mat));
+    }
+    // chin (light/wind screen housing): front, sides; top either side of the slit
+    const cw = W - 2;
+    o.add(panel([[-cw, 0], [cw, 0], [cw, S.chinTop], [-cw, S.chinTop]], new THREE.Vector3(0, 0, S.chinZ - d), X, Y, mat));
+    for (const sg of [-1, 1]) {
+      const x0 = sg * S.slitHalf;
+      const x1 = sg * cw;
+      o.add(panel([[Math.min(x0, x1), S.frontZ], [Math.max(x0, x1), S.frontZ], [Math.max(x0, x1), S.chinZ], [Math.min(x0, x1), S.chinZ]], new THREE.Vector3(0, S.chinTop - d, 0), X, Z, mat));
+    }
+    // sloped roof either side of the slit
+    const lowP = new THREE.Vector3(0, S.slopeLow - d, S.frontZ - d);
+    const highP = new THREE.Vector3(0, H - d, S.roofBreak - d);
+    const Uup = highP.clone().sub(lowP);
+    const Ls = Uup.length();
+    Uup.normalize();
+    for (const sg of [-1, 1]) {
+      const x0 = sg * S.slitHalf;
+      const x1 = sg * (W - d);
+      o.add(panel([[Math.min(x0, x1), 0], [Math.max(x0, x1), 0], [Math.max(x0, x1), Ls], [Math.min(x0, x1), Ls]], lowP, X, Uup, mat));
+    }
+    // flat roof with the slit notch
+    const sh = S.slitHalf;
+    o.add(
+      panel(
+        [
+          [-(W - d), S.roofBreak],
+          [-sh, S.roofBreak],
+          [-sh, S.slitBack],
+          [sh, S.slitBack],
+          [sh, S.roofBreak],
+          [W - d, S.roofBreak],
+          [W - d, -(W - c)],
+          [W - c, -(W - d)],
+          [-(W - c), -(W - d)],
+          [-(W - d), -(W - c)],
+        ],
+        new THREE.Vector3(0, H - d, 0),
+        X,
+        Z,
+        mat,
+      ),
+    );
+    return o;
+  };
+  g.add(shell(OBS_MAT.cladding, 0));
+  g.add(shell(OBS_MAT.louvers, inset)); // black louvered inner wall
+  void slopeY;
+
+  // slit jambs: teal steel frames along the opening (seen through the open slit)
+  for (const sg of [-1, 1]) {
+    const x = sg * (S.slitHalf + 0.25);
+    const pts = [
+      new THREE.Vector3(x, S.chinTop, S.frontZ - 0.2),
+      new THREE.Vector3(x, S.slopeLow, S.frontZ - 0.2),
+      new THREE.Vector3(x, H - 0.2, S.roofBreak - 0.2),
+      new THREE.Vector3(x, H - 0.2, S.slitBack - 0.2),
+    ];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i];
+      const b = pts[i + 1];
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.5, a.distanceTo(b), 0.9), OBS_MAT.teal);
+      m.position.copy(a).add(b).multiplyScalar(0.5);
+      m.quaternion.setFromUnitVectors(Y, b.clone().sub(a).normalize());
+      g.add(m);
+    }
+  }
+  // arched teal ribs across the slit (inside), like the steel seen through the opening
+  for (const zr of [8, 2, -4]) {
+    const y = zr > S.roofBreak ? slopeY(zr) - 0.8 : H - 0.8;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(2 * W - 1.2, 0.4, 0.4), OBS_MAT.teal);
+    m.position.set(0, y, zr - 0.6);
+    g.add(m);
+  }
+
+  // doors: two dark panels covering the slit on the slope + flat roof; slide sideways to open
+  const doors: THREE.Group[] = [];
+  const lowP = new THREE.Vector3(0, S.slopeLow + 0.15, S.frontZ + 0.15);
+  const highP = new THREE.Vector3(0, H + 0.15, S.roofBreak + 0.15);
+  const Uup = highP.clone().sub(lowP);
+  const Ls = Uup.length();
+  Uup.normalize();
+  for (const sg of [-1, 1]) {
+    const d = new THREE.Group();
+    const x0 = 0;
+    const x1 = sg * (S.slitHalf + 0.6);
+    d.add(panel([[Math.min(x0, x1), 0], [Math.max(x0, x1), 0], [Math.max(x0, x1), Ls], [Math.min(x0, x1), Ls]], lowP, X, Uup, OBS_MAT.doors));
+    d.add(panel([[Math.min(x0, x1), S.roofBreak + 0.15], [Math.max(x0, x1), S.roofBreak + 0.15], [Math.max(x0, x1), S.slitBack - 0.6], [Math.min(x0, x1), S.slitBack - 0.6]], new THREE.Vector3(0, H + 0.15, 0), X, Z, OBS_MAT.doors));
+    d.userData.sg = sg;
+    g.add(d);
+    doors.push(d);
+  }
+
+  // louvered vents (34): slats rotate open
+  const slats: THREE.Mesh[] = [];
+  const slatGeo = new THREE.BoxGeometry(3.6, 0.42, 0.05);
+  const addVent = (center: THREE.Vector3, along: THREE.Vector3, normal: THREE.Vector3) => {
+    const v = new THREE.Group();
+    v.position.copy(center).addScaledVector(normal, 0.08);
+    v.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(along, Y, normal));
+    const back = new THREE.Mesh(new THREE.PlaneGeometry(3.8, 2.6), OBS_MAT.ventBack);
+    back.position.z = -0.03;
+    v.add(back);
+    for (let k = 0; k < 6; k++) {
+      const s = new THREE.Mesh(slatGeo, OBS_MAT.slat);
+      s.position.y = -1.05 + k * 0.42;
+      v.add(s);
+      slats.push(s);
+    }
+    g.add(v);
+  };
+  let n = 0;
+  for (const sg of [-1, 1])
+    for (const z of [-7.5, -2.5, 2.5, 7.5])
+      for (const y of [4, 9, 14, 19]) {
+        if (y + 1.4 > slopeY(Math.min(S.frontZ, z + 2)) - 0.5 && z > S.roofBreak) continue;
+        if (n >= 26) continue;
+        addVent(new THREE.Vector3(sg * W, y, z), new THREE.Vector3(0, 0, -sg), new THREE.Vector3(sg, 0, 0));
+        n++;
+      }
+  for (const x of [-7, -2.4, 2.4, 7])
+    for (const y of [7, 16]) {
+      if (n >= 34) continue;
+      addVent(new THREE.Vector3(x, y, -W), new THREE.Vector3(-1, 0, 0), new THREE.Vector3(0, 0, -1));
+      n++;
+    }
+
+  // teal brackets sticking out of the sides (platform/crane supports, photos)
+  for (const sg of [-1, 1])
+    for (const [y, z] of [[8, -9], [13, 9.5], [17, -12]]) {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(3, 0.35, 1.2), OBS_MAT.teal);
+      b.position.set(sg * (W + 1.5), y, z);
+      g.add(b);
+    }
+  // roof railing (teal)
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(2 * W - 2, 0.08, 0.08), OBS_MAT.teal);
+  rail.position.set(0, H + 1.1, -W + 1);
+  g.add(rail);
+
+  // skirt (rotates with the dome): corrugated band overhanging the drum
+  const skirt = new THREE.Mesh(new THREE.CylinderGeometry(S.drumR + 0.6, S.drumR + 0.6, 2.2, 128, 1, true), OBS_MAT.cladding);
+  skirt.position.y = -0.9;
+  g.add(skirt);
+  const base = new THREE.Mesh(new THREE.RingGeometry(S.drumR - 0.5, S.drumR + 0.6, 128), OBS_MAT.cladding);
+  base.rotation.x = -Math.PI / 2;
+  base.position.y = 0.01;
+  g.add(base);
+
+  // light/wind screen: dark panel filling the slit from its bottom up to the beam
+  const lws = new THREE.Mesh(new THREE.BufferGeometry(), OBS_MAT.lws);
+  g.add(lws);
+  const slitPath = [
+    new THREE.Vector2(S.frontZ, S.chinTop),
+    new THREE.Vector2(S.frontZ, S.slopeLow),
+    new THREE.Vector2(S.roofBreak, H),
+    new THREE.Vector2(S.slitBack, H),
+  ].map((p) => p.clone());
+  const segLen = slitPath.slice(1).map((p, i) => p.distanceTo(slitPath[i]));
+  const totalLen = segLen.reduce((a, b) => a + b, 0);
+  const pointAt = (s: number) => {
+    let d = s;
+    for (let i = 0; i < segLen.length; i++) {
+      if (d <= segLen[i]) return slitPath[i].clone().lerp(slitPath[i + 1], d / segLen[i]);
+      d -= segLen[i];
+    }
+    return slitPath[slitPath.length - 1].clone();
+  };
+  /** arc-length position where a ray from the axis point hits the slit path */
+  const hitS = (oz: number, oy: number, dz: number, dy: number) => {
+    let acc = 0;
+    for (let i = 0; i < segLen.length; i++) {
+      const a = slitPath[i];
+      const b = slitPath[i + 1];
+      // solve o + t d = a + u (b - a)
+      const ex = b.x - a.x;
+      const ey = b.y - a.y;
+      const det = dz * -ey - dy * -ex;
+      if (Math.abs(det) > 1e-9) {
+        const rx = a.x - oz;
+        const ry = a.y - oy;
+        const t = (rx * -ey - ry * -ex) / det;
+        const u = (dz * ry - dy * rx) / det;
+        if (t > 0 && u >= 0 && u <= 1) return acc + u * segLen[i];
+      }
+      acc += segLen[i];
+    }
+    return totalLen;
+  };
+
+  const labels = [
+    { title: 'Rotating dome', text: '30 m wide, built by EIE (Italy). It turns independently of the telescope at up to 1.5°/s and is clad in corrugated aluminium.', pos: new THREE.Vector3(-W, 14, 0) },
+    { title: 'Slit', text: 'An 11 m wide opening running up the front and over the top. Two roof doors slide sideways to open it.', pos: new THREE.Vector3(0, H + 0.5, -2) },
+    { title: 'Light/wind screen', text: 'A moving screen inside the slit that leaves just the opening the beam needs (11 × 10 m), blocking wind and stray light.', pos: new THREE.Vector3(0, S.chinTop + 0.5, S.chinZ) },
+    { title: 'Vents', text: '34 louvered vents open in under 30 s to flush warm air out of the dome, so the air in front of the mirror stays at night-time temperature.', pos: new THREE.Vector3(W + 0.2, 12, -2.5) },
+  ];
+
+  return {
+    group: g,
+    labels,
+    setOpen(t: number) {
+      for (const d of doors) d.position.x = d.userData.sg * t * (S.slitHalf + 0.9);
+    },
+    setVents(t: number) {
+      for (const s of slats) s.rotation.x = t * 1.15;
+    },
+    setLWS(el: number, open: number) {
+      if (open < 0.01) {
+        lws.visible = false;
+        return;
+      }
+      lws.visible = true;
+      const e = (el * Math.PI) / 180;
+      const axisY = SITE.azFloor + 7 - SITE.drumH; // elevation axis height in dome coordinates
+      // beam bottom edge: 5 m below the optical axis, measured perpendicular to it
+      const oz = -Math.sin(e) * -5;
+      const oy = axisY + Math.cos(e) * -5;
+      const sTop = Math.max(0, hitS(oz, oy, Math.cos(e), Math.sin(e)) - 0.6) * open;
+      const pos: number[] = [];
+      const idx: number[] = [];
+      const N = 40;
+      for (let i = 0; i <= N; i++) {
+        const p = pointAt((sTop * i) / N);
+        // sit just inside the cladding
+        pos.push(-S.slitHalf, p.y - 0.25, p.x - 0.25, S.slitHalf, p.y - 0.25, p.x - 0.25);
+        if (i < N) idx.push(2 * i, 2 * i + 1, 2 * i + 2, 2 * i + 1, 2 * i + 3, 2 * i + 2);
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.setIndex(idx);
+      geo.computeVertexNormals();
+      lws.geometry.dispose();
+      lws.geometry = geo;
+    },
+  };
+}
+
+// ------------------------------------------------------------------ fixed parts
+function buildDrum() {
+  const S = SITE;
+  const g = new THREE.Group();
+  const drum = new THREE.Mesh(new THREE.CylinderGeometry(S.drumR, S.drumR, S.drumH, 128, 1, true), OBS_MAT.white);
+  drum.position.y = S.drumH / 2;
+  g.add(drum);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(S.drumR + 0.12, S.drumR + 0.12, 0.9, 128, 1, true), OBS_MAT.ringBand);
+  band.position.y = S.drumH - 0.45;
+  g.add(band);
+  // telescope pier (16 m hollow concrete cylinder) and azimuth floor
+  const pier = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, S.azFloor, 96, 1, true), OBS_MAT.concrete);
+  pier.position.y = S.azFloor / 2;
+  g.add(pier);
+  const floor = new THREE.Mesh(new THREE.RingGeometry(8.6, S.drumR, 96), OBS_MAT.floor);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = S.azFloor - 0.6;
+  g.add(floor);
+  // entrance and stair tower (teal stairs seen on the aerial photo)
+  const door = new THREE.Mesh(new THREE.BoxGeometry(5, 4.5, 0.3), new THREE.MeshStandardMaterial({ color: 0x2a2c30, roughness: 0.6 }));
+  door.position.set(-S.drumR * Math.sin(0.5), 2.25, S.drumR * Math.cos(0.5));
+  door.rotation.y = -0.5;
+  g.add(door);
+  return g;
+}
+
+/** Hip-roofed tier: rectangle footprint with chamfered eaves. Extruded along x. */
+function tier(x0: number, x1: number, halfZ: number, y0: number, h: number, eave: number, rise: number, mat: THREE.Material, roofMat: THREE.Material) {
+  const g = new THREE.Group();
+  const s = new THREE.Shape();
+  s.moveTo(-halfZ, 0);
+  s.lineTo(halfZ, 0);
+  s.lineTo(halfZ, h);
+  s.lineTo(halfZ - eave, h + rise);
+  s.lineTo(-halfZ + eave, h + rise);
+  s.lineTo(-halfZ, h);
+  s.closePath();
+  const geo = new THREE.ExtrudeGeometry(s, { depth: x1 - x0, bevelEnabled: false });
+  geo.rotateY(Math.PI / 2);
+  geo.translate(x0, y0, 0);
+  // two materials: walls white, but keep it simple with one mesh + a roof overlay
+  g.add(new THREE.Mesh(geo, mat));
+  const roof = panel([[x0, -halfZ + eave], [x1, -halfZ + eave], [x1, halfZ - eave], [x0, halfZ - eave]], new THREE.Vector3(0, y0 + h + rise + 0.02, 0), X, Z, roofMat);
+  g.add(roof);
+  return g;
+}
+
+function buildServiceBuilding() {
+  const g = new THREE.Group();
+  const W = OBS_MAT.whiteNoClip;
+  const R = OBS_MAT.whiteRoof;
+  // block next to the dome (platform lift shaft & clean room access)
+  g.add(tier(12, 27, 9, 0, 22, 2.2, 2.5, W, R));
+  // long service & operations building stepping down to the saddle (+x)
+  g.add(tier(27, 62, 15, -1.5, 12, 3, 3, W, R));
+  g.add(tier(27, 62, 11, 13.5, 4.5, 2.2, 2, W, R));
+  g.add(tier(62, 104, 15, -6, 11, 3, 3, W, R));
+  g.add(tier(62, 104, 11, 8, 4, 2.2, 2, W, R));
+  // grey basement level visible at the low end
+  const base = new THREE.Mesh(new THREE.BoxGeometry(30, 6, 26), new THREE.MeshStandardMaterial({ color: 0x8e9195, roughness: 0.8 }));
+  base.position.set(92, -9, 0);
+  g.add(base);
+  return g;
+}
+
+function buildAuxTel() {
+  const g = new THREE.Group();
+  const y0 = terrainHeight(AUXTEL_POS.x, AUXTEL_POS.y);
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 4.6, 4, 48), OBS_MAT.whiteNoClip);
+  wall.position.y = 2;
+  g.add(wall);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(4.7, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xe6e6e6, metalness: 0.3, roughness: 0.4 }));
+  dome.position.y = 4;
+  g.add(dome);
+  g.position.set(AUXTEL_POS.x, y0, AUXTEL_POS.y);
+  return g;
+}
+
+export function buildObservatory() {
+  const root = new THREE.Group();
+  const terrain = buildTerrain();
+  root.add(terrain);
+  const drum = buildDrum();
+  root.add(drum);
+  const dome = buildDome();
+  dome.group.position.y = SITE.drumH;
+  root.add(dome.group);
+  const building = buildServiceBuilding();
+  root.add(building);
+  const auxtel = buildAuxTel();
+  root.add(auxtel);
+  return { root, dome, drum, building, auxtel, terrain };
+}
