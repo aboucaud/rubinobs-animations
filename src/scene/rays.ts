@@ -7,12 +7,18 @@ import { ocsv } from './util';
 const vert = /* glsl */ `
   attribute float aDist;
   attribute float aOk;
+  attribute float aGate;
+  attribute float aShX;
   varying float vDist;
   varying float vOk;
+  varying float vGate;
+  varying float vShX;
   #include <clipping_planes_pars_vertex>
   void main() {
     vDist = aDist;
     vOk = aOk;
+    vGate = aGate;
+    vShX = aShX;
     vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mvPosition;
     #include <clipping_planes_vertex>
@@ -27,11 +33,16 @@ const frag = /* glsl */ `
   uniform float uBase;     // brightness of the static path
   uniform float uIntensity;
   uniform float uContinuous;
+  uniform float uEdgeA;   // shutter stack A covers x > uEdgeA
+  uniform float uEdgeB;   // shutter stack B covers x < uEdgeB
   varying float vDist;
   varying float vOk;
+  varying float vGate;
+  varying float vShX;
   #include <clipping_planes_pars_fragment>
   void main() {
     #include <clipping_planes_fragment>
+    if (vGate > 0.5 && (vShX > uEdgeA || vShX < uEdgeB)) discard;
     float behind = uHead - vDist;            // how far behind the head this point is
     if (behind < 0.0 && uContinuous < 0.5) discard;
     float ph = uContinuous > 0.5 ? mod(behind, uPeriod) : behind;
@@ -63,6 +74,8 @@ export class RayBundle {
         uBase: { value: 0.1 },
         uIntensity: { value: 3.0 },
         uContinuous: { value: 1 },
+        uEdgeA: { value: 100 },
+        uEdgeB: { value: -100 },
       },
       transparent: true,
       blending: THREE.AdditiveBlending,
@@ -75,22 +88,50 @@ export class RayBundle {
     this.object.renderOrder = 10;
   }
 
-  set(results: TraceResult[]) {
+  /** gateZ: OCS z of the shutter plane; vertices beyond it are gated by the shutter edges. */
+  set(results: TraceResult[], gateZ?: number) {
     const pos: number[] = [];
     const dist: number[] = [];
     const ok: number[] = [];
+    const gate: number[] = [];
+    const shx: number[] = [];
     let maxD = 0;
     let sumOk = 0;
     let nOk = 0;
     for (const r of results) {
       let d = 0;
-      for (let i = 0; i < r.points.length - 1; i++) {
-        const a = ocsv(r.points[i]);
-        const b = ocsv(r.points[i + 1]);
+      // split the path at the shutter plane
+      let pts = r.points;
+      let xg = 0;
+      let gIdx = Infinity;
+      if (gateZ !== undefined) {
+        const out = [];
+        for (let i = 0; i < pts.length; i++) {
+          if (i > 0 && gIdx === Infinity && pts[i - 1][2] < gateZ && pts[i][2] >= gateZ) {
+            const t = (gateZ - pts[i - 1][2]) / (pts[i][2] - pts[i - 1][2]);
+            const q: [number, number, number] = [
+              pts[i - 1][0] + t * (pts[i][0] - pts[i - 1][0]),
+              pts[i - 1][1] + t * (pts[i][1] - pts[i - 1][1]),
+              gateZ,
+            ];
+            xg = q[0];
+            out.push(q);
+            gIdx = out.length - 1;
+          }
+          out.push(pts[i]);
+        }
+        pts = out;
+      }
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = ocsv(pts[i]);
+        const b = ocsv(pts[i + 1]);
         const seg = a.distanceTo(b);
         pos.push(a.x, a.y, a.z, b.x, b.y, b.z);
         dist.push(d, d + seg);
         ok.push(r.ok ? 1 : 0, r.ok ? 1 : 0);
+        const gg = i >= gIdx ? 1 : 0;
+        gate.push(gg, gg);
+        shx.push(xg, xg);
         d += seg;
       }
       maxD = Math.max(maxD, d);
@@ -103,6 +144,8 @@ export class RayBundle {
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setAttribute('aDist', new THREE.Float32BufferAttribute(dist, 1));
     g.setAttribute('aOk', new THREE.Float32BufferAttribute(ok, 1));
+    g.setAttribute('aGate', new THREE.Float32BufferAttribute(gate, 1));
+    g.setAttribute('aShX', new THREE.Float32BufferAttribute(shx, 1));
     this.object.geometry.dispose();
     this.object.geometry = g;
     this.maxDist = maxD;

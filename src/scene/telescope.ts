@@ -6,13 +6,14 @@ import baffles from '../data/baffles.json';
 import { Rubin, SPIDER } from '../optics/trace';
 import { MAT } from './materials';
 import { annulusMesh, beam, box, lathe, ocs, sagProfile, tube, cylinderBetween } from './util';
-import { buildFocalPlane } from './focalplane';
+import { buildLSSTCam } from './lsstcam';
 
 export interface Label {
   id: string;
   title: string;
   text: string;
   pos: THREE.Vector3; // in OTA frame
+  parent?: THREE.Object3D; // if set, pos is in this object's local frame
 }
 
 export interface Telescope {
@@ -26,7 +27,7 @@ export interface Telescope {
 const BF = baffles as { name: string; z: number; inner: number; outer: number }[];
 
 /** Lens/filter solid of revolution between two surfaces (front at lower z). */
-function lensSolid(front: (r: number) => number, back: (r: number) => number, rClear: number, rEdge: number, mat: THREE.Material) {
+export function lensSolid(front: (r: number) => number, back: (r: number) => number, rClear: number, rEdge: number, mat: THREE.Material) {
   const n = 48;
   const prof: [number, number][] = [];
   for (let i = 0; i <= n; i++) {
@@ -254,79 +255,18 @@ export function buildTelescope(rubin: Rubin): Telescope {
   L('m2baffle', 'M2 baffle', '21 black anodised vanes around M2 stop stray light that would otherwise reach the camera directly.', ocs(-2.2, -0.8, 5.7));
 
   // ------------------------------------------------------------------ LSSTCam
-  const cam = new THREE.Group();
-  cam.name = 'LSSTCam';
+  const camModel = buildLSSTCam(rubin);
+  const cam = camModel.group;
   const zL1 = S.L1_entrance.z0;
-  const zBody0 = 3.5019725882045593;
-  const rBody = 0.80469;
-  const zBodyTop = 5.45;
-  const zTrunkTop = zL1 + 3.73;
-  // L1 (Ø1.57 m physical, 1.55 m clear), L2, L3: real surfaces
-  const lenses = new THREE.Group();
-  lenses.add(lensSolid((r) => S.L1_entrance.zAt(r, 0), (r) => S.L1_exit.zAt(r, 0), 0.775, 0.785, MAT.silica));
-  lenses.add(lensSolid((r) => S.L2_entrance.zAt(r, 0), (r) => S.L2_exit.zAt(r, 0), 0.551, 0.56, MAT.silica));
-  lenses.add(lensSolid((r) => S.L3_entrance.zAt(r, 0), (r) => S.L3_exit.zAt(r, 0), 0.361, 0.361, MAT.silica));
-  cam.add(lenses);
-  groups.lenses = lenses;
-  // L1 cell ring + L1/L2 cone
-  cam.add(tube(0.785, rBody, zL1 - 0.03, zBody0 + 0.02, MAT.aluDark));
-  cam.add(lathe([[0.79, zBody0], [0.57, S.L2_entrance.z0 - 0.01], [0.585, S.L2_entrance.z0 + 0.05], [0.8, zBody0 + 0.06]], 96, MAT.aluDark));
-  // body skin
-  cam.add(tube(rBody - 0.015, rBody, zBody0, zBodyTop, MAT.alu));
-  cam.add(annulusMesh(0.56, rBody, S.L2_entrance.z0 + 0.08, MAT.aluDark, 0.03)); // L2 bulkhead
-  cam.add(annulusMesh(0.0, rBody, zBodyTop, MAT.aluDark, 0.05)); // back flange
-  // shutter frame (two 3-panel blade stacks retracted to ±x)
-  const zSh = S.Filter_exit.z0 + 0.025;
-  for (const sg of [-1, 1]) {
-    for (let k = 0; k < 3; k++) cam.add(box(sg * (0.45 + 0.012 * k), 0, zSh + 0.006 * k, 0.17, 0.8, 0.004, MAT.aluDark));
-  }
-  cam.add(annulusMesh(0.38, 0.62, zSh - 0.006, MAT.aluDark, 0.01));
-  // cryostat + focal plane
   const zDet = S.Detector.z0;
-  cam.add(tube(0.43, 0.46, S.L3_entrance.z0 - 0.01, 5.05, MAT.steel, 96)); // cryostat vessel
-  cam.add(annulusMesh(0.361, 0.46, S.L3_entrance.z0 + 0.03, MAT.steel, 0.06)); // L3 window flange
-  const fp = buildFocalPlane(zDet);
-  cam.add(fp);
-  groups.focalPlane = fp;
-  cam.add(annulusMesh(0, 0.42, zDet + 0.33, MAT.sic, 0.02)); // SiC grid plate
-  cam.add(annulusMesh(0, 0.42, zDet + 0.40, MAT.copper, 0.03)); // cryo plate
-  cam.add(annulusMesh(0, 0.42, zDet + 0.48, MAT.copper, 0.03)); // cold plate
-  // filter carousel: 5 sockets in a pentagon around the cryostat (one empty: its filter is in the beam)
-  const carousel = new THREE.Group();
-  const zC = 4.95;
-  carousel.add(tube(0.66, 0.7, zC - 0.42, zC - 0.38, MAT.aluDark));
-  carousel.add(tube(0.66, 0.7, zC + 0.38, zC + 0.42, MAT.aluDark));
-  for (let k = 1; k < 5; k++) {
-    const a = (k * 2 * Math.PI) / 5 + Math.PI / 2;
-    const f = new THREE.Mesh(new THREE.CylinderGeometry(0.375, 0.375, 0.02, 64), MAT.filterCoat);
-    // disc normal radial: rotate cylinder axis (Y) into radial direction
-    const radial = ocs(Math.cos(a), Math.sin(a), 0).normalize();
-    f.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), radial);
-    f.position.copy(ocs(0.53 * Math.cos(a), 0.53 * Math.sin(a), zC));
-    carousel.add(f);
-  }
-  cam.add(carousel);
-  groups.carousel = carousel;
-  // in-beam filter (meniscus, real surfaces) + its frame
-  const filter = new THREE.Group();
-  const buildFilter = (r: Rubin) => {
-    filter.clear();
-    const s = r.surfaces;
-    filter.add(lensSolid((x) => s.Filter_entrance.zAt(x, 0), (x) => s.Filter_exit.zAt(x, 0), 0.375, 0.375, MAT.filterCoat));
-    filter.add(tube(0.375, 0.395, s.Filter_entrance.z0 - 0.005, s.Filter_exit.z0 + 0.05, MAT.aluDark, 64));
-  };
-  buildFilter(rubin);
-  cam.add(filter);
-  groups.filter = filter;
-  // autochanger rails (APPROX)
-  for (const sg of [-1, 1]) cam.add(box(0, sg * 0.6, 4.6, 0.06, 0.06, 0.75, MAT.steel));
-  // utility trunk
-  cam.add(tube(0.56, 0.6, zBodyTop, zTrunkTop, MAT.alu, 64));
-  cam.add(annulusMesh(0, 0.6, zTrunkTop, MAT.aluDark, 0.05, 64));
-  // camera hexapod + rotator (to spindle)
-  cam.add(tube(0.62, 0.95, zTrunkTop - 0.25, zTrunkTop - 0.05, MAT.steel, 96));
+  const filter = camModel.parts.filters as THREE.Group;
+  const buildFilter = (r: Rubin) => camModel.instantBeam(r.band);
   ota.add(cam);
   groups.camera = cam;
+  groups.lenses = camModel.parts.l1l2;
+  groups.filter = camModel.parts.filters;
+  groups.carousel = camModel.parts.carousel;
+  groups.focalPlane = camModel.parts.focalPlane;
   L('camera', 'LSSTCam', 'The largest digital camera ever built for astronomy: 3.2 gigapixels, 1.65 m wide, 3.7 m long, 3 t. It hangs upside-down in the middle of the telescope, through the hole in M2.', ocs(0.8, 0, 6.2));
   L('L1', 'L1 lens', '1.57 m fused-silica lens, the largest high-performance optical lens ever made. Light enters the camera here.', ocs(0.0, -0.78, zL1));
   L('filter', 'Filter (u g r i z y)', '75 cm curved filter. Only one colour band passes at a time; five filters wait in the carousel around the cryostat.', ocs(0.37, 0, S.Filter_entrance.z0));

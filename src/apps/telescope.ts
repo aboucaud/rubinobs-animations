@@ -6,13 +6,13 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import GUI from 'lil-gui';
-import { Rubin, Band, BANDS, TraceResult } from './optics/trace';
-import { buildTelescope } from './scene/telescope';
-import { cutPlane, MAT } from './scene/materials';
-import { RayBundle } from './scene/rays';
-import { ocs, ocsv, tube } from './scene/util';
-import { LAYOUT, ccdAt } from './scene/focalplane';
-import './style.css';
+import { Rubin, Band, BANDS, TraceResult } from '../optics/trace';
+import { buildTelescope } from '../scene/telescope';
+import { cutPlane, MAT } from '../scene/materials';
+import { RayBundle } from '../scene/rays';
+import { ocs, ocsv, tube } from '../scene/util';
+import { LAYOUT, ccdAt } from '../scene/focalplane';
+import '../style.css';
 
 const BAND_INFO: Record<Band, { name: string; color: string; range: string; note: string }> = {
   u: { name: 'u', color: '#9b6bff', range: '320–390 nm', note: 'near-ultraviolet' },
@@ -361,7 +361,7 @@ function frame() {
   elGroup.rotation.x += (THREE.MathUtils.degToRad(90 - state.elevation) - elGroup.rotation.x) * 0.08;
   azGroup.rotation.y += (THREE.MathUtils.degToRad(-state.azimuth) - azGroup.rotation.y) * 0.08;
   mount.visible = state.mount;
-  tel.groups.lenses.visible = tel.groups.filter.visible = tel.groups.carousel.visible = state.glass;
+  tel.groups.lenses.visible = tel.groups.filter.visible = state.glass;
   azGroup.children.forEach((c) => c !== elGroup && (c.visible = state.mount));
 
   // cutaway plane always faces the viewer, through the optical axis

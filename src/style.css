@@ -2,9 +2,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #05070d; col
   font: 13px/1.4 "Inter", system-ui, -apple-system, sans-serif; }
 #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 header { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 14px; pointer-events: none; }
+header a.home { pointer-events: auto; color: #9fb4d8; text-decoration: none; font-size: 11px; display: inline-block; margin-bottom: 4px; }
+header a.home:hover { color: #fff; }
 header h1 { margin: 0; font-size: 15px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
 header p { margin: 2px 0 0; font-size: 11px; opacity: .6; }
-#info { position: fixed; left: 14px; top: calc(max(12px, env(safe-area-inset-top)) + 44px); max-width: 330px;
+#info { position: fixed; left: 14px; top: calc(max(12px, env(safe-area-inset-top)) + 62px); max-width: 330px;
   background: rgba(8,12,22,.72); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.08);
   border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; font-size: 12px; }
 #info .band { font-size: 22px; font-weight: 700; color: var(--c); display: flex; align-items: baseline; gap: 8px; }
@@ -29,4 +31,25 @@ header p { margin: 2px 0 0; font-size: 11px; opacity: .6; }
   #info .band { font-size: 18px; }
   #inset { width: 130px; height: 130px; }
   #insetWrap div { max-width: 130px; }
+}
+
+#info .seq { margin-top: 4px; padding: 6px 8px; border-radius: 8px; background: rgba(90,180,255,.1); border: 1px solid rgba(90,180,255,.25); }
+#info .clock { font-variant-numeric: tabular-nums; opacity: .75; font-size: 11px; margin-top: 2px; }
+#bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom));
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; max-width: calc(100vw - 28px);
+  background: rgba(8,12,22,.78); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 8px 10px; }
+#bar button { font: 600 13px system-ui, sans-serif; color: #fff; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.18);
+  border-radius: 8px; padding: 7px 11px; cursor: pointer; }
+#bar button[data-band] { color: var(--c); min-width: 34px; }
+#bar button.active { background: color-mix(in srgb, var(--c) 25%, transparent); border-color: var(--c); color: #fff; }
+#bar button.primary { background: #2a6df0; border-color: #4d86ff; }
+#bar button:disabled { opacity: .35; cursor: default; }
+#bar .sep { font-size: 11px; opacity: .6; margin-left: 6px; }
+#bar .slider { font-size: 11px; opacity: .85; display: flex; align-items: center; gap: 6px; margin-left: 6px; }
+#bar input[type=range] { width: 110px; }
+@media (max-width: 720px) {
+  #bar { gap: 4px; padding: 6px; }
+  #bar button { padding: 6px 8px; font-size: 12px; }
+  #bar .sep { display: none; }
+  #tip { bottom: 120px; }
 }

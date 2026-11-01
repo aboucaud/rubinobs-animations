@@ -3,21 +3,76 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Rubin Observatory — Simonyi Telescope light path</title>
+  <title>Rubin Observatory — interactive animations</title>
+  <meta name="description" content="Interactive, physically accurate animations of the Vera C. Rubin Observatory, the Simonyi Survey Telescope and the LSST Camera." />
+  <link rel="stylesheet" href="/src/landing.css" />
 </head>
 <body>
-  <canvas id="c"></canvas>
-  <header>
-    <h1>Simonyi Survey Telescope</h1>
-    <p>Vera C. Rubin Observatory · real optical prescription, live ray trace · work in progress</p>
-  </header>
-  <div id="info"></div>
-  <div id="labels"></div>
-  <div id="insetWrap">
-    <canvas id="inset"></canvas>
-    <div>Focal plane, seen from M3. Tap to move the star.</div>
-  </div>
-  <div id="tip"></div>
-  <script type="module" src="/src/main.ts"></script>
+  <main>
+    <header class="hero">
+      <p class="kicker">Vera C. Rubin Observatory · Cerro Pachón, Chile</p>
+      <h1>Follow the light</h1>
+      <p class="lede">Interactive 3D animations of the Simonyi Survey Telescope and the LSST Camera. Every ray you see is computed live from the telescope's real optical design, from the night sky down to the 3.2-gigapixel camera.</p>
+    </header>
+
+    <section class="grid">
+      <a class="card" href="./telescope/index.html">
+        <div class="thumb" style="background-image:url('./thumbs/telescope.jpg')"></div>
+        <div class="body">
+          <span class="tag live">Live</span>
+          <h2>The Simonyi Survey Telescope</h2>
+          <p>Starlight bounces off three mirrors and crosses three lenses before landing on a single CCD. Choose a filter, move the star across the 3.5° field and watch where its light ends up.</p>
+        </div>
+      </a>
+      <a class="card" href="./camera/index.html">
+        <div class="thumb" style="background-image:url('./thumbs/camera.jpg')"></div>
+        <div class="body">
+          <span class="tag live">Live</span>
+          <h2>Inside the LSST Camera</h2>
+          <p>Take apart the largest astronomical camera ever built. Swap filters with the carousel and autochanger, open the shutter, and watch a 30-second exposure build up and read out.</p>
+        </div>
+      </a>
+      <div class="card soon">
+        <div class="thumb placeholder"><span>Coming soon</span></div>
+        <div class="body">
+          <span class="tag">Planned</span>
+          <h2>The observatory &amp; the dome</h2>
+          <p>The summit facility on Cerro Pachón, the 30 m rotating dome and the 350-tonne mount that slews the telescope in seconds.</p>
+        </div>
+      </div>
+      <div class="card soon">
+        <div class="thumb placeholder"><span>Coming soon</span></div>
+        <div class="body">
+          <span class="tag">Planned</span>
+          <h2>A night of the survey</h2>
+          <p>Slew, settle, expose, read out, repeat: about 1,000 images a night that map the whole southern sky every few nights.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>Optical design from the Rubin <a href="https://github.com/jmeyers314/batoid">batoid</a> models; focal-plane layout from <a href="https://github.com/lsst/obs_lsst">obs_lsst</a>. Mechanical parts marked as schematic are approximations. Not an official Rubin Observatory product.</p>
+      <p><a href="https://github.com/aboucaud/rubinobs-animations">Source on GitHub</a></p>
+    </footer>
+  </main>
+  <canvas id="stars"></canvas>
+  <script type="module">
+    const c = document.getElementById('stars');
+    const g = c.getContext('2d');
+    function draw() {
+      const d = Math.min(devicePixelRatio, 2);
+      c.width = innerWidth * d; c.height = innerHeight * d;
+      g.scale(d, d);
+      let s = 3;
+      const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+      for (let i = 0; i < 500; i++) {
+        const a = r() * 0.7 + 0.1;
+        g.fillStyle = `rgba(220,230,255,${a})`;
+        g.fillRect(r() * innerWidth, r() * innerHeight, r() < 0.95 ? 1 : 1.8, r() < 0.95 ? 1 : 1.8);
+      }
+    }
+    draw();
+    addEventListener('resize', draw);
+  </script>
 </body>
 </html>

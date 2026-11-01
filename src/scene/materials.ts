@@ -47,6 +47,7 @@ export const MAT = {
     envMapIntensity: 0.25,
     specularIntensity: 0.25,
     side: THREE.DoubleSide,
+    clippingPlanes: cut,
   }),
   filterCoat: new THREE.MeshPhysicalMaterial({
     color: 0xff7a5c,
@@ -64,11 +65,12 @@ export const MAT = {
   paint: std({ color: 0xbfc3c7, metalness: 0.15, roughness: 0.55 }),
   paintCut: std({ color: 0xbfc3c7, metalness: 0.15, roughness: 0.55 }, true),
   paintBlue: std({ color: 0x2f5d8a, metalness: 0.2, roughness: 0.5 }),
+  blueCut: std({ color: 0x2f5d8a, metalness: 0.2, roughness: 0.5 }, true),
   // Black anodised baffles
   black: std({ color: 0x0d0e10, metalness: 0.3, roughness: 0.7, side: THREE.DoubleSide }),
   blackCut: std({ color: 0x0d0e10, metalness: 0.3, roughness: 0.7 }, true),
   // Camera aluminium skin
-  alu: std({ color: 0xc9ccd0, metalness: 0.85, roughness: 0.32 }, true),
+  alu: std({ color: 0xc9ccd0, metalness: 0.6, roughness: 0.42 }, true),
   aluDark: std({ color: 0x4a4e55, metalness: 0.7, roughness: 0.4 }, true),
   steel: std({ color: 0x8a9096, metalness: 0.8, roughness: 0.45 }, true),
   steelSolid: std({ color: 0x8a9096, metalness: 0.8, roughness: 0.45 }),
@@ -78,7 +80,8 @@ export const MAT = {
   e2v: new THREE.MeshPhysicalMaterial({ color: 0x3a2a6b, metalness: 0.6, roughness: 0.15, iridescence: 0.6, clearcoat: 0.4, envMapIntensity: 0.4 }),
   itl: new THREE.MeshPhysicalMaterial({ color: 0x5b4a2a, metalness: 0.6, roughness: 0.15, iridescence: 0.5, clearcoat: 0.4, envMapIntensity: 0.4 }),
   wfs: new THREE.MeshPhysicalMaterial({ color: 0x2a5b4f, metalness: 0.6, roughness: 0.15, clearcoat: 0.4, envMapIntensity: 0.4 }),
-  raftBase: std({ color: 0x6d6f73, metalness: 0.7, roughness: 0.4 }),
+  fee: std({ color: 0x1f5a3a, metalness: 0.3, roughness: 0.5 }, true),
+  raftBase: std({ color: 0x6d6f73, metalness: 0.7, roughness: 0.4 }, true),
   concrete: std({ color: 0x8d8f91, metalness: 0, roughness: 0.95 }),
   floor: std({ color: 0x3b3e43, metalness: 0.2, roughness: 0.8 }),
 };

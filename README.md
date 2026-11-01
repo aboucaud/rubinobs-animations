@@ -30,6 +30,17 @@ To regenerate the prescription data (needs `pip install batoid`):
 cd tools && python3 export_prescription.py
 ```
 
+## Pages
+
+| Page | Source | What it shows |
+|---|---|---|
+| `index.html` | landing page | links to every animation |
+| `telescope/` | `src/apps/telescope.ts` | the Simonyi telescope with a live ray trace from the sky to the focal plane |
+| `camera/` | `src/apps/camera.ts` | LSSTCam: exploded view, light through L1–L3, filter exchange, shutter, exposure and readout |
+
+Shared modules live in `src/optics/` (ray tracer) and `src/scene/` (telescope, camera, focal plane, rays, materials).
+
 ## Status
 
-v0.1: telescope only. Exact optics and baffles; the mount (TMA), mirror cell, centre section and camera internals are schematic placeholders until the NOIRLab CAD is integrated.
+- Exact: optical surfaces (M1–M3, L1–L3, filters per band), baffles and spider, focal-plane layout, camera body radius.
+- Schematic: the mount (TMA), mirror cell, centre section and camera internals (carousel sockets, autochanger rails, shutter frame, cryostat interior, utility trunk). These will be replaced as better geometry (NOIRLab CAD, LSSTCam drawings) becomes available.
