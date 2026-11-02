@@ -3,12 +3,11 @@
 // LSST camera posters; dimensions not published are schematic. OCS-aligned local frame (util.ts):
 // local Y = OCS z = optical axis (light travels +z), OCS +y = "up" (the standby socket).
 //
-// Kinematics ("double-rail"): each filter carrier has two pins per side, at its leading and
-// trailing edges. Leaving the top (standby) socket, the filter slides straight forward; when the
-// leading pins reach the front groove (the beam plane, just in front of the shutter) they run down
-// it while the trailing pins still run along the top groove — a sliding ladder that turns the
-// filter by 90° with no extra motor. It then drops straight down into its online position, where
-// clamps hold it to 0.1 mm. Everything fits inside the Ø1.6 m camera body.
+// Kinematics: each filter carrier has two pins per side. Leaving the top (standby) socket, the
+// filter slides straight forward, then turns by 90° about a fixed pivot (its pins run along the
+// arcs of the large circular groove of the autochanger plates), wrapping around the front corner of
+// the cryostat, and finally drops straight down into its online position, where clamps hold it to
+// 0.1 mm. Everything fits inside the Ø1.6 m camera body.
 import * as THREE from 'three';
 import { Band } from '../optics/trace';
 import { Surface } from '../optics/surfaces';
@@ -26,9 +25,9 @@ export const FES = {
   zC: 4.95, // centre of the stored filters along the axis
   half: 0.375, // filter radius (75 cm filters)
   pinX: 0.42, // pins on the side lugs of the filter frame
-  pinD: 0.375, // pins sit at the leading and trailing edges of the filter carrier
+  pinD: 0.3, // pins on the side lugs, ±0.3 m from the filter centre
   plateX: 0.45, // inner face of the autochanger side plates
-  zFront: 4.165, // front of the autochanger frame
+  zFront: 4.12, // front of the autochanger frame (the leading pins swing slightly in front of the beam plane)
   zArmEnd: 5.36, // rear end of the top rails
   zRing: 5.42, // carousel ring (front face)
 };
@@ -164,20 +163,33 @@ function buildFilter(b: Band) {
   return g;
 }
 
-/** Pose along the autochanger path. s = 0: standby (top socket), s = 1: online (in the beam). */
+/** Pivot depth of the autochanger rotation below the top rail (m). */
+const PIVOT_H = 0.3;
+
+/**
+ * Pose along the autochanger path. s = 0: standby (top socket), s = 1: online (in the beam).
+ * Three phases (photo of the real autochanger plate: a large circular groove):
+ *  A. the filter slides straight forward out of the standby socket;
+ *  B. it rotates by 90° about a fixed pivot, its pins running along arcs of the circular groove
+ *     (the pivot is placed so the filter wraps around the front corner of the cryostat);
+ *  C. it drops straight down into the online position in front of the shutter.
+ */
 export function fesPose(s: number, zF: number) {
-  const { R, zC, half } = FES;
-  const lenA = zC - (zF + half);
-  const lenB = (half * Math.PI) / 2;
-  const lenC = R - half;
+  const { R, zC } = FES;
+  const h = PIVOT_H;
+  const pz = zF + h; // pivot
+  const py = R - h;
+  const lenA = zC - pz;
+  const lenB = (h * Math.PI) / 2;
+  const lenC = py;
   const total = lenA + lenB + lenC;
   const d = THREE.MathUtils.clamp(s, 0, 1) * total;
   if (d <= lenA) return { cy: R, cz: zC - d, theta: 0, total };
   if (d <= lenA + lenB) {
-    const th = (d - lenA) / half;
-    return { cy: R - half * Math.sin(th), cz: zF + half * Math.cos(th), theta: th, total };
+    const th = (d - lenA) / h;
+    return { cy: py + h * Math.cos(th), cz: pz - h * Math.sin(th), theta: th, total };
   }
-  return { cy: R - half - (d - lenA - lenB), cz: zF, theta: Math.PI / 2, total };
+  return { cy: py - (d - lenA - lenB), cz: zF, theta: Math.PI / 2, total };
 }
 
 /** Pin position (OCS y, z) for the leading (+1) or trailing (−1) pin. */
@@ -347,8 +359,8 @@ export function buildFES(): FilterExchanger {
       [4.295, -0.56],
       [4.295, 0.5],
       [zArm, 0.5],
-      [zArm, 0.64],
-      [zFr, 0.64],
+      [zArm, 0.67],
+      [zFr, 0.67],
     ];
     plateShape.moveTo(pts[0][0], pts[0][1]);
     for (const p of pts.slice(1)) plateShape.lineTo(p[0], p[1]);
@@ -453,7 +465,7 @@ export function buildFES(): FilterExchanger {
     onlineClamps.push({ m, sx });
   }
   L('autochanger', 'Autochanger', 'Pulls the chosen filter out of the standby socket and guides it, with two pins per side running in two grooves, around the front of the cryostat into the beam: about 1 m in total, the main 91 cm in about 6 s, never more than 1.5 g.', ocs(X + 0.05, 0.2, 4.4), autochanger);
-  L('rails', 'Double rails', 'Two grooves per side. The leading pins go down the front while the trailing pins still run along the top: this tilts the filter through 90° without any motor for the rotation.', ocs(X, 0.6, 4.9), autochanger);
+  L('rails', 'Guide grooves', 'The pins run in grooves cut in the side plates: straight along the top, then along a large circle that turns the filter through 90° around the front of the cryostat, then straight down into the beam.', ocs(X, 0.6, 4.9), autochanger);
   L('carrier', 'Filter carrier', 'The V-shaped beam and the four trucks belong to the moving part of the autochanger: they grip the filter by its pins and travel with it between the carousel and the beam.', ocs(0, 0.42, 4.2), carrier);
   L('online', 'Online clamps', 'Hold the filter in the beam, a few millimetres in front of the shutter and L3, repeatable to better than 0.1 mm.', ocs(X, -0.2, 4.3), autochanger);
 

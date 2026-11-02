@@ -175,8 +175,8 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
   const l3 = lensSolid((r) => S.L3_entrance.zAt(r, 0), (r) => S.L3_exit.zAt(r, 0), 0.361, 0.361, MAT.silica);
   cryo.add(l3);
   parts.L3 = l3;
-  cryo.add(tube(0.361, 0.47, S.L3_entrance.z0 - 0.005, S.L3_exit.z0 + 0.02, MAT.steel, 96)); // Ti L3 ring
-  cryo.add(tube(0.45, 0.47, S.L3_exit.z0 + 0.02, 5.16, MAT.steel, 96)); // vessel
+  cryo.add(tube(0.361, 0.4, S.L3_entrance.z0 - 0.005, S.L3_exit.z0 + 0.02, MAT.steel, 96)); // Ti L3 ring
+  cryo.add(lathe([[0.4, S.L3_exit.z0 + 0.02], [0.45, S.L3_exit.z0 + 0.06], [0.45, 5.16], [0.43, 5.16], [0.43, S.L3_exit.z0 + 0.07], [0.385, S.L3_exit.z0 + 0.03]], 96, MAT.steel)); // vessel, narrower nose
   cryo.add(annulusMesh(0, 0.5, 5.17, MAT.steel, 0.03, 96)); // end cap
   const fp = buildFocalPlane(zDet);
   cryo.add(fp);

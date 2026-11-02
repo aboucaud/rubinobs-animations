@@ -8,12 +8,16 @@ export const SITE = {
   drumR: 15, // 30 m lower enclosure
   drumH: 14, // fixed drum height above the summit platform
   azFloor: 16, // top of the 16 m telescope pier
-  domeH: 25, // rotating part height above the drum (top ≈ 39 m)
+  baseH: 4.5, // white cylindrical base that rotates with the dome, between drum and box
+  domeH: 20.5, // faceted box height above the base (top ≈ 39 m)
   slitHalf: 5.5, // 11 m clear slit
-  frontZ: 11, // front face of the dome box
-  chinZ: 14.5, // front of the light/wind screen housing
-  chinTop: 10,
-  slopeLow: 12.5, // height of the slope's lower edge (dome-local)
+  // front (photos): the sloped roof doors run down to the top front edge of a deep white box,
+  // the light/wind screen housing ("chin"), which sticks out well beyond the silver body
+  frontZ: 15, // = chinZ: no vertical strip above the chin
+  chinZ: 15, // front of the light/wind screen housing
+  chinBack: 6, // where the white housing meets the silver body on the sides
+  chinTop: 8.5,
+  slopeLow: 8.5, // the slope starts at the chin's top front edge
   roofBreak: -4, // z where the sloped roof meets the flat roof
   slitBack: -7.5, // slit continues over the flat roof to here
   halfW: 15,
@@ -83,6 +87,7 @@ export const OBS_MAT = {
   whiteNoClip: new THREE.MeshStandardMaterial({ color: PALETTE.buildingWhite, metalness: 0.05, roughness: 0.7, side: THREE.DoubleSide }),
   white: new THREE.MeshStandardMaterial({ color: PALETTE.buildingWhite, metalness: 0.05, roughness: 0.7, clippingPlanes: clip, side: THREE.DoubleSide }),
   whiteRoof: new THREE.MeshStandardMaterial({ color: 0xdedad6, metalness: 0.3, roughness: 0.55, side: THREE.DoubleSide }),
+  chinWhite: new THREE.MeshStandardMaterial({ color: 0xf1efec, bumpMap: corrBump, bumpScale: 0.4, metalness: 0.15, roughness: 0.55, clippingPlanes: clip, side: THREE.DoubleSide }),
   drum: new THREE.MeshStandardMaterial({ color: 0xe9e6e2, bumpMap: corrBump, bumpScale: 0.5, metalness: 0.25, roughness: 0.55, clippingPlanes: clip, side: THREE.DoubleSide }),
   bldg: new THREE.MeshStandardMaterial({ color: 0xe6e3df, bumpMap: corrBump, bumpScale: 0.5, metalness: 0.25, roughness: 0.55, side: THREE.DoubleSide }),
   bldgGrey: new THREE.MeshStandardMaterial({ color: 0x8b8f94, bumpMap: corrBump, bumpScale: 0.5, metalness: 0.3, roughness: 0.6 }),
@@ -354,8 +359,6 @@ function buildDome(): Dome {
         [-(W - c), 0],
         [S.chinZ, 0],
         [S.chinZ, S.chinTop],
-        [S.frontZ, S.chinTop],
-        [S.frontZ, S.slopeLow],
         [S.roofBreak, H],
         [-(W - c) + hc, H],
         [-(W - c), H - hc],
@@ -383,20 +386,9 @@ function buildDome(): Dome {
       const top = bot.map((p) => new THREE.Vector3(p.x, H - d, p.z + hc));
       o.add(quadStrip(bot, top, mat));
     }
-    // front face strip above the chin, either side of the slit
-    for (const sg of [-1, 1]) {
-      const x0 = sg * S.slitHalf;
-      const x1 = sg * (W - d);
-      o.add(panel([[Math.min(x0, x1), S.chinTop], [Math.max(x0, x1), S.chinTop], [Math.max(x0, x1), S.slopeLow], [Math.min(x0, x1), S.slopeLow]], new THREE.Vector3(0, 0, S.frontZ - d), X, Y, mat));
-    }
     // chin (light/wind screen housing): front, sides; top either side of the slit
-    const cw = W - 2;
+    const cw = W - d;
     o.add(panel([[-cw, 0], [cw, 0], [cw, S.chinTop], [-cw, S.chinTop]], new THREE.Vector3(0, 0, S.chinZ - d), X, Y, mat));
-    for (const sg of [-1, 1]) {
-      const x0 = sg * S.slitHalf;
-      const x1 = sg * cw;
-      o.add(panel([[Math.min(x0, x1), S.frontZ], [Math.max(x0, x1), S.frontZ], [Math.max(x0, x1), S.chinZ], [Math.min(x0, x1), S.chinZ]], new THREE.Vector3(0, S.chinTop - d, 0), X, Z, mat));
-    }
     // sloped roof either side of the slit
     const lowP = new THREE.Vector3(0, S.slopeLow - d, S.frontZ - d);
     const highP = new THREE.Vector3(0, H - d, S.roofBreak - d);
@@ -448,6 +440,7 @@ function buildDome(): Dome {
     for (let i = 0; i < pts.length - 1; i++) {
       const a = pts[i];
       const b = pts[i + 1];
+      if (a.distanceTo(b) < 0.05) continue;
       const m = new THREE.Mesh(new THREE.BoxGeometry(0.5, a.distanceTo(b), 0.9), OBS_MAT.teal);
       m.position.copy(a).add(b).multiplyScalar(0.5);
       m.quaternion.setFromUnitVectors(Y, b.clone().sub(a).normalize());
@@ -503,6 +496,7 @@ function buildDome(): Dome {
     for (const z of [-7.5, -2.5, 2.5, 7.5])
       for (const y of [4, 9, 14, 19]) {
         if (y + 1.4 > slopeY(Math.min(S.frontZ, z + 2)) - 0.5 && z > S.roofBreak) continue;
+        if (z + 2 > S.chinBack && y - 1.3 < S.chinTop) continue;
         if (n >= 26) continue;
         addVent(new THREE.Vector3(sg * W, y, z), new THREE.Vector3(0, 0, -sg), new THREE.Vector3(sg, 0, 0));
         n++;
@@ -516,7 +510,7 @@ function buildDome(): Dome {
 
   // teal brackets sticking out of the sides (platform/crane supports, photos)
   for (const sg of [-1, 1])
-    for (const [y, z] of [[8, -9], [13, 9.5], [17, -12]]) {
+    for (const [y, z] of [[S.chinTop - 0.3, 12.5], [12.5, -9], [16.5, -12]]) {
       const b = new THREE.Mesh(new THREE.BoxGeometry(3, 0.35, 1.2), OBS_MAT.teal);
       b.position.set(sg * (W + 1.5), y, z);
       g.add(b);
@@ -526,14 +520,33 @@ function buildDome(): Dome {
   rail.position.set(0, H + 1.1, -W + 1);
   g.add(rail);
 
-  // skirt (rotates with the dome): corrugated band overhanging the drum
-  const skirt = new THREE.Mesh(new THREE.CylinderGeometry(S.drumR + 0.6, S.drumR + 0.6, 2.2, 128, 1, true), OBS_MAT.cladding);
-  skirt.position.y = -0.9;
-  g.add(skirt);
-  const base = new THREE.Mesh(new THREE.RingGeometry(S.drumR - 0.5, S.drumR + 0.6, 128), OBS_MAT.cladding);
-  base.rotation.x = -Math.PI / 2;
-  base.position.y = 0.01;
-  g.add(base);
+  // white light/wind-screen housing: side and front faces over the silver cladding (photos)
+  for (const sg of [-1, 1])
+    g.add(panel([[S.chinBack, 0], [S.chinZ, 0], [S.chinZ, S.chinTop], [S.chinBack, S.chinTop]], new THREE.Vector3(sg * (W + 0.06), 0, 0), Z, Y, OBS_MAT.chinWhite));
+  g.add(panel([[-W, 0], [W, 0], [W, S.chinTop], [-W, S.chinTop]], new THREE.Vector3(0, 0, S.chinZ + 0.06), X, Y, OBS_MAT.chinWhite));
+  // underside of the box (shadowed band seen where the box overhangs the base)
+  {
+    const under = panel(
+      [[-W, -(W - c)], [-(W - c), -W], [W - c, -W], [W, -(W - c)], [W, S.chinZ], [-W, S.chinZ]],
+      new THREE.Vector3(0, 0.02, 0),
+      X,
+      Z,
+      OBS_MAT.cladding,
+    );
+    g.add(under);
+  }
+  // white cylindrical base rotating with the dome, between the drum and the box
+  {
+    const geo = new THREE.CylinderGeometry(S.drumR + 0.25, S.drumR + 0.25, S.baseH, 160, 1, true);
+    const uv = geo.attributes.uv;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 2 * Math.PI * S.drumR, uv.getY(i) * S.baseH);
+    const base = new THREE.Mesh(geo, OBS_MAT.drum);
+    base.position.y = -S.baseH / 2;
+    g.add(base);
+    const lip = new THREE.Mesh(new THREE.CylinderGeometry(S.drumR + 0.45, S.drumR + 0.45, 0.5, 160, 1, true), OBS_MAT.chinWhite);
+    lip.position.y = -S.baseH + 0.25;
+    g.add(lip);
+  }
 
   // light/wind screen: dark panel filling the slit from its bottom up to the beam
   const lws = new THREE.Mesh(new THREE.BufferGeometry(), OBS_MAT.lws);
@@ -543,7 +556,7 @@ function buildDome(): Dome {
     new THREE.Vector2(S.frontZ, S.slopeLow),
     new THREE.Vector2(S.roofBreak, H),
     new THREE.Vector2(S.slitBack, H),
-  ].map((p) => p.clone());
+  ].filter((p, i, arr) => i === 0 || p.distanceTo(arr[i - 1]) > 0.01);
   const segLen = slitPath.slice(1).map((p, i) => p.distanceTo(slitPath[i]));
   const totalLen = segLen.reduce((a, b) => a + b, 0);
   const pointAt = (s: number) => {
@@ -599,7 +612,7 @@ function buildDome(): Dome {
       }
       lws.visible = true;
       const e = (el * Math.PI) / 180;
-      const axisY = SITE.azFloor + 7 - SITE.drumH; // elevation axis height in dome coordinates
+      const axisY = SITE.azFloor + 7 - SITE.drumH - SITE.baseH; // elevation axis height in box coordinates
       // beam bottom edge: 5 m below the optical axis, measured perpendicular to it
       const oz = -Math.sin(e) * -5;
       const oy = axisY + Math.cos(e) * -5;
@@ -695,7 +708,7 @@ function buildServiceBuilding() {
   const g = new THREE.Group();
   const M = OBS_MAT.bldg;
   // tall block against the drum (platform-lift shaft, camera & coating access), slanted top
-  const tall = facetedBar([[-10, 0], [10, 0], [10, 13.5], [7, 15.5], [-10, 15.5]], 11, 27, 0, M);
+  const tall = facetedBar([[-10, 0], [10, 0], [10, 15.5], [7, 17.5], [-10, 17.5]], 11, 27, 0, M);
   g.add(tall);
   // long service & operations building: stacked, outward-flaring bands (cross-section in z, y)
   const sec: [number, number][] = [
@@ -750,7 +763,7 @@ export function buildObservatory() {
   const drum = buildDrum();
   root.add(drum);
   const dome = buildDome();
-  dome.group.position.y = SITE.drumH;
+  dome.group.position.y = SITE.drumH + SITE.baseH;
   root.add(dome.group);
   const building = buildServiceBuilding();
   root.add(building);
