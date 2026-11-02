@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import { Band } from '../optics/trace';
 import { Surface } from '../optics/surfaces';
 import prescription from '../data/prescription.json';
+import filterColours from '../data/filter_colours.json';
 import { cutPlane } from './materials';
 import { lathe, ocs, tube } from './util';
 import type { Label } from './telescope';
@@ -28,8 +29,8 @@ export const FES = {
   pinD: 0.375, // pins sit at the leading and trailing edges of the filter carrier
   plateX: 0.45, // inner face of the autochanger side plates
   zFront: 4.165, // front of the autochanger frame
-  zArmEnd: 5.3, // rear end of the top rails
-  zRing: 5.36, // carousel ring (front face)
+  zArmEnd: 5.36, // rear end of the top rails
+  zRing: 5.42, // carousel ring (front face)
 };
 
 export const BAND_HEX: Record<Band, string> = {
@@ -84,22 +85,38 @@ function lensSolid(front: (r: number) => number, back: (r: number) => number, rC
   return lathe(prof, 112, mat);
 }
 
-function filterGlass(b: Band) {
-  const c = new THREE.Color(BAND_HEX[b]);
-  return new THREE.MeshPhysicalMaterial({
-    color: c.clone().lerp(new THREE.Color(1, 1, 1), 0.35),
-    metalness: 0.35,
-    roughness: 0.05,
-    transmission: 0.45,
-    ior: 1.458,
-    thickness: 0.02,
-    iridescence: 1,
-    iridescenceIOR: 1.9,
-    iridescenceThicknessRange: [250, 700],
-    envMapIntensity: 0.9,
-    side: THREE.DoubleSide,
+/**
+ * Interference filters barely absorb: what is not transmitted is reflected (R = 1 − T).
+ * Colours computed from lsst/throughputs (tools/filter_colours.py). Rendered with two layers:
+ * the glass multiplies what is behind it by the transmitted colour, and the coating adds a
+ * mirror reflection tinted by the reflected colour. So g looks orange-gold in reflection and
+ * cyan when looked through, r the opposite, and u, i, z, y are near-perfect visible mirrors.
+ */
+const FC = filterColours as Record<Band, { transmitted_linear: number[]; reflected_linear: number[]; transmitted_hex: string; reflected_hex: string }>;
+function filterMaterials(b: Band) {
+  const t = FC[b].transmitted_linear.map((v) => Math.min(1, v) * 0.93);
+  const r = FC[b].reflected_linear.map((v) => Math.min(1, v));
+  const through = new THREE.MeshBasicMaterial({
+    color: new THREE.Color().setRGB(t[0], t[1], t[2]),
+    blending: THREE.MultiplyBlending,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.FrontSide,
+    clippingPlanes: clip,
+    toneMapped: false,
+  });
+  const reflect = new THREE.MeshStandardMaterial({
+    color: new THREE.Color().setRGB(r[0], r[1], r[2]),
+    metalness: 1,
+    roughness: 0.04,
+    envMapIntensity: 1.3,
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.FrontSide,
     clippingPlanes: clip,
   });
+  return { through, reflect };
 }
 
 /** One filter: meniscus from its band's batoid surfaces, frame ring, two side lugs with two pins each.
@@ -113,7 +130,17 @@ function buildFilter(b: Band) {
   const th = fx.z0 - z0;
   const g = new THREE.Group();
   g.name = `filter-${b}`;
-  g.add(lensSolid((r) => fe.zAt(r, 0) - z0, (r) => fx.zAt(r, 0) - z0, 0.375, 0.375, filterGlass(b)));
+  const fm = filterMaterials(b);
+  const glass = lensSolid((r) => fe.zAt(r, 0) - z0, (r) => fx.zAt(r, 0) - z0, 0.375, 0.375, fm.through);
+  glass.renderOrder = 5;
+  g.add(glass);
+  // coating: reflective layer on the entrance surface (and a weaker one on the exit side)
+  const coat = lathe(Array.from({ length: 41 }, (_, i) => [(0.375 * i) / 40, fe.zAt((0.375 * i) / 40, 0) - z0 - 0.0005] as [number, number]), 112, fm.reflect);
+  coat.renderOrder = 6;
+  g.add(coat);
+  const coatBack = lathe(Array.from({ length: 41 }, (_, i) => [(0.375 * (40 - i)) / 40, fx.zAt((0.375 * (40 - i)) / 40, 0) - z0 + 0.0005] as [number, number]), 112, fm.reflect);
+  coatBack.renderOrder = 6;
+  g.add(coatBack);
   // aluminium frame ring
   g.add(tube(0.375, 0.398, -0.006, th + 0.03, M.dark, 96));
   g.add(tube(0.398, 0.402, 0.004, th + 0.02, M.alu, 96));
@@ -190,8 +217,8 @@ export interface FilterExchanger {
   state: FESState;
   labels: Label[];
   update(opts?: { carouselDz?: number; beamDz?: number }): void;
-  stepsTo(target: Band): FESStep[];
-  instantBeam(b: Band): void;
+  stepsTo(target: Band | null): FESStep[];
+  instantBeam(b: Band | null): void;
   swapLoader(incoming: Band): void;
 }
 
@@ -358,19 +385,6 @@ export function buildFES(): FilterExchanger {
     // front frame: bottom beam, top beam, white V bar (as in the CNRS animation)
     autochanger.add(boxAt(0, -0.53, zFr + 0.02, 2 * X + 0.05, 0.06, 0.04, M.dark));
     autochanger.add(boxAt(0, 0.61, zFr + 0.02, 2 * X + 0.05, 0.06, 0.04, M.dark));
-    const vPts: [number, number][] = [[-X, 0.58], [0, 0.43], [X, 0.58]];
-    for (let i = 0; i < 2; i++) {
-      const a = ocs(vPts[i][0], vPts[i][1], zFr + 0.01);
-      const b = ocs(vPts[i + 1][0], vPts[i + 1][1], zFr + 0.01);
-      const len = a.distanceTo(b);
-      const bar = new THREE.Mesh(new THREE.BoxGeometry(len, 0.045, 0.03), M.white);
-      bar.position.copy(a).add(b).multiplyScalar(0.5);
-      bar.rotation.y = 0;
-      bar.rotation.z = 0;
-      const dir = b.clone().sub(a).normalize();
-      bar.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), dir);
-      autochanger.add(bar);
-    }
     // rear cross-beam at the end of the arms
     autochanger.add(boxAt(0, 0.62, zArm - 0.03, 2 * X + 0.05, 0.05, 0.05, M.dark));
     // linear drives: ball-screw rails on the outside of the arms, with motors at the rear
@@ -407,6 +421,30 @@ export function buildFES(): FilterExchanger {
       latches.push({ m: la, sx, which });
     }
   }
+  // filter carrier: the V-shaped beam joining the two trailing trucks. It belongs to the moving
+  // part of the autochanger: it rides with the filter to the carousel and back.
+  const carrier = new THREE.Group();
+  {
+    const pts: [number, number][] = [[-0.445, -0.445], [0, -0.39], [0.445, -0.445]];
+    for (let i = 0; i < 2; i++) {
+      const a = new THREE.Vector3(pts[i][0], 0.02, pts[i][1]);
+      const b = new THREE.Vector3(pts[i + 1][0], 0.02, pts[i + 1][1]);
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(a.distanceTo(b) + 0.03, 0.03, 0.05), M.dark);
+      bar.position.copy(a).add(b).multiplyScalar(0.5);
+      bar.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), b.clone().sub(a).normalize());
+      carrier.add(bar);
+    }
+    const hub = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.04, 0.05), M.darker);
+    hub.position.set(0, 0.02, -0.395);
+    carrier.add(hub);
+    for (const sx of [-1, 1]) {
+      const end = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.08), M.darker);
+      end.position.set(sx * 0.445, 0.02, -0.43);
+      carrier.add(end);
+    }
+  }
+  autochanger.add(carrier);
+
   // online clamps on the front plates (filter held by its lower pins)
   const onlineClamps: { m: THREE.Mesh; sx: number }[] = [];
   for (const sx of [-1, 1]) {
@@ -416,6 +454,7 @@ export function buildFES(): FilterExchanger {
   }
   L('autochanger', 'Autochanger', 'Pulls the chosen filter out of the standby socket and guides it, with two pins per side running in two grooves, around the front of the cryostat into the beam: about 1 m in total, the main 91 cm in about 6 s, never more than 1.5 g.', ocs(X + 0.05, 0.2, 4.4), autochanger);
   L('rails', 'Double rails', 'Two grooves per side. The leading pins go down the front while the trailing pins still run along the top: this tilts the filter through 90° without any motor for the rotation.', ocs(X, 0.6, 4.9), autochanger);
+  L('carrier', 'Filter carrier', 'The V-shaped beam and the four trucks belong to the moving part of the autochanger: they grip the filter by its pins and travel with it between the carousel and the beam.', ocs(0, 0.42, 4.2), carrier);
   L('online', 'Online clamps', 'Hold the filter in the beam, a few millimetres in front of the shutter and L3, repeatable to better than 0.1 mm.', ocs(X, -0.2, 4.3), autochanger);
 
   // ================================================================ filters
@@ -496,6 +535,11 @@ export function buildFES(): FilterExchanger {
       l.m.position.copy(ocs(l.sx * (X - 0.035 + 0.02 * open), p.y + 0.03, p.z));
       l.m.material = state.latch > 0.5 ? M.clampShut : M.clampOpen;
     }
+    {
+      const p = fesPose(s, zF);
+      carrier.quaternion.setFromAxisAngle(AX, Math.PI / 2 - p.theta);
+      carrier.position.copy(ocs(0, p.cy, p.cz + (held && state.transit ? bdz * state.transit.s : held && state.beam ? bdz : 0)));
+    }
     // linear-drive carriages follow the trailing pin along z; the linkage reaches down to it
     const tp = pinPos(s, zF, -1);
     const cz = THREE.MathUtils.clamp(tp.z, FES.zFront + 0.05, FES.zArmEnd - 0.05);
@@ -526,56 +570,74 @@ export function buildFES(): FilterExchanger {
     });
   }
 
-  function stepsTo(target: Band): FESStep[] {
+  /** Steps for an exchange. target = null stores the current filter: all five in the carousel. */
+  function stepsTo(target: Band | null): FESStep[] {
     const st = state;
     const from = st.beam;
-    if (!from || from === target || st.home[target] === undefined) return [];
-    const kT = st.home[target]!;
-    const a0 = st.carouselAngle;
-    let a1 = -(kT * 2 * Math.PI) / 5;
-    while (a1 - a0 > Math.PI) a1 -= 2 * Math.PI;
-    while (a1 - a0 < -Math.PI) a1 += 2 * Math.PI;
-    const slots = Math.round(Math.abs(a1 - a0) / ((2 * Math.PI) / 5));
-    return [
+    if (from === target) return [];
+    if (target && st.home[target] === undefined) return [];
+    const out: FESStep[] = [
       {
         label: 'Checks',
         detail: 'Shutter closed, camera rotator within ±5° of its zero so the rails are aligned with gravity, carousel position confirmed.',
         real: 3,
         run: () => {},
       },
-      {
-        label: `Unclamp the ${from} filter`,
-        detail: 'The online clamps release the filter; it now hangs on the autochanger trucks only.',
-        real: 5,
-        run: (t) => (st.onlineClamp = 1 - ease(t)),
-      },
-      {
-        label: `Return ${from} to its socket`,
-        detail: 'Slow 9 cm start, then the main move: up the front, the 90° tilt, and straight back along the top rails into the empty standby socket.',
-        real: 14,
-        run: (t) => {
-          st.beam = null;
-          st.transit = { band: from, s: 1 - moveProfile(t) };
+    ];
+    if (from) {
+      out.push(
+        {
+          label: `Unclamp the ${from} filter`,
+          detail: 'The online clamps release the filter; it now hangs on the autochanger trucks only.',
+          real: 5,
+          run: (t) => (st.onlineClamp = 1 - ease(t)),
         },
-        done: () => {
-          st.transit = null;
+        {
+          label: `Return ${from} to its socket`,
+          detail: 'Slow 9 cm start, then the main move: up the front, the 90° tilt, and straight back along the top rails into the empty standby socket. The carrier travels with it.',
+          real: 14,
+          run: (t) => {
+            st.beam = null;
+            st.transit = { band: from, s: 1 - moveProfile(t) };
+          },
+          done: () => {
+            st.transit = null;
+          },
         },
-      },
-      {
-        label: 'Lock in the carousel',
-        detail: 'The socket clamps lock the filter; the autochanger latches let go of its pins.',
-        real: 6,
-        run: (t) => {
-          st.socketClamp = ease(t);
-          st.latch = 1 - ease(t);
+        {
+          label: 'Lock in the carousel',
+          detail: 'The socket clamps lock the filter; the autochanger latches let go of its pins.',
+          real: 6,
+          run: (t) => {
+            st.socketClamp = ease(t);
+            st.latch = 1 - ease(t);
+          },
         },
-      },
-      {
+      );
+    }
+    if (!target) {
+      out.push({
+        label: 'All five filters stored',
+        detail: 'No filter in the beam: the carrier waits empty at the standby socket.',
+        real: 1,
+        run: () => {},
+      });
+      return out;
+    }
+    const kT = st.home[target]!;
+    const a0 = st.carouselAngle;
+    let a1 = -(kT * 2 * Math.PI) / 5;
+    while (a1 - a0 > Math.PI) a1 -= 2 * Math.PI;
+    while (a1 - a0 < -Math.PI) a1 += 2 * Math.PI;
+    const slots = Math.round(Math.abs(a1 - a0) / ((2 * Math.PI) / 5));
+    if (slots > 0)
+      out.push({
         label: `Carousel turns ${slots}/5 of a turn`,
         detail: `Brake released, ${slots === 1 ? '72°' : '144°'} rotation of 200 kg of filters and structure, then realignment with the autochanger to better than 0.1 mm.`,
         real: slots === 1 ? 26 : 30.5,
         run: (t) => (st.carouselAngle = a0 + (a1 - a0) * ease(t)),
-      },
+      });
+    out.push(
       {
         label: `Grab ${target}`,
         detail: 'The autochanger latches close on the pins of the new filter; the socket clamps unlock (an unlocking cable is pulled).',
@@ -599,14 +661,22 @@ export function buildFES(): FilterExchanger {
         label: 'Clamp online',
         detail: 'The online clamps close. The filter sits a few millimetres in front of the shutter and L3, repeatable to better than 0.1 mm.',
         real: 8,
-        run: (t) => {
-          st.onlineClamp = ease(t);
-        },
+        run: (t) => (st.onlineClamp = ease(t)),
       },
-    ];
+    );
+    return out;
   }
 
-  function instantBeam(b: Band) {
+  function instantBeam(b: Band | null) {
+    if (b === null) {
+      state.beam = null;
+      state.transit = null;
+      state.onlineClamp = 0;
+      state.latch = 0;
+      state.socketClamp = 1;
+      update();
+      return;
+    }
     if (state.home[b] === undefined) swapLoader(b);
     state.beam = b;
     state.transit = null;

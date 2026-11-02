@@ -99,10 +99,10 @@ let idx = 0;
 let stepT = 0;
 let realClock = 0;
 let realTotal = 0;
-let target: Band | null = null;
+let target: Band | null | undefined = undefined;
 
-function start(b: Band) {
-  if (queue.length || b === fes.state.beam || fes.state.home[b] === undefined) return;
+function start(b: Band | null) {
+  if (queue.length || b === fes.state.beam || (b && fes.state.home[b] === undefined)) return;
   all = fes.stepsTo(b);
   queue = [...all];
   idx = 0;
@@ -127,7 +127,7 @@ function tick(dt: number) {
     queue.shift();
     idx++;
     stepT = 0;
-    if (!queue.length) target = null;
+    if (!queue.length) target = undefined;
     renderSteps();
   }
 }
@@ -137,7 +137,7 @@ const info = document.getElementById('info')!;
 const stepsEl = document.getElementById('steps')!;
 function renderSteps() {
   if (!all.length) {
-    stepsEl.innerHTML = `<div class="k">Choose a filter below to watch a complete exchange. Durations are those of the real system (≈ 82–86 s in total).</div>`;
+    stepsEl.innerHTML = `<div class="k">Choose a filter below to watch a complete exchange, or “none” to store all five filters in the carousel. Durations are those of the real system (≈ 82–86 s for a full exchange).</div>`;
     return;
   }
   stepsEl.innerHTML = all
@@ -152,9 +152,12 @@ function updateHud() {
   const loaded = BANDS.filter((b) => s.home[b] !== undefined);
   const prog = realTotal ? Math.min(1, realClock / realTotal) : 0;
   info.innerHTML = `
-    <div class="band" style="--c:${s.beam ? BAND_HEX[s.beam] : '#ccc'}">${s.beam ?? (s.transit ? s.transit.band : '—')}<span>${s.beam ? 'in the beam · ' + BAND_TXT[s.beam] : 'filter moving'}</span></div>
+    <div class="band" style="--c:${s.beam ? BAND_HEX[s.beam] : '#ccc'}">${s.beam ?? (s.transit ? s.transit.band : '∅')}<span>${s.beam ? 'in the beam · ' + BAND_TXT[s.beam] : s.transit ? 'filter moving' : 'no filter in the beam'}</span></div>
     <div>Carousel: <b>${loaded.join(' ')}</b> <span class="k">· ${s.loaderOut ?? '—'} waits in the loader</span></div>
-    ${target ? `<div class="seq"><b>Exchange → ${target}</b><div class="bar"><i style="width:${(prog * 100).toFixed(1)}%"></i></div><div class="clock">real time ${realClock.toFixed(1)} / ${realTotal.toFixed(1)} s · shown ×${state.speed}${state.paused ? ' · paused' : ''}</div></div>` : ''}`;
+    ${target !== undefined ? `<div class="seq"><b>${target ? 'Exchange → ' + target : 'Store the filter: none in the beam'}</b><div class="bar"><i style="width:${(prog * 100).toFixed(1)}%"></i></div><div class="clock">real time ${realClock.toFixed(1)} / ${realTotal.toFixed(1)} s · shown ×${state.speed}${state.paused ? ' · paused' : ''}</div></div>` : ''}`;
+  const bn = document.getElementById('bNone') as HTMLButtonElement;
+  bn.disabled = !!queue.length || s.beam === null;
+  bn.classList.toggle('active', s.beam === null && !s.transit);
   document.querySelectorAll<HTMLButtonElement>('#bar button[data-band]').forEach((b) => {
     const f = b.dataset.band as Band;
     b.disabled = !!queue.length || s.home[f] === undefined || f === s.beam;
@@ -168,10 +171,12 @@ const bar = document.getElementById('bar')!;
 bar.innerHTML = `
   <span class="sep">Put in the beam</span>
   ${BANDS.map((b) => `<button data-band="${b}" style="--c:${BAND_HEX[b]}">${b}</button>`).join('')}
+  <button id="bNone" style="--c:#ccc" title="Store all five filters in the carousel">none</button>
   <button id="bPause">❚❚ Pause</button>
   <label class="slider">Speed <select id="speed"><option value="1">real time</option><option value="2">×2</option><option value="4" selected>×4</option><option value="10">×10</option></select></label>
   <button id="bSwap" title="Daytime operation">Loader: swap u ↔ y</button>`;
 bar.querySelectorAll<HTMLButtonElement>('button[data-band]').forEach((b) => (b.onclick = () => start(b.dataset.band as Band)));
+document.getElementById('bNone')!.onclick = () => start(null);
 document.getElementById('bPause')!.onclick = () => (state.paused = !state.paused);
 (document.getElementById('speed') as HTMLSelectElement).onchange = (e) => (state.speed = parseFloat((e.target as HTMLSelectElement).value));
 document.getElementById('bSwap')!.onclick = () => {
@@ -181,7 +186,7 @@ document.getElementById('bSwap')!.onclick = () => {
 };
 
 // labels: only the FES ones (+ cryostat / L3 for context)
-const LABEL_IDS = new Set(['carousel', 'drive', 'autochanger', 'rails', 'online', 'filter', 'shutter', 'L3', 'cryostat', 'fp']);
+const LABEL_IDS = new Set(['carrier', 'carousel', 'drive', 'autochanger', 'rails', 'online', 'filter', 'shutter', 'L3', 'cryostat', 'fp']);
 const labelLayer = document.getElementById('labels')!;
 const tip = document.getElementById('tip')!;
 const labelEls = cam.labels

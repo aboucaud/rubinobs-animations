@@ -183,7 +183,7 @@ function visitSteps(): Step[] {
   ];
 }
 
-function filterSteps(target: Band): Step[] {
+function filterSteps(target: Band | null): Step[] {
   // the real FES sequence (shared with the filter-exchange page), shown ~8× faster than real time
   const steps = cam.fes.stepsTo(target);
   const out: Step[] = steps.map((st) => ({ label: st.label, real: st.real, anim: Math.max(0.6, st.real / 8), run: st.run, done: st.done }));
@@ -191,8 +191,10 @@ function filterSteps(target: Band): Step[] {
   const prev = last.done;
   last.done = () => {
     prev?.();
-    state.band = target;
-    retrace();
+    if (target) {
+      state.band = target;
+      retrace();
+    }
   };
   return out;
 }
@@ -248,7 +250,7 @@ function updateHud() {
   const loaded = (['u', 'g', 'r', 'i', 'z', 'y'] as Band[]).filter((b) => cs.home[b] !== undefined);
   const loader = (['u', 'g', 'r', 'i', 'z', 'y'] as Band[]).find((b) => cs.home[b] === undefined);
   info.innerHTML = `
-    <div class="band" style="--c:${BAND_HEX[state.band]}">${cs.beam ?? '—'}<span>${cs.beam ? BAND_TXT[cs.beam] : 'filter in transit'}</span></div>
+    <div class="band" style="--c:${cs.beam ? BAND_HEX[cs.beam] : '#ccc'}">${cs.beam ?? '∅'}<span>${cs.beam ? BAND_TXT[cs.beam] : cs.transit ? 'filter in transit' : 'no filter in the beam'}</span></div>
     <div>Shutter: <b>${state.shutter}</b> · Carousel: <b>${loaded.join(' ')}</b> <span class="k">(${loader} waits in the loader)</span></div>
     ${busy ? `<div class="seq"><b>${seqName}</b><br>${step.label}<div class="clock">real time ${realClock.toFixed(1)} s</div></div>` : `<div class="k">Pick an action below. Times are shown as they happen on the real camera.</div>`}`;
   document.querySelectorAll<HTMLButtonElement>('#bar button').forEach((b) => {
@@ -256,6 +258,13 @@ function updateHud() {
     b.disabled = busy || (!!f && (cs.home[f] === undefined || f === cs.beam));
     b.classList.toggle('active', !!f && f === cs.beam);
   });
+  const bn = document.getElementById('bNone') as HTMLButtonElement | null;
+  if (bn) {
+    bn.disabled = busy || cs.beam === null;
+    bn.classList.toggle('active', cs.beam === null && !cs.transit);
+  }
+  const be = document.getElementById('bExpose') as HTMLButtonElement | null;
+  if (be) be.disabled = busy || cs.beam === null;
 }
 
 const bar = document.getElementById('bar')!;
@@ -263,10 +272,15 @@ bar.innerHTML = `
   <button id="bExpose" class="primary">◉ Take a 30 s exposure</button>
   <span class="sep">Change filter</span>
   ${(['u', 'g', 'r', 'i', 'z', 'y'] as Band[]).map((b) => `<button data-band="${b}" style="--c:${BAND_HEX[b]}">${b}</button>`).join('')}
+  <button id="bNone" style="--c:#ccc" title="Store all five filters in the carousel">none</button>
   <label class="slider">Explode <input id="explode" type="range" min="0" max="1" step="0.01" value="0"></label>`;
 document.getElementById('bExpose')!.onclick = () => {
   if (state.explode > 0.01) setExplode(0);
   runSequence('One 30-second exposure', visitSteps());
+};
+document.getElementById('bNone')!.onclick = () => {
+  if (state.explode > 0.01) setExplode(0);
+  runSequence('Store the filter: none in the beam', filterSteps(null));
 };
 bar.querySelectorAll<HTMLButtonElement>('button[data-band]').forEach((b) => {
   b.onclick = () => {

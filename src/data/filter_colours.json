@@ -1,0 +1,104 @@
+{
+ "u": {
+  "transmitted_linear": [
+   0.0,
+   0.0001,
+   0.0024
+  ],
+  "reflected_linear": [
+   1.0002,
+   0.9999,
+   0.9976
+  ],
+  "transmitted_hex": "#000008",
+  "reflected_hex": "#ffffff",
+  "transmitted_hue_hex": "#0034ff",
+  "visible_transmission": 0.0,
+  "visible_reflection": 1.0
+ },
+ "g": {
+  "transmitted_linear": [
+   0.0,
+   0.6088,
+   1.0285
+  ],
+  "reflected_linear": [
+   1.2871,
+   0.3912,
+   0.0
+  ],
+  "transmitted_hex": "#00cdff",
+  "reflected_hex": "#ffa800",
+  "transmitted_hue_hex": "#00caff",
+  "visible_transmission": 0.408,
+  "visible_reflection": 0.592
+ },
+ "r": {
+  "transmitted_linear": [
+   1.2347,
+   0.382,
+   0.0
+  ],
+  "reflected_linear": [
+   0.0,
+   0.618,
+   1.082
+  ],
+  "transmitted_hex": "#ffa600",
+  "reflected_hex": "#00ceff",
+  "transmitted_hue_hex": "#ff9700",
+  "visible_transmission": 0.569,
+  "visible_reflection": 0.431
+ },
+ "i": {
+  "transmitted_linear": [
+   0.0033,
+   0.0007,
+   0.0
+  ],
+  "reflected_linear": [
+   0.9967,
+   0.9993,
+   1.0001
+  ],
+  "transmitted_hex": "#0b0200",
+  "reflected_hex": "#ffffff",
+  "transmitted_hue_hex": "#ff8100",
+  "visible_transmission": 0.001,
+  "visible_reflection": 0.999
+ },
+ "z": {
+  "transmitted_linear": [
+   0.0001,
+   0.0001,
+   0.0001
+  ],
+  "reflected_linear": [
+   0.9999,
+   0.9999,
+   0.9999
+  ],
+  "transmitted_hex": "#000000",
+  "reflected_hex": "#ffffff",
+  "transmitted_hue_hex": "#ffffff",
+  "visible_transmission": 0.0,
+  "visible_reflection": 1.0
+ },
+ "y": {
+  "transmitted_linear": [
+   0.0001,
+   0.0001,
+   0.0001
+  ],
+  "reflected_linear": [
+   0.9999,
+   0.9999,
+   0.9999
+  ],
+  "transmitted_hex": "#000000",
+  "reflected_hex": "#ffffff",
+  "transmitted_hue_hex": "#ffffff",
+  "visible_transmission": 0.0,
+  "visible_reflection": 1.0
+ }
+}
