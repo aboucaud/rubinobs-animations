@@ -13,11 +13,13 @@ export const SITE = {
   slitHalf: 5.5, // 11 m clear slit
   // front (photos): the sloped roof doors run down to the top front edge of a deep white box,
   // the light/wind screen housing ("chin"), which sticks out well beyond the silver body
-  frontZ: 15, // = chinZ: no vertical strip above the chin
-  chinZ: 15, // front of the light/wind screen housing
-  chinBack: 6, // where the white housing meets the silver body on the sides
-  chinTop: 8.5,
-  slopeLow: 8.5, // the slope starts at the chin's top front edge
+  frontZ: 12.5, // = chinZ: no vertical strip above the chin
+  chinZ: 12.5, // front of the light/wind screen housing (slim, photos 2026-11-02)
+  chinBack: 7, // where the white housing meets the silver body on the sides
+  chinTop: 6.5,
+  chinUnder: 2.5, // the housing's front face stops 2.5 m above the box bottom...
+  chinUnderBack: 3, // ...and its underside slopes back 3 m to the box bottom
+  slopeLow: 6.5, // the slope starts at the chin's top front edge
   roofBreak: -4, // z where the sloped roof meets the flat roof
   slitBack: -7.5, // slit continues over the flat roof to here
   halfW: 15,
@@ -357,7 +359,8 @@ function buildDome(): Dome {
     for (const sg of [-1, 1]) {
       const prof: [number, number][] = [
         [-(W - c), 0],
-        [S.chinZ, 0],
+        [S.chinZ - S.chinUnderBack, 0],
+        [S.chinZ, S.chinUnder],
         [S.chinZ, S.chinTop],
         [S.roofBreak, H],
         [-(W - c) + hc, H],
@@ -388,7 +391,16 @@ function buildDome(): Dome {
     }
     // chin (light/wind screen housing): front, sides; top either side of the slit
     const cw = W - d;
-    o.add(panel([[-cw, 0], [cw, 0], [cw, S.chinTop], [-cw, S.chinTop]], new THREE.Vector3(0, 0, S.chinZ - d), X, Y, mat));
+    o.add(panel([[-cw, S.chinUnder], [cw, S.chinUnder], [cw, S.chinTop], [-cw, S.chinTop]], new THREE.Vector3(0, 0, S.chinZ - d), X, Y, mat));
+    {
+      // sloped underside of the housing
+      const a = new THREE.Vector3(0, 0 + d, S.chinZ - S.chinUnderBack);
+      const b = new THREE.Vector3(0, S.chinUnder, S.chinZ - d);
+      const U = b.clone().sub(a);
+      const Lu = U.length();
+      U.normalize();
+      o.add(panel([[-cw, 0], [cw, 0], [cw, Lu], [-cw, Lu]], a, X, U, mat));
+    }
     // sloped roof either side of the slit
     const lowP = new THREE.Vector3(0, S.slopeLow - d, S.frontZ - d);
     const highP = new THREE.Vector3(0, H - d, S.roofBreak - d);
@@ -466,8 +478,8 @@ function buildDome(): Dome {
     const d = new THREE.Group();
     const x0 = 0;
     const x1 = sg * (S.slitHalf + 0.6);
-    d.add(panel([[Math.min(x0, x1), 0], [Math.max(x0, x1), 0], [Math.max(x0, x1), Ls], [Math.min(x0, x1), Ls]], lowP, X, Uup, OBS_MAT.doors));
-    d.add(panel([[Math.min(x0, x1), S.roofBreak + 0.15], [Math.max(x0, x1), S.roofBreak + 0.15], [Math.max(x0, x1), S.slitBack - 0.6], [Math.min(x0, x1), S.slitBack - 0.6]], new THREE.Vector3(0, H + 0.15, 0), X, Z, OBS_MAT.doors));
+    d.add(panel([[Math.min(x0, x1), 0], [Math.max(x0, x1), 0], [Math.max(x0, x1), Ls], [Math.min(x0, x1), Ls]], lowP, X, Uup, OBS_MAT.cladding));
+    d.add(panel([[Math.min(x0, x1), S.roofBreak + 0.15], [Math.max(x0, x1), S.roofBreak + 0.15], [Math.max(x0, x1), S.slitBack - 0.6], [Math.min(x0, x1), S.slitBack - 0.6]], new THREE.Vector3(0, H + 0.15, 0), X, Z, OBS_MAT.cladding));
     d.userData.sg = sg;
     g.add(d);
     doors.push(d);
@@ -510,7 +522,7 @@ function buildDome(): Dome {
 
   // teal brackets sticking out of the sides (platform/crane supports, photos)
   for (const sg of [-1, 1])
-    for (const [y, z] of [[S.chinTop - 0.3, 12.5], [12.5, -9], [16.5, -12]]) {
+    for (const [y, z] of [[S.chinTop - 0.3, 10.5], [12.5, -9], [16.5, -12]]) {
       const b = new THREE.Mesh(new THREE.BoxGeometry(3, 0.35, 1.2), OBS_MAT.teal);
       b.position.set(sg * (W + 1.5), y, z);
       g.add(b);
@@ -522,12 +534,12 @@ function buildDome(): Dome {
 
   // white light/wind-screen housing: side and front faces over the silver cladding (photos)
   for (const sg of [-1, 1])
-    g.add(panel([[S.chinBack, 0], [S.chinZ, 0], [S.chinZ, S.chinTop], [S.chinBack, S.chinTop]], new THREE.Vector3(sg * (W + 0.06), 0, 0), Z, Y, OBS_MAT.chinWhite));
-  g.add(panel([[-W, 0], [W, 0], [W, S.chinTop], [-W, S.chinTop]], new THREE.Vector3(0, 0, S.chinZ + 0.06), X, Y, OBS_MAT.chinWhite));
+    g.add(panel([[S.chinBack, 0], [S.chinZ - S.chinUnderBack, 0], [S.chinZ, S.chinUnder], [S.chinZ, S.chinTop], [S.chinBack, S.chinTop]], new THREE.Vector3(sg * (W + 0.06), 0, 0), Z, Y, OBS_MAT.chinWhite));
+  g.add(panel([[-W, S.chinUnder], [W, S.chinUnder], [W, S.chinTop], [-W, S.chinTop]], new THREE.Vector3(0, 0, S.chinZ + 0.06), X, Y, OBS_MAT.chinWhite));
   // underside of the box (shadowed band seen where the box overhangs the base)
   {
     const under = panel(
-      [[-W, -(W - c)], [-(W - c), -W], [W - c, -W], [W, -(W - c)], [W, S.chinZ], [-W, S.chinZ]],
+      [[-W, -(W - c)], [-(W - c), -W], [W - c, -W], [W, -(W - c)], [W, S.chinZ - S.chinUnderBack], [-W, S.chinZ - S.chinUnderBack]],
       new THREE.Vector3(0, 0.02, 0),
       X,
       Z,
@@ -543,6 +555,11 @@ function buildDome(): Dome {
     const base = new THREE.Mesh(geo, OBS_MAT.drum);
     base.position.y = -S.baseH / 2;
     g.add(base);
+    // top of the base around the box footprint (closes the gap under the slim housing)
+    const cap = new THREE.Mesh(new THREE.RingGeometry(12.2, S.drumR + 0.25, 160), OBS_MAT.cladding);
+    cap.rotation.x = -Math.PI / 2;
+    cap.position.y = -0.02;
+    g.add(cap);
     const lip = new THREE.Mesh(new THREE.CylinderGeometry(S.drumR + 0.45, S.drumR + 0.45, 0.5, 160, 1, true), OBS_MAT.chinWhite);
     lip.position.y = -S.baseH + 0.25;
     g.add(lip);
@@ -710,34 +727,34 @@ function buildServiceBuilding() {
   // tall block against the drum (platform-lift shaft, camera & coating access), slanted top
   const tall = facetedBar([[-10, 0], [10, 0], [10, 15.5], [7, 17.5], [-10, 17.5]], 11, 27, 0, M);
   g.add(tall);
-  // long service & operations building: stacked, outward-flaring bands (cross-section in z, y)
+  // long service & operations building (photo 2026-11-02): widest at the bottom, a sloped lower
+  // band stepping in, a near-vertical upper band, then the sloped roof; the far end leans back
+  // toward the top (bottom further out than the top), like the sides
   const sec: [number, number][] = [
-    [-9, 0], [9, 0], // undercut base
-    [9, 3], [13.5, 6.5], // first band flares out
-    [13.5, 8], [15.5, 9.5], // second band
-    [15.5, 11], [12, 14.5], // sloped upper roof
-    [-12, 14.5], [-15.5, 11],
-    [-15.5, 9.5], [-13.5, 8],
-    [-13.5, 6.5], [-9, 3],
+    [-15.5, 0], [15.5, 0],
+    [13.5, 5], [13, 9], // sloped lower band, near-vertical upper band
+    [9, 13], [-9, 13], // sloped roof up to the flat top
+    [-13, 9], [-13.5, 5],
   ];
   const yb = -9; // the building steps down toward the saddle
-  const bar = facetedBar(sec, 22, 60, yb, M, 0.75, 7);
+  const bar = facetedBar(sec, 22, 64, yb, M, -0.45, 0);
   g.add(bar);
-  // flat top roof strip (slightly darker) and a ribbon of small windows
-  const roof = facetedBar([[-12, 14.5], [12, 14.5], [10, 15.6], [-10, 15.6]], 22, 60, yb, OBS_MAT.whiteRoof, 0.75, 7);
+  // flat top roof strip and a ribbon of small windows under the upper eave
+  const roof = facetedBar([[-9, 13], [9, 13], [8.5, 13.4], [-8.5, 13.4]], 22, 64 - 0.45 * 13, yb, OBS_MAT.whiteRoof, -0.45, 13);
   g.add(roof);
   const winMat = new THREE.MeshStandardMaterial({ color: 0x2a3a48, metalness: 0.6, roughness: 0.2, emissive: 0x000000 });
   for (let x = 26; x < 58; x += 3.2) {
     const w = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.7, 0.1), winMat);
-    w.position.set(x, yb + 9.0, 15.55);
+    w.position.set(x, yb + 8.3, 13.08);
     g.add(w);
   }
   // grey lower level at the far end (maintenance / loading)
-  const base = facetedBar([[-9, 0], [9, 0], [9, 5], [-9, 5]], 44, 66, yb - 5, OBS_MAT.bldgGrey);
+  const base = facetedBar([[-14, 0], [14, 0], [14, 5], [-14, 5]], 44, 66, yb - 5, OBS_MAT.bldgGrey);
   g.add(base);
   // big roll-up door on the near side
   const door = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 0.2), new THREE.MeshStandardMaterial({ color: 0x55595f, metalness: 0.4, roughness: 0.6 }));
-  door.position.set(40, yb + 3, 9.1);
+  door.position.set(40, yb + 2.6, 14.6);
+  door.rotation.x = -Math.atan2(2, 5);
   g.add(door);
   g.userData.windows = winMat;
   return g;
