@@ -42,6 +42,9 @@ Anything that moves, changes material, or is shown/hidden on its own after the b
 in the `keep` list of the `mergeStatic(...)` call of its assembly (or live in a group that is in that
 list, like `parts.blades` or the dome doors). Otherwise it is baked into the merged mesh and silently
 stops moving. Referencing the object afterwards (position, material, visible) has no visible effect.
+Safety net: under `npm run dev`, a baked mesh is locked and any later change to its transform,
+`visible` or `material` throws `mergeStatic: "<name>" was baked into a merged mesh…`. So test
+animations in dev mode and watch the console; the production build has no such check.
 
 **Rule 2: a new input of a ray trace must be in the cache key.**
 `src/apps/telescope.ts` caches baked traces in a `TraceCache` (LRU, 2 MB budget) keyed by every
@@ -54,6 +57,9 @@ whenever the camera is not exploded. A page that hides parts (the filters page h
 must re-apply its visibility after every `cam.update()`: on the filters page always call
 `refreshModel()`, never `cam.update()` alone. (Regression fixed in Nov 2026: the body covered
 the filter during an exchange.)
+
+**Pitfall: labels only touch the DOM when their visibility changes** (`createLabels` in
+`common.ts`). Any per-element cached state must start consistent with the DOM (labels start hidden).
 
 **Measured effect** (software WebGL, so only draw calls and memory are meaningful):
 draw calls per frame telescope 1978 → 298, camera 1200 → 260, filters 1051 → 187,

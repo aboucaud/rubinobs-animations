@@ -95,6 +95,9 @@ export function createLabels<L extends LabelItem>(
       tip.innerHTML = `<b>${l.title}</b><p>${l.text}</p>`;
       tip.classList.add('show');
     };
+    // start hidden: the update below only touches the DOM when visibility changes, so the
+    // element and the `shown` flag must agree from the start
+    el.style.display = 'none';
     layer.appendChild(el);
     return { l, el, shown: false };
   });
