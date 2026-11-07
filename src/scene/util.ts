@@ -21,6 +21,20 @@ export function lathe(profile: [number, number][], segments = 128, mat?: THREE.M
   return new THREE.Mesh(g, mat);
 }
 
+/** Lens/filter solid of revolution between two surface profiles (front at lower z). */
+export function lensSolid(front: (r: number) => number, back: (r: number) => number, rClear: number, rEdge: number, mat: THREE.Material, n = 48, segments = 128) {
+  const prof: [number, number][] = [];
+  for (let i = 0; i <= n; i++) {
+    const r = (rEdge * i) / n;
+    prof.push([r, front(Math.min(r, rClear))]);
+  }
+  for (let i = n; i >= 0; i--) {
+    const r = (rEdge * i) / n;
+    prof.push([r, back(Math.min(r, rClear))]);
+  }
+  return lathe(prof, segments, mat);
+}
+
 /** Sample a surface sag profile between r0 and r1, as [r, zGlobal]. */
 export function sagProfile(s: Surface, r0: number, r1: number, n = 64, dz = 0): [number, number][] {
   const out: [number, number][] = [];

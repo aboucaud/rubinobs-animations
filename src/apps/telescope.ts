@@ -1,51 +1,26 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import GUI from 'lil-gui';
-import { Rubin, Band, BANDS, TraceResult } from '../optics/trace';
-import { buildTelescope } from '../scene/telescope';
-import { buildAzimuth } from '../scene/mount';
+import { Rubin } from '../optics/trace';
+import { BANDS, BAND_HEX, BAND_INFO, Band } from '../scene/bands';
+import { buildTelescope, ELEV_AXIS_ABOVE_M1 } from '../scene/telescope';
+import { buildAzimuth, AXIS_HEIGHT } from '../scene/mount';
 import { cutPlane, MAT } from '../scene/materials';
-import { RayBundle } from '../scene/rays';
-import { ocs, ocsv, tube } from '../scene/util';
+import { RayBuilder, RayBundle, RayData, rayBytes, TraceCache } from '../scene/rays';
+import { ocs, ocsv } from '../scene/util';
 import { LAYOUT, ccdAt } from '../scene/focalplane';
-import '../style.css';
-
-const BAND_INFO: Record<Band, { name: string; color: string; range: string; note: string }> = {
-  u: { name: 'u', color: '#9b6bff', range: '320–390 nm', note: 'near-ultraviolet' },
-  g: { name: 'g', color: '#34b8ff', range: '400–550 nm', note: 'blue-green' },
-  r: { name: 'r', color: '#ff6a2e', range: '550–690 nm', note: 'red' },
-  i: { name: 'i', color: '#ff2f5e', range: '690–820 nm', note: 'near-infrared (false colour)' },
-  z: { name: 'z', color: '#e04bff', range: '820–925 nm', note: 'infrared (false colour)' },
-  y: { name: 'y', color: '#ffd43a', range: '930–1010 nm', note: 'infrared (false colour)' },
-};
-
-const ELEV_AXIS_ABOVE_M1 = 1.69; // inferred from the M1M3 actuator table (to be checked vs CAD)
-const AXIS_HEIGHT = 7.0; // APPROX: elevation axis above the azimuth floor
+import { CameraTween, createLabels, createViewer, faceCutPlane, glowTexture } from './common';
 
 // ---------------------------------------------------------------- renderer & scene
-const canvas = document.getElementById('c') as HTMLCanvasElement;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.9;
-renderer.localClippingEnabled = true;
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x05070d);
-const pmrem = new THREE.PMREMGenerator(renderer);
-scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-scene.environmentIntensity = 0.55;
-
-const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.02, 2000);
+const { renderer, scene, camera, controls, composer, bloom, onResize } = createViewer({
+  fov: 40,
+  near: 0.02,
+  far: 2000,
+  exposure: 0.9,
+  background: 0x05070d,
+  roomEnvironment: 0.55,
+  bloom: [0.9, 0.3, 1.3],
+});
 camera.position.set(17, 12, 19);
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
 controls.target.set(0, AXIS_HEIGHT + 1.5, 0);
 controls.maxDistance = 120;
 controls.minDistance = 0.3;
@@ -96,8 +71,7 @@ const state = {
   bloom: 0.9,
 };
 
-let rubin = new Rubin(state.band);
-const tel = buildTelescope(rubin);
+const tel = buildTelescope(Rubin.forBand(state.band));
 const azGroup = new THREE.Group();
 const elGroup = new THREE.Group();
 elGroup.position.y = AXIS_HEIGHT;
@@ -107,62 +81,81 @@ azGroup.add(elGroup);
 scene.add(azGroup);
 
 // Mount & pier placeholder (APPROX: TMA envelope to be replaced by the NOIRLab CAD)
-const mount = new THREE.Group();
+const azimuth = buildAzimuth();
+azGroup.add(azimuth);
+const pier = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 15.65, 96, 1, true), MAT.concrete);
+pier.position.y = -0.6 - 15.65 / 2;
+scene.add(pier);
 {
-  const pier = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 15.65, 96, 1, true), MAT.concrete);
-  pier.position.y = -0.6 - 15.65 / 2;
-  mount.add(pier);
   const floor = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 0.3, 96), MAT.floor);
   floor.position.y = -0.75;
   scene.add(floor);
-  azGroup.add(buildAzimuth());
 }
-scene.add(mount);
 
 // ---------------------------------------------------------------- rays
 const rays = new RayBundle();
 tel.ota.add(rays.object);
-const spot = new THREE.Sprite(
-  new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffffff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }),
-);
+const spot = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffffff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
 spot.scale.setScalar(0.06);
 spot.renderOrder = 11;
 tel.ota.add(spot);
-const star = new THREE.Sprite(
-  new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffffff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }),
-);
+const star = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffffff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
 star.scale.setScalar(2.2);
 tel.ota.add(star);
 
-let lastResults: TraceResult[] = [];
-let landing = { x: 0, y: 0, ok: 0, total: 0, blocked: {} as Record<string, number> };
+type Landing = { x: number; y: number; ok: number; total: number; blocked: Record<string, number> };
+type Traced = { rays: RayData; landing: Landing };
+// Baked traces, keyed by every input of the trace: going back to a configuration already seen
+// costs nothing (switching bands, densities or patterns back and forth), and the 2 MB budget
+// (≈ 130 default fans, or ≈ 15 of the densest 3D bundles) bounds the memory the cache can hold.
+const traces = new TraceCache<Traced>(2 * 1024 * 1024, (t) => rayBytes(t.rays) + 256);
+let landing: Landing = { x: 0, y: 0, ok: 0, total: 0, blocked: {} };
 let head = 0;
 
-function retrace() {
-  rubin = new Rubin(state.band);
+function fieldAngles() {
   const th = (state.fieldAngle * Math.PI) / 180;
   const az = (state.fieldAz * Math.PI) / 180;
-  const thx = th * Math.cos(az);
-  const thy = th * Math.sin(az);
-  lastResults = rubin.traceStar(thx, thy, { rings: state.rings, perRing: state.rings * 3, startZ: 12.5, rInner: 2.2, rOuter: 4.25, pattern: state.pattern, fanAngle: 0 });
-  rays.set(lastResults);
-  const col = new THREE.Color(BAND_INFO[state.band].color);
-  rays.material.uniforms.uColor.value.copy(col);
-  (spot.material as THREE.SpriteMaterial).color.copy(col).multiplyScalar(2);
-  const okR = lastResults.filter((r) => r.ok);
+  return [th * Math.cos(az), th * Math.sin(az)] as const;
+}
+
+function trace(): Traced {
+  const rubin = Rubin.forBand(state.band);
+  const [thx, thy] = fieldAngles();
+  const out = new RayBuilder();
   const blocked: Record<string, number> = {};
-  for (const r of lastResults) if (!r.ok) blocked[r.stoppedBy ?? '?'] = (blocked[r.stoppedBy ?? '?'] ?? 0) + 1;
   let x = 0;
   let y = 0;
-  for (const r of okR) {
+  let ok = 0;
+  let total = 0;
+  // each ray is baked into typed arrays as soon as it is traced, then dropped
+  rubin.forEachStarRay(thx, thy, { rings: state.rings, perRing: state.rings * 3, startZ: 12.5, rInner: 2.2, rOuter: 4.25, pattern: state.pattern, fanAngle: 0 }, (r) => {
+    out.add(r);
+    total++;
+    if (!r.ok) {
+      const k = r.stoppedBy ?? '?';
+      blocked[k] = (blocked[k] ?? 0) + 1;
+      return;
+    }
     const p = r.points[r.points.length - 1];
     x += p[0];
     y += p[1];
-  }
-  x /= okR.length || 1;
-  y /= okR.length || 1;
-  landing = { x, y, ok: okR.length, total: lastResults.length, blocked };
-  spot.position.copy(ocs(x, y, rubin.surfaces.Detector.z0 - 0.002));
+    ok++;
+  });
+  return { rays: out.finish(), landing: { x: x / (ok || 1), y: y / (ok || 1), ok, total, blocked } };
+}
+
+function retrace() {
+  // cache key: EVERY setting that changes the trace must be in it, or stale rays are shown
+  const k = [state.band, state.fieldAngle.toFixed(3), state.fieldAz.toFixed(2), state.pattern, state.rings].join('|');
+  const t = traces.get(k, trace);
+  rays.setData(t.rays);
+  landing = t.landing;
+  const rubin = Rubin.forBand(state.band);
+  const col = new THREE.Color(BAND_HEX[state.band]);
+  rays.material.uniforms.uColor.value.copy(col);
+  spot.material.color.copy(col).multiplyScalar(2);
+  spot.position.copy(ocs(landing.x, landing.y, rubin.surfaces.Detector.z0 - 0.002));
+  const [thx, thy] = fieldAngles();
   const d = Rubin.fieldDirection(thx, thy);
   star.position.copy(ocsv([-d[0] * 60, -d[1] * 60, -d[2] * 60]));
   tel.setBand(rubin);
@@ -170,47 +163,14 @@ function retrace() {
   drawInset();
 }
 
-// ---------------------------------------------------------------- post-processing
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), state.bloom, 0.3, 1.3);
-composer.addPass(bloom);
-composer.addPass(new OutputPass());
+// Slider drags fire many change events per frame: trace at most once per frame.
+let retracePending = false;
+function requestRetrace() {
+  retracePending = true;
+}
 
 // ---------------------------------------------------------------- labels
-const labelLayer = document.getElementById('labels')!;
-const tip = document.getElementById('tip')!;
-const labelEls = tel.labels.map((l) => {
-  const el = document.createElement('button');
-  el.className = 'label';
-  el.textContent = l.title.split(' — ')[0];
-  el.onclick = (e) => {
-    e.stopPropagation();
-    tip.innerHTML = `<b>${l.title}</b><p>${l.text}</p>`;
-    tip.classList.add('show');
-  };
-  labelLayer.appendChild(el);
-  return { l, el };
-});
-document.body.addEventListener('pointerdown', (e) => {
-  if (!(e.target as HTMLElement).closest('#tip')) tip.classList.remove('show');
-});
-const tmpV = new THREE.Vector3();
-function updateLabels() {
-  labelLayer.style.display = state.labels ? 'block' : 'none';
-  if (!state.labels) return;
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  for (const { l, el } of labelEls) {
-    tmpV.copy(l.pos);
-    tel.ota.localToWorld(tmpV);
-    const dist = tmpV.distanceTo(camera.position);
-    tmpV.project(camera);
-    const vis = tmpV.z < 1 && Math.abs(tmpV.x) < 1.05 && Math.abs(tmpV.y) < 1.05 && dist < 45;
-    el.style.display = vis ? 'block' : 'none';
-    if (vis) el.style.transform = `translate(${((tmpV.x + 1) / 2) * w}px, ${((1 - tmpV.y) / 2) * h}px)`;
-  }
-}
+const updateLabels = createLabels(tel.labels, camera, controls, { defaultParent: tel.ota, margin: 1.05, visible: (_l, dist) => dist < 45 });
 
 // ---------------------------------------------------------------- info panel & focal-plane inset
 const info = document.getElementById('info')!;
@@ -225,7 +185,7 @@ function updateInfo() {
     .join(', ');
   const travelNs = ((rays.meanOkLength - (12.5 - 9.818)) / 0.299792458).toFixed(0);
   info.innerHTML = `
-    <div class="band" style="--c:${b.color}">${b.name}<span>${b.range} · ${b.note}</span></div>
+    <div class="band" style="--c:${BAND_HEX[state.band]}">${state.band}<span>${b.range} · ${b.note}${b.falseColour ? ' (false colour)' : ''}</span></div>
     <div>Star at <b>${state.fieldAngle.toFixed(2)}°</b> from the centre of the field</div>
     <div>Lands at <b>${(landing.x * 1e3).toFixed(1)}, ${(landing.y * 1e3).toFixed(1)} mm</b> (r = ${(r * 1e3).toFixed(1)} mm)</div>
     <div>Sensor: <b>${ccd ? `${ccd.raft} ${ccd.ccd}` : 'gap between CCDs'}</b>${ccd ? ` <span class="k">${kindName(ccd.kind)}</span>` : ''}</div>
@@ -243,26 +203,35 @@ function kindName(k: string) {
 const inset = document.getElementById('inset') as HTMLCanvasElement;
 const ictx = inset.getContext('2d')!;
 const FP_HALF = 0.33;
+// the CCD layout never changes: draw it once into an offscreen canvas, then only the spot moves
+let insetBase: HTMLCanvasElement | null = null;
 function drawInset() {
   const dpr = Math.min(window.devicePixelRatio, 2);
   const S = inset.clientWidth;
-  inset.width = S * dpr;
-  inset.height = S * dpr;
-  ictx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ictx.clearRect(0, 0, S, S);
   const k = S / (2 * FP_HALF);
   const X = (x: number) => S / 2 + x * k;
   const Y = (y: number) => S / 2 - y * k;
-  ictx.strokeStyle = 'rgba(255,255,255,0.25)';
-  ictx.beginPath();
-  ictx.arc(S / 2, S / 2, 0.317 * k, 0, Math.PI * 2);
-  ictx.stroke();
-  for (const c of LAYOUT) {
-    ictx.fillStyle = c.kind === 'e2v' ? '#4b3a8c' : c.kind === 'itl' ? '#7a6436' : c.kind === 'wfs' ? '#2f7a69' : '#8a7444';
-    ictx.fillRect(X(c.cx - c.w / 2), Y(c.cy + c.h / 2), c.w * k, c.h * k);
+  if (!insetBase || insetBase.width !== Math.round(S * dpr)) {
+    insetBase = document.createElement('canvas');
+    insetBase.width = insetBase.height = Math.round(S * dpr);
+    const g = insetBase.getContext('2d')!;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.strokeStyle = 'rgba(255,255,255,0.25)';
+    g.beginPath();
+    g.arc(S / 2, S / 2, 0.317 * k, 0, Math.PI * 2);
+    g.stroke();
+    for (const c of LAYOUT) {
+      g.fillStyle = c.kind === 'e2v' ? '#4b3a8c' : c.kind === 'itl' ? '#7a6436' : c.kind === 'wfs' ? '#2f7a69' : '#8a7444';
+      g.fillRect(X(c.cx - c.w / 2), Y(c.cy + c.h / 2), c.w * k, c.h * k);
+    }
+    inset.width = inset.height = insetBase.width;
   }
+  ictx.setTransform(1, 0, 0, 1, 0, 0);
+  ictx.clearRect(0, 0, inset.width, inset.height);
+  ictx.drawImage(insetBase, 0, 0);
+  ictx.setTransform(dpr, 0, 0, dpr, 0, 0);
   // spot
-  const col = BAND_INFO[state.band].color;
+  const col = BAND_HEX[state.band];
   ictx.fillStyle = col;
   ictx.shadowColor = col;
   ictx.shadowBlur = 10;
@@ -280,10 +249,10 @@ inset.addEventListener('pointerdown', (e) => {
   // focal-plane position → field angle (EFL ≈ 10.31 m; images are not inverted along this path)
   const EFL = 10.31;
   const ang = (Math.hypot(x, y) / EFL) * (180 / Math.PI);
-  state.fieldAngle = Math.min(1.75, ang);
-  state.fieldAz = (Math.atan2(y, x) * 180) / Math.PI;
+  state.fieldAngle = Math.round(Math.min(1.75, ang) * 100) / 100;
+  state.fieldAz = Math.round((Math.atan2(y, x) * 180) / Math.PI);
   gui.controllersRecursive().forEach((c) => c.updateDisplay());
-  retrace();
+  requestRetrace();
 });
 
 // ---------------------------------------------------------------- views
@@ -296,12 +265,10 @@ const VIEWS: Record<string, View> = {
   'Focal plane': { pos: [0.7, 3.95, 0.35], tgt: [0, 4.43, 0], cut: true, glass: false },
   'From the sky': { pos: [0.01, 32, 0.01], tgt: [0, 0, 0] },
 };
-let tween: { start: number; t: number; p0: THREE.Vector3; p1: THREE.Vector3; q0: THREE.Vector3; q1: THREE.Vector3 } | null = null;
+const tween = new CameraTween(camera, controls, 1400);
 function goView(name: string) {
   const v = VIEWS[name];
-  const p1 = tel.ota.localToWorld(new THREE.Vector3(...v.pos));
-  const q1 = tel.ota.localToWorld(new THREE.Vector3(...v.tgt));
-  tween = { start: performance.now(), t: 0, p0: camera.position.clone(), p1, q0: controls.target.clone(), q1 };
+  tween.start(tel.ota.localToWorld(new THREE.Vector3(...v.pos)), tel.ota.localToWorld(new THREE.Vector3(...v.tgt)));
   state.glass = v.glass ?? true;
   if (v.cut !== undefined) state.cutaway = v.cut;
   gui.controllersRecursive().forEach((c) => c.updateDisplay());
@@ -311,11 +278,11 @@ function goView(name: string) {
 const gui = new GUI({ title: 'Simonyi Telescope' });
 if (window.innerWidth < 720) gui.close();
 const fLight = gui.addFolder('Light');
-fLight.add(state, 'band', BANDS).name('filter').onChange(retrace);
-fLight.add(state, 'fieldAngle', 0, 1.75, 0.01).name('star offset (°)').onChange(retrace);
-fLight.add(state, 'fieldAz', -180, 180, 1).name('star direction (°)').onChange(retrace);
-fLight.add(state, 'pattern', { 'fan (one slice)': 'fan', '3D bundle': 'bundle' }).name('rays').onChange(retrace);
-fLight.add(state, 'rings', 3, 14, 1).name('ray density').onChange(retrace);
+fLight.add(state, 'band', BANDS).name('filter').onChange(requestRetrace);
+fLight.add(state, 'fieldAngle', 0, 1.75, 0.01).name('star offset (°)').onChange(requestRetrace);
+fLight.add(state, 'fieldAz', -180, 180, 1).name('star direction (°)').onChange(requestRetrace);
+fLight.add(state, 'pattern', { 'fan (one slice)': 'fan', '3D bundle': 'bundle' }).name('rays').onChange(requestRetrace);
+fLight.add(state, 'rings', 3, 14, 1).name('ray density').onChange(requestRetrace);
 fLight.add(state, 'speed', 0.2, 8, 0.1).name('light speed (m/s)').onChange(updateInfo);
 fLight.add(state, 'continuous').name('continuous light');
 fLight.add({ fire: () => ((state.continuous = false), (head = 0), gui.controllersRecursive().forEach((c) => c.updateDisplay())) }, 'fire').name('▶ send one wavefront');
@@ -326,16 +293,18 @@ fView.add(state, 'cutaway').name('cutaway');
 fView.add(state, 'labels').name('labels');
 fView.add(state, 'glass').name('lenses & filters');
 fView.add(state, 'mount').name('mount (approx.)');
-fView.add(state, 'bloom', 0, 2, 0.05).name('glow').onChange((v: number) => (bloom.strength = v));
+fView.add(state, 'bloom', 0, 2, 0.05).name('glow').onChange((v: number) => (bloom!.strength = v));
 const fPoint = gui.addFolder('Pointing');
 fPoint.add(state, 'elevation', 15, 90, 0.5).name('elevation (°)');
 fPoint.add(state, 'azimuth', -270, 270, 1).name('azimuth (°)');
 
 // ---------------------------------------------------------------- loop
 const clock = new THREE.Clock();
-const axisW = new THREE.Vector3();
-const originW = new THREE.Vector3();
 function frame() {
+  if (retracePending) {
+    retracePending = false;
+    retrace();
+  }
   const dt = Math.min(clock.getDelta(), 0.05);
   head += dt * state.speed;
   const u = rays.material.uniforms;
@@ -345,70 +314,26 @@ function frame() {
   if (!state.continuous && head > rays.maxDist + 6) head = rays.maxDist + 6;
   // spot brightness follows arrivals
   const arrival = state.continuous ? 1 : Math.max(0, Math.min(1, (head - rays.meanOkLength) / 0.3)) * Math.exp(-Math.max(0, head - rays.meanOkLength - 0.3) / 2);
-  (spot.material as THREE.SpriteMaterial).opacity = arrival;
+  spot.material.opacity = arrival;
 
   // pointing (eased)
   elGroup.rotation.x += (THREE.MathUtils.degToRad(90 - state.elevation) - elGroup.rotation.x) * 0.08;
   azGroup.rotation.y += (THREE.MathUtils.degToRad(-state.azimuth) - azGroup.rotation.y) * 0.08;
-  mount.visible = state.mount;
+  pier.visible = azimuth.visible = state.mount;
   tel.groups.lenses.visible = tel.groups.filter.visible = state.glass;
-  azGroup.children.forEach((c) => c !== elGroup && (c.visible = state.mount));
 
   // cutaway plane always faces the viewer, through the optical axis
-  tel.ota.updateMatrixWorld();
-  originW.setFromMatrixPosition(tel.ota.matrixWorld);
-  axisW.set(0, 1, 0).transformDirection(tel.ota.matrixWorld);
-  if (state.cutaway) {
-    const v = camera.position.clone().sub(originW);
-    v.addScaledVector(axisW, -v.dot(axisW)).normalize();
-    cutPlane.normal.copy(v).negate();
-    cutPlane.constant = -cutPlane.normal.dot(originW);
-  } else {
-    cutPlane.normal.set(0, 1, 0);
-    cutPlane.constant = 1e6;
-  }
+  faceCutPlane(cutPlane, tel.ota, camera, state.cutaway);
 
-  if (tween) {
-    tween.t = Math.min(1, (performance.now() - tween.start) / 1400);
-    const e = tween.t < 0.5 ? 4 * tween.t ** 3 : 1 - (-2 * tween.t + 2) ** 3 / 2;
-    camera.position.lerpVectors(tween.p0, tween.p1, e);
-    controls.target.lerpVectors(tween.q0, tween.q1, e);
-    if (tween.t >= 1) tween = null;
-  }
+  tween.update();
   controls.update();
   composer.render();
-  updateLabels();
+  updateLabels(state.labels);
   requestAnimationFrame(frame);
 }
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
-  drawInset();
-});
-
-function glowTexture() {
-  const c = document.createElement('canvas');
-  c.width = c.height = 128;
-  const g = c.getContext('2d')!;
-  const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  grd.addColorStop(0, 'rgba(255,255,255,1)');
-  grd.addColorStop(0.15, 'rgba(255,255,255,0.6)');
-  grd.addColorStop(0.5, 'rgba(255,255,255,0.08)');
-  grd.addColorStop(1, 'rgba(255,255,255,0)');
-  g.fillStyle = grd;
-  g.fillRect(0, 0, 128, 128);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-// unused helper kept for future dome work
-void tube;
+onResize.push(drawInset);
 
 retrace();
 goView('Overview');
 frame();
-(window as any).__rubin = { state, retrace, goView, camera, controls };
+(window as any).__rubin = { state, retrace, goView, camera, controls, renderer, traces };

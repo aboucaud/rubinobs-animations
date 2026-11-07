@@ -9,16 +9,16 @@
 // the cryostat, and finally drops straight down into its online position, where clamps hold it to
 // 0.1 mm. Everything fits inside the Ø1.6 m camera body.
 import * as THREE from 'three';
-import { Band } from '../optics/trace';
+import { BANDS, Band } from './bands';
 import { Surface } from '../optics/surfaces';
 import prescription from '../data/prescription.json';
 import filterColours from '../data/filter_colours.json';
 import { cutPlane } from './materials';
-import { lathe, ocs, tube } from './util';
+import { box, lathe, lensSolid, ocs, tube } from './util';
+import { mergeStatic } from './optimize';
 import type { Label } from './telescope';
 
 const P = prescription as unknown as Record<Band, { surfaces: any[] }>;
-export const BANDS: Band[] = ['u', 'g', 'r', 'i', 'z', 'y'];
 
 export const FES = {
   R: 0.53, // distance from the axis to a stored filter's outer face (pentagon apothem)
@@ -30,15 +30,6 @@ export const FES = {
   zFront: 4.12, // front of the autochanger frame (the leading pins swing slightly in front of the beam plane)
   zArmEnd: 5.36, // rear end of the top rails
   zRing: 5.42, // carousel ring (front face)
-};
-
-export const BAND_HEX: Record<Band, string> = {
-  u: '#9b6bff',
-  g: '#34b8ff',
-  r: '#ff6a2e',
-  i: '#ff2f5e',
-  z: '#e04bff',
-  y: '#ffd43a',
 };
 
 // ---------------------------------------------------------------- materials (CNRS-like anodised greys)
@@ -68,20 +59,6 @@ function slottedAlpha(slots: number) {
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
-}
-
-function boxAt(cx: number, cy: number, cz: number, sx: number, sy: number, sz: number, mat: THREE.Material) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sz, sy), mat);
-  m.position.copy(ocs(cx, cy, cz));
-  return m;
-}
-
-function lensSolid(front: (r: number) => number, back: (r: number) => number, rClear: number, rEdge: number, mat: THREE.Material) {
-  const n = 40;
-  const prof: [number, number][] = [];
-  for (let i = 0; i <= n; i++) prof.push([(rEdge * i) / n, front(Math.min((rEdge * i) / n, rClear))]);
-  for (let i = n; i >= 0; i--) prof.push([(rEdge * i) / n, back(Math.min((rEdge * i) / n, rClear))]);
-  return lathe(prof, 112, mat);
 }
 
 /**
@@ -130,7 +107,7 @@ function buildFilter(b: Band) {
   const g = new THREE.Group();
   g.name = `filter-${b}`;
   const fm = filterMaterials(b);
-  const glass = lensSolid((r) => fe.zAt(r, 0) - z0, (r) => fx.zAt(r, 0) - z0, 0.375, 0.375, fm.through);
+  const glass = lensSolid((r) => fe.zAt(r, 0) - z0, (r) => fx.zAt(r, 0) - z0, 0.375, 0.375, fm.through, 40, 112);
   glass.renderOrder = 5;
   g.add(glass);
   // coating: reflective layer on the entrance surface (and a weaker one on the exit side)
@@ -160,6 +137,7 @@ function buildFilter(b: Band) {
   tab.position.set(0, th / 2, -0.405);
   g.add(tab);
   g.userData = { zBeam: z0, thickness: th, band: b };
+  mergeStatic(g); // a filter moves as one block; a part animated inside it must go in keep
   return g;
 }
 
@@ -272,7 +250,7 @@ export function buildFES(): FilterExchanger {
     // radial webs visible through the slots
     for (let i = 0; i < 40; i++) {
       const a = ((i + 0.5) / 40) * Math.PI * 2;
-      const w = boxAt(0.665 * Math.cos(a), 0.665 * Math.sin(a), zR + 0.055, 0.1, 0.008, 0.11, M.darker);
+      const w = box(0.665 * Math.cos(a), 0.665 * Math.sin(a), zR + 0.055, 0.1, 0.008, 0.11, M.darker);
       w.rotation.y = a;
       carousel.add(w);
     }
@@ -300,18 +278,18 @@ export function buildFES(): FilterExchanger {
     for (const side of [-1, 1]) {
       // guide rail along z
       const p = at(R - 0.035, side * 0.415, (zC + zR) / 2 - 0.15);
-      const rail = boxAt(p.x, p.y, p.z, 0.035, 0.035, zR - (zC - 0.4), M.dark);
+      const rail = box(p.x, p.y, p.z, 0.035, 0.035, zR - (zC - 0.4), M.dark);
       rail.rotation.y = a - Math.PI / 2;
       sg.add(rail);
       // standoff to the ring
       const q = at(R + 0.02, side * 0.415, zR - 0.03);
-      const st = boxAt(q.x, q.y, q.z, 0.06, 0.12, 0.06, M.dark);
+      const st = box(q.x, q.y, q.z, 0.06, 0.12, 0.06, M.dark);
       st.rotation.y = a - Math.PI / 2;
       sg.add(st);
       // clamp (self-locking, orange = open, green = locked)
       for (const dz of [-0.22, 0.18]) {
         const r = at(R - 0.005, side * 0.432, zC + dz);
-        const cl = boxAt(r.x, r.y, r.z, 0.03, 0.045, 0.07, M.clampShut);
+        const cl = box(r.x, r.y, r.z, 0.03, 0.045, 0.07, M.clampShut);
         cl.rotation.y = a - Math.PI / 2;
         cl.userData.base = cl.position.clone();
         cl.userData.out = ocs(side * 0.03 * -sn, side * 0.03 * c, 0); // tangential retreat when unlocked
@@ -321,7 +299,7 @@ export function buildFES(): FilterExchanger {
     }
     // rear stop
     const r = at(R - 0.02, 0, zR - 0.02);
-    const stop = boxAt(r.x, r.y, r.z, 0.16, 0.05, 0.04, M.alu);
+    const stop = box(r.x, r.y, r.z, 0.16, 0.05, 0.04, M.alu);
     stop.rotation.y = a - Math.PI / 2;
     sg.add(stop);
     carousel.add(sg);
@@ -339,7 +317,7 @@ export function buildFES(): FilterExchanger {
     const pinion = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 24), M.steel);
     pinion.position.copy(ocs(0.2, -0.745, zR + 0.09));
     fixed.add(pinion);
-    const bracket = boxAt(0.2, -0.79, zR + 0.06, 0.12, 0.05, 0.14, M.dark);
+    const bracket = box(0.2, -0.79, zR + 0.06, 0.12, 0.05, 0.14, M.dark);
     fixed.add(bracket);
   }
   L('drive', 'Carousel drive', 'A motor and brake turn the carousel ring through its gear. Before a filter can leave, the carousel is realigned to better than 0.1 mm with the autochanger.', ocs(0.2, -0.8, zR + 0.15), fixed);
@@ -395,18 +373,18 @@ export function buildFES(): FilterExchanger {
       }
     }
     // front frame: bottom beam, top beam, white V bar (as in the CNRS animation)
-    autochanger.add(boxAt(0, -0.53, zFr + 0.02, 2 * X + 0.05, 0.06, 0.04, M.dark));
-    autochanger.add(boxAt(0, 0.61, zFr + 0.02, 2 * X + 0.05, 0.06, 0.04, M.dark));
+    autochanger.add(box(0, -0.53, zFr + 0.02, 2 * X + 0.05, 0.06, 0.04, M.dark));
+    autochanger.add(box(0, 0.61, zFr + 0.02, 2 * X + 0.05, 0.06, 0.04, M.dark));
     // rear cross-beam at the end of the arms
-    autochanger.add(boxAt(0, 0.62, zArm - 0.03, 2 * X + 0.05, 0.05, 0.05, M.dark));
+    autochanger.add(box(0, 0.62, zArm - 0.03, 2 * X + 0.05, 0.05, 0.05, M.dark));
     // linear drives: ball-screw rails on the outside of the arms, with motors at the rear
     for (const sx of [-1, 1]) {
-      autochanger.add(boxAt(sx * DX, 0.67, (zFr + zArm) / 2 + 0.05, 0.05, 0.05, zArm - zFr - 0.05, M.alu));
+      autochanger.add(box(sx * DX, 0.67, (zFr + zArm) / 2 + 0.05, 0.05, 0.05, zArm - zFr - 0.05, M.alu));
       const screw = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, zArm - zFr - 0.1, 12), M.steel);
       screw.position.copy(ocs(sx * DX, 0.70, (zFr + zArm) / 2 + 0.05));
       autochanger.add(screw);
       // cross-ties from the drive rail to the arm
-      for (const z of [zFr + 0.06, 4.7, zArm - 0.06]) autochanger.add(boxAt(sx * (DX + X + 0.025) / 2, 0.65, z, X + 0.025 - DX, 0.03, 0.03, M.dark));
+      for (const z of [zFr + 0.06, 4.7, zArm - 0.06]) autochanger.add(box(sx * (DX + X + 0.025) / 2, 0.65, z, X + 0.025 - DX, 0.03, 0.03, M.dark));
       const mot = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.14, 24), M.motor);
       mot.position.copy(ocs(sx * DX, 0.67, zArm + 0.1));
       autochanger.add(mot);
@@ -478,6 +456,12 @@ export function buildFES(): FilterExchanger {
     filterRoot.add(filters[b]);
   }
   L('filter', 'Filter', '75 cm curved fused-silica disc with an interference coating; 25–38 kg. Each one passes a single colour band (u, g, r, i, z or y).', ocs(0, 0.0, 4.3), filterRoot);
+
+  // bake the static meshes of each rigid assembly (moving pieces and clamps are kept apart)
+  // moving / toggled parts must be in the keep list (see optimize.ts, CLAUDE.md)
+  mergeStatic(carousel, socketClamps.flat());
+  mergeStatic(fixed);
+  mergeStatic(autochanger, [carrier, ...carriages, ...links, ...trucks.map((t) => t.m), ...latches.map((l) => l.m), ...onlineClamps.map((c) => c.m)]);
 
   // ================================================================ state & update
   const state: FESState = {

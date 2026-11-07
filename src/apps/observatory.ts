@@ -1,35 +1,24 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import GUI from 'lil-gui';
 import { Rubin } from '../optics/trace';
-import { buildTelescope } from '../scene/telescope';
-import { buildAzimuth } from '../scene/mount';
-import { MAT } from '../scene/materials';
+import { buildTelescope, ELEV_AXIS_ABOVE_M1 } from '../scene/telescope';
+import { buildAzimuth, AXIS_HEIGHT } from '../scene/mount';
 import { RayBundle } from '../scene/rays';
 import { buildObservatory, SITE, domeCut } from '../scene/observatory';
-import '../style.css';
+import { CameraTween, createLabels, createViewer } from './common';
 
-const ELEV_AXIS_ABOVE_M1 = 1.69;
-const AXIS_ABOVE_FLOOR = 7.0; // APPROX (same as the telescope page)
 const TIME_SCALE = 6; // animation runs 6× faster than reality during the survey
 
 // ---------------------------------------------------------------- renderer & scene
-const canvas = document.getElementById('c') as HTMLCanvasElement;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.localClippingEnabled = true;
-
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.3, 20000);
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
+const { renderer, scene, camera, controls, composer, bloom } = createViewer({
+  fov: 45,
+  near: 0.3,
+  far: 20000,
+  background: 0x03050b,
+  bloom: [0.5, 0.4, 1.6],
+  logarithmicDepthBuffer: true,
+});
 controls.maxDistance = 1500;
 controls.minDistance = 2;
 controls.maxPolarAngle = Math.PI * 0.495;
@@ -51,6 +40,22 @@ envSky.scale.setScalar(1000);
 envScene.add(envSky);
 let envRT: THREE.WebGLRenderTarget | null = null;
 let envDirty = true;
+let envSunEl = NaN;
+let envT = Infinity;
+// Re-rendering the sky environment allocates a new PMREM render target: skip it when the sun has
+// not visibly moved, and do it at most every 0.3 s while the time of day changes.
+function maybeUpdateEnv(dt: number) {
+  envT += dt;
+  if (!envDirty || tween.running) return;
+  if (Math.abs(sunElevation() - envSunEl) < 0.05) {
+    envDirty = false;
+    return;
+  }
+  if (envT < 0.3) return;
+  envT = 0;
+  envSunEl = sunElevation();
+  updateEnv();
+}
 function updateEnv() {
   const u = envSky.material.uniforms;
   for (const k of ['turbidity', 'rayleigh', 'mieCoefficient', 'mieDirectionalG']) u[k].value = skyU[k].value;
@@ -114,12 +119,12 @@ const stars = (() => {
 const obs = buildObservatory();
 scene.add(obs.root);
 
-const rubin = new Rubin('r');
+const rubin = Rubin.forBand('r');
 const tel = buildTelescope(rubin);
 const azGroup = new THREE.Group();
 azGroup.position.y = SITE.azFloor;
 const elGroup = new THREE.Group();
-elGroup.position.y = AXIS_ABOVE_FLOOR;
+elGroup.position.y = AXIS_HEIGHT;
 tel.ota.position.y = -ELEV_AXIS_ABOVE_M1;
 elGroup.add(tel.ota);
 azGroup.add(elGroup);
@@ -178,6 +183,7 @@ const state = {
 };
 
 const sunDir = new THREE.Vector3();
+const SUNSET_FOG = new THREE.Color(0.9, 0.6, 0.45);
 function sunElevation() {
   return 55 - state.time * 85;
 }
@@ -200,16 +206,13 @@ function applyTimeOfDay() {
   (stars.material as THREE.PointsMaterial).opacity = night;
   stars.visible = night > 0.01;
   sky.visible = el > -16;
-  scene.background = new THREE.Color(0x03050b);
   renderer.toneMappingExposure = 0.3 + 0.45 * (1 - day);
-  const fogC = new THREE.Color().setRGB(0.72, 0.77, 0.84).multiplyScalar(0.08 + 0.92 * day);
-  if (low > 0.5 && el > -6) fogC.lerp(new THREE.Color(0.9, 0.6, 0.45), 0.35 * day);
-  (scene.fog as THREE.Fog).color.copy(fogC);
+  const fogC = (scene.fog as THREE.Fog).color.setRGB(0.72, 0.77, 0.84).multiplyScalar(0.08 + 0.92 * day);
+  if (low > 0.5 && el > -6) fogC.lerp(SUNSET_FOG, 0.35 * day);
   scene.environmentIntensity = 0.15 + 0.6 * day;
-  if (bloomRef) bloomRef.strength = 0.08 + 0.6 * (1 - day);
+  bloom!.strength = 0.08 + 0.6 * (1 - day);
   envDirty = true;
 }
-let bloomRef: UnrealBloomPass | null = null;
 
 // ---------------------------------------------------------------- survey logic
 const angDiff = (a: number, b: number) => ((((a - b) % 360) + 540) % 360) - 180;
@@ -301,14 +304,6 @@ function tick(dt: number) {
   rays.material.uniforms.uBase.value = 0.05 * beamMat.uniforms.uOpacity.value;
 }
 
-// ---------------------------------------------------------------- post
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.5, 0.4, 1.6);
-composer.addPass(bloom);
-bloomRef = bloom;
-composer.addPass(new OutputPass());
-
 // ---------------------------------------------------------------- labels
 type L = { title: string; text: string; pos: THREE.Vector3; parent: THREE.Object3D };
 const LABELS: L[] = [
@@ -318,40 +313,7 @@ const LABELS: L[] = [
   { title: 'Auxiliary Telescope', text: 'A 1.2 m telescope on its own hill. It takes spectra of bright stars all night to measure how much the atmosphere dims each colour.', pos: new THREE.Vector3(68.7, 4, -115.8), parent: obs.root },
   { title: 'Simonyi Survey Telescope', text: '8.4 m primary mirror, 350 t moving mass. It slews 3.5° and settles in about 5 s, then takes a 30 s exposure, around 1,000 times a night.', pos: new THREE.Vector3(0, 10, 0), parent: tel.ota },
 ];
-const labelLayer = document.getElementById('labels')!;
-const tip = document.getElementById('tip')!;
-const labelEls = LABELS.map((l) => {
-  const el = document.createElement('button');
-  el.className = 'label';
-  el.textContent = l.title;
-  el.onclick = (e) => {
-    e.stopPropagation();
-    tip.innerHTML = `<b>${l.title}</b><p>${l.text}</p>`;
-    tip.classList.add('show');
-  };
-  labelLayer.appendChild(el);
-  return { l, el };
-});
-document.body.addEventListener('pointerdown', (e) => {
-  if (!(e.target as HTMLElement).closest('#tip')) tip.classList.remove('show');
-});
-const tmpV = new THREE.Vector3();
-function updateLabels() {
-  labelLayer.style.display = state.labels ? 'block' : 'none';
-  if (!state.labels) return;
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  const camD = camera.position.distanceTo(controls.target);
-  for (const { l, el } of labelEls) {
-    tmpV.copy(l.pos);
-    l.parent.localToWorld(tmpV);
-    const d = tmpV.distanceTo(camera.position);
-    tmpV.project(camera);
-    const vis = tmpV.z < 1 && Math.abs(tmpV.x) < 1.02 && Math.abs(tmpV.y) < 1.02 && d < 1.7 * camD + 20;
-    el.style.display = vis ? 'block' : 'none';
-    if (vis) el.style.transform = `translate(${((tmpV.x + 1) / 2) * w}px, ${((1 - tmpV.y) / 2) * h}px)`;
-  }
-}
+const updateLabels = createLabels(LABELS, camera, controls, { defaultParent: obs.root, short: false, visible: (_l, d, camD) => d < 1.7 * camD + 20 });
 
 // ---------------------------------------------------------------- HUD & bar
 const info = document.getElementById('info')!;
@@ -422,6 +384,7 @@ document.getElementById('bObs')!.onclick = () => {
 
 // ---------------------------------------------------------------- views
 type View = { pos: THREE.Vector3; tgt: THREE.Vector3; cut?: boolean; domeFrame?: boolean };
+const tween = new CameraTween(camera, controls, 1600);
 const VIEWS: Record<string, View> = {
   Summit: { pos: new THREE.Vector3(150, 85, 200), tgt: new THREE.Vector3(25, 12, 0) },
   'Map view (with AuxTel)': { pos: new THREE.Vector3(60, 300, 40), tgt: new THREE.Vector3(55, -10, -45) },
@@ -432,11 +395,10 @@ const VIEWS: Record<string, View> = {
   'Inside (cutaway)': { pos: new THREE.Vector3(-46, 34, 22), tgt: new THREE.Vector3(0, 26, 0), cut: true, domeFrame: true },
   'Telescope at work': { pos: new THREE.Vector3(-20, 33, 16), tgt: new THREE.Vector3(0, 27, 0), cut: true, domeFrame: true },
 };
-let tween: { start: number; p0: THREE.Vector3; p1: THREE.Vector3; q0: THREE.Vector3; q1: THREE.Vector3 } | null = null;
 function goView(name: string) {
   const v = VIEWS[name];
   const rot = v.domeFrame ? new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(-state.domeAz)) : new THREE.Quaternion();
-  tween = { start: performance.now(), p0: camera.position.clone(), p1: v.pos.clone().applyQuaternion(rot), q0: controls.target.clone(), q1: v.tgt.clone().applyQuaternion(rot) };
+  tween.start(v.pos.clone().applyQuaternion(rot), v.tgt.clone().applyQuaternion(rot));
   state.cutaway = !!v.cut;
   gui.controllersRecursive().forEach((c) => c.updateDisplay());
 }
@@ -447,7 +409,7 @@ for (const k of Object.keys(VIEWS)) fv.add({ [k]: () => goView(k) }, k);
 const fd = gui.addFolder('Display');
 fd.add(state, 'cutaway').name('cut the dome open');
 fd.add(state, 'labels').name('labels');
-fd.add(bloom, 'strength', 0, 2, 0.05).name('glow');
+fd.add(bloom!, 'strength', 0, 2, 0.05).name('glow');
 const fp = gui.addFolder('Pointing (when not surveying)');
 fp.add(state, 'manualEl', 15, 90, 0.5).name('elevation (°)');
 fp.add(state, 'manualAz', -270, 270, 1).name('azimuth (°)');
@@ -464,7 +426,7 @@ function frame() {
     if (state.time === animTime) animTime = null;
   }
   tick(dt);
-  if (envDirty && !tween) updateEnv();
+  maybeUpdateEnv(dt);
   hudT += dt;
   if (hudT > 0.15) {
     hudT = 0;
@@ -472,40 +434,29 @@ function frame() {
   }
   // dome cutaway: vertical plane through the dome axis, facing the viewer
   if (state.cutaway) {
-    const v = camera.position.clone();
-    v.y = 0;
-    v.normalize();
-    domeCut.normal.copy(v).negate();
+    domeCut.normal.set(camera.position.x, 0, camera.position.z).normalize().negate();
     domeCut.constant = 0;
   } else {
     domeCut.normal.set(0, 1, 0);
     domeCut.constant = 1e6;
   }
-  if (tween) {
-    const t = Math.min(1, (performance.now() - tween.start) / 1600);
-    const e = t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
-    camera.position.lerpVectors(tween.p0, tween.p1, e);
-    controls.target.lerpVectors(tween.q0, tween.q1, e);
-    if (t >= 1) tween = null;
-  }
+  tween.update();
   controls.update();
   composer.render();
-  updateLabels();
+  updateLabels(state.labels);
   requestAnimationFrame(frame);
 }
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
-});
 
 applyTimeOfDay();
+// build the sky environment before the first frame, so materials are compiled once, with it
+envSunEl = sunElevation();
+updateEnv();
 camera.position.copy(VIEWS.Summit.pos);
 controls.target.copy(VIEWS.Summit.tgt);
 updateHud();
 frame();
 (window as any).__rubin = {
+  renderer,
   state,
   goView,
   applyTimeOfDay,

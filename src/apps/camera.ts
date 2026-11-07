@@ -1,42 +1,28 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import GUI from 'lil-gui';
-import { Rubin, Band, TraceResult } from '../optics/trace';
-import { buildLSSTCam, CAM, BAND_HEX } from '../scene/lsstcam';
+import { Rubin, TraceResult } from '../optics/trace';
+import { BANDS, BAND_HEX, BAND_INFO, Band } from '../scene/bands';
+import { buildLSSTCam, CAM } from '../scene/lsstcam';
 import { cutPlane, MAT } from '../scene/materials';
-import { RayBundle } from '../scene/rays';
+import { bakeRays, RayBundle, RayData } from '../scene/rays';
 import { ocs } from '../scene/util';
 import { FocalPlaneImage } from '../scene/exposure';
-import '../style.css';
+import { CameraTween, createLabels, createViewer, easeInOutCubic as ease, faceCutPlane } from './common';
 
-const BAND_TXT: Record<Band, string> = {
-  u: 'u · 320–390 nm · near-ultraviolet',
-  g: 'g · 400–550 nm · blue-green',
-  r: 'r · 550–690 nm · red',
-  i: 'i · 690–820 nm · near-infrared',
-  z: 'z · 820–925 nm · infrared',
-  y: 'y · 930–1010 nm · infrared',
-};
+const bandText = (b: Band) => `${b} · ${BAND_INFO[b].range} · ${BAND_INFO[b].note}`;
 
 // ---------------------------------------------------------------- renderer & scene
-const canvas = document.getElementById('c') as HTMLCanvasElement;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.95;
-renderer.localClippingEnabled = true;
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0d14);
-const pmrem = new THREE.PMREMGenerator(renderer);
-scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-scene.environmentIntensity = 0.4;
+const { renderer, scene, camera, controls, composer } = createViewer({
+  fov: 38,
+  near: 0.01,
+  far: 200,
+  exposure: 0.95,
+  background: 0x0a0d14,
+  roomEnvironment: 0.4,
+  bloom: [0.8, 0.35, 1.4],
+});
+controls.minDistance = 0.2;
+controls.maxDistance = 25;
 scene.add(new THREE.HemisphereLight(0xc8d6f0, 0x20180f, 0.7));
 const key = new THREE.DirectionalLight(0xffffff, 1.5);
 key.position.set(4, 7, 5);
@@ -44,12 +30,6 @@ scene.add(key);
 const rim = new THREE.DirectionalLight(0xa8c0ff, 0.8);
 rim.position.set(-5, 3, -4);
 scene.add(rim);
-
-const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.01, 200);
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
-controls.minDistance = 0.2;
-controls.maxDistance = 25;
 
 // clean-room floor
 {
@@ -74,8 +54,7 @@ root.matrix.makeBasis(new THREE.Vector3(0, 0, 1), new THREE.Vector3(-1, 0, 0), n
 root.matrix.setPosition(AXIS_Z_CENTER, HEIGHT, 0);
 scene.add(root);
 
-let rubin = new Rubin('r');
-const cam = buildLSSTCam(rubin);
+const cam = buildLSSTCam(Rubin.forBand('r'));
 root.add(cam.group);
 
 // cart (schematic)
@@ -102,11 +81,12 @@ const STARS: [number, number][] = [
   [-0.55, -1.3],
   [-1.2, 0.95],
 ];
-let landings: { x: number; y: number }[] = [];
-function retrace() {
-  rubin = new Rubin(state.band);
+// One baked bundle per band (4 stars each), traced the first time the band is shown.
+const traced = new Map<Band, { rays: RayData; landings: { x: number; y: number }[] }>();
+function traceBand(band: Band) {
+  const rubin = Rubin.forBand(band);
   const all: TraceResult[] = [];
-  landings = [];
+  const landings: { x: number; y: number }[] = [];
   const zStart = CAM.zL1 - 0.7;
   for (const [ax, ay] of STARS) {
     const res = rubin.traceStar((ax * Math.PI) / 180, (ay * Math.PI) / 180, { rings: 3, perRing: 14, rInner: 2.6, rOuter: 4.1 });
@@ -129,12 +109,17 @@ function retrace() {
     }
     landings.push({ x: sx / n, y: sy / n });
   }
-  rays.set(all, CAM.zShutter + 0.008);
-  rays.material.uniforms.uColor.value.set(BAND_HEX[state.band]);
-  rays.material.uniforms.uPeriod.value = 2.2;
-  rays.material.uniforms.uTail.value = 0.18;
-  fpImage.makeSky(BAND_HEX[state.band], landings);
+  return { rays: bakeRays(all, CAM.zShutter + 0.008), landings };
 }
+function retrace() {
+  let t = traced.get(state.band);
+  if (!t) traced.set(state.band, (t = traceBand(state.band)));
+  rays.setData(t.rays);
+  rays.material.uniforms.uColor.value.set(BAND_HEX[state.band]);
+  fpImage.makeSky(BAND_HEX[state.band], t.landings);
+}
+rays.material.uniforms.uPeriod.value = 2.2;
+rays.material.uniforms.uTail.value = 0.18;
 
 // ---------------------------------------------------------------- state & sequences
 const state = {
@@ -159,7 +144,6 @@ let stepT = 0;
 let realClock = 0;
 let seqName = '';
 let seqStart = 0;
-const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 
 function runSequence(name: string, steps: Step[]) {
   if (queue.length) return;
@@ -199,47 +183,11 @@ function filterSteps(target: Band | null): Step[] {
   return out;
 }
 
-// ---------------------------------------------------------------- post-processing
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.8, 0.35, 1.4);
-composer.addPass(bloom);
-composer.addPass(new OutputPass());
-
 // ---------------------------------------------------------------- labels
-const labelLayer = document.getElementById('labels')!;
-const tip = document.getElementById('tip')!;
-const labelEls = cam.labels.map((l) => {
-  const el = document.createElement('button');
-  el.className = 'label';
-  el.textContent = l.title.split(' — ')[0];
-  el.onclick = (e) => {
-    e.stopPropagation();
-    tip.innerHTML = `<b>${l.title}</b><p>${l.text}</p>`;
-    tip.classList.add('show');
-  };
-  labelLayer.appendChild(el);
-  return { l, el };
+const updateLabels = createLabels(cam.labels, camera, controls, {
+  defaultParent: cam.group,
+  visible: (l, dist, camD) => (l.parent ?? cam.group).visible && dist < 1.6 * camD + 0.4,
 });
-document.body.addEventListener('pointerdown', (e) => {
-  if (!(e.target as HTMLElement).closest('#tip')) tip.classList.remove('show');
-});
-const tmpV = new THREE.Vector3();
-function updateLabels() {
-  labelLayer.style.display = state.labels ? 'block' : 'none';
-  if (!state.labels) return;
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  for (const { l, el } of labelEls) {
-    tmpV.copy(l.pos);
-    (l.parent ?? cam.group).localToWorld(tmpV);
-    const vis0 = (l.parent ?? cam.group).visible && tmpV.distanceTo(camera.position) < 1.6 * camera.position.distanceTo(controls.target) + 0.4;
-    tmpV.project(camera);
-    const vis = vis0 && tmpV.z < 1 && Math.abs(tmpV.x) < 1.02 && Math.abs(tmpV.y) < 1.02;
-    el.style.display = vis ? 'block' : 'none';
-    if (vis) el.style.transform = `translate(${((tmpV.x + 1) / 2) * w}px, ${((1 - tmpV.y) / 2) * h}px)`;
-  }
-}
 
 // ---------------------------------------------------------------- HUD & action bar
 const info = document.getElementById('info')!;
@@ -247,10 +195,10 @@ function updateHud() {
   const cs = cam.state;
   const busy = queue.length > 0;
   const step = queue[0];
-  const loaded = (['u', 'g', 'r', 'i', 'z', 'y'] as Band[]).filter((b) => cs.home[b] !== undefined);
-  const loader = (['u', 'g', 'r', 'i', 'z', 'y'] as Band[]).find((b) => cs.home[b] === undefined);
+  const loaded = BANDS.filter((b) => cs.home[b] !== undefined);
+  const loader = BANDS.find((b) => cs.home[b] === undefined);
   info.innerHTML = `
-    <div class="band" style="--c:${cs.beam ? BAND_HEX[cs.beam] : '#ccc'}">${cs.beam ?? '∅'}<span>${cs.beam ? BAND_TXT[cs.beam] : cs.transit ? 'filter in transit' : 'no filter in the beam'}</span></div>
+    <div class="band" style="--c:${cs.beam ? BAND_HEX[cs.beam] : '#ccc'}">${cs.beam ?? '∅'}<span>${cs.beam ? bandText(cs.beam) : cs.transit ? 'filter in transit' : 'no filter in the beam'}</span></div>
     <div>Shutter: <b>${state.shutter}</b> · Carousel: <b>${loaded.join(' ')}</b> <span class="k">(${loader} waits in the loader)</span></div>
     ${busy ? `<div class="seq"><b>${seqName}</b><br>${step.label}<div class="clock">real time ${realClock.toFixed(1)} s</div></div>` : `<div class="k">Pick an action below. Times are shown as they happen on the real camera.</div>`}`;
   document.querySelectorAll<HTMLButtonElement>('#bar button').forEach((b) => {
@@ -271,7 +219,7 @@ const bar = document.getElementById('bar')!;
 bar.innerHTML = `
   <button id="bExpose" class="primary">◉ Take a 30 s exposure</button>
   <span class="sep">Change filter</span>
-  ${(['u', 'g', 'r', 'i', 'z', 'y'] as Band[]).map((b) => `<button data-band="${b}" style="--c:${BAND_HEX[b]}">${b}</button>`).join('')}
+  ${BANDS.map((b) => `<button data-band="${b}" style="--c:${BAND_HEX[b]}">${b}</button>`).join('')}
   <button id="bNone" style="--c:#ccc" title="Store all five filters in the carousel">none</button>
   <label class="slider">Explode <input id="explode" type="range" min="0" max="1" step="0.01" value="0"></label>`;
 document.getElementById('bExpose')!.onclick = () => {
@@ -308,10 +256,10 @@ const VIEWS: Record<string, View> = {
   Exploded: { pos: new THREE.Vector3(-1.5, 3.4, 7.2), tgt: new THREE.Vector3(0.2, 1.4, 0), cut: false, explode: 1 },
 };
 let hidden: string[] = [];
-let tween: { start: number; p0: THREE.Vector3; p1: THREE.Vector3; q0: THREE.Vector3; q1: THREE.Vector3 } | null = null;
+const tween = new CameraTween(camera, controls, 1400);
 function goView(name: string) {
   const v = VIEWS[name];
-  tween = { start: performance.now(), p0: camera.position.clone(), p1: v.pos.clone(), q0: controls.target.clone(), q1: v.tgt.clone() };
+  tween.start(v.pos, v.tgt);
   if (v.cut !== undefined) state.cutaway = v.cut;
   state.cutOffset = v.cutOffset ?? 0;
   state.glass = v.glass ?? true;
@@ -343,8 +291,6 @@ function swapLoader(incoming: Band) {
 // ---------------------------------------------------------------- loop
 const clock = new THREE.Clock();
 let head = 0;
-const axisW = new THREE.Vector3();
-const originW = new THREE.Vector3();
 let hudTimer = 0;
 function tick(dt: number) {
   head += dt * state.speed;
@@ -384,7 +330,7 @@ function frame() {
   u.uEdgeA.value = cam.state.shutterA > 0.001 ? H - 2 * H * cam.state.shutterA : 100;
   u.uEdgeB.value = cam.state.shutterB > 0.001 ? -H + 2 * H * cam.state.shutterB : -100;
   rays.object.visible = state.rays && state.explode < 0.02 && cam.state.beam !== null;
-  cam.parts.l1l2.children.slice(0, 2).forEach((m) => (m.visible = state.glass));
+  cam.parts.L1.visible = cam.parts.L2.visible = state.glass;
   cam.parts.L3.visible = state.glass;
   cam.parts.body.visible = state.explode < 0.02;
   for (const h of hidden) cam.parts[h].visible = false;
@@ -392,38 +338,14 @@ function frame() {
   if (cam.state.beam) cam.filters[cam.state.beam].visible = state.beamFilter;
 
   // cutaway plane through the optical axis, facing the viewer
-  root.updateMatrixWorld();
-  originW.setFromMatrixPosition(root.matrixWorld);
-  axisW.set(0, 1, 0).transformDirection(root.matrixWorld);
-  if (state.cutaway) {
-    const v = camera.position.clone().sub(originW);
-    v.addScaledVector(axisW, -v.dot(axisW)).normalize();
-    cutPlane.normal.copy(v).negate();
-    cutPlane.constant = state.cutOffset - cutPlane.normal.dot(originW);
-  } else {
-    cutPlane.normal.set(0, 1, 0);
-    cutPlane.constant = 1e6;
-  }
+  faceCutPlane(cutPlane, root, camera, state.cutaway, state.cutOffset);
 
-  if (tween) {
-    const t = Math.min(1, (performance.now() - tween.start) / 1400);
-    const e = ease(t);
-    camera.position.lerpVectors(tween.p0, tween.p1, e);
-    controls.target.lerpVectors(tween.q0, tween.q1, e);
-    if (t >= 1) tween = null;
-  }
+  tween.update();
   controls.update();
   composer.render();
-  updateLabels();
+  updateLabels(state.labels);
   requestAnimationFrame(frame);
 }
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
-});
 
 retrace();
 cam.update();
@@ -431,4 +353,4 @@ updateHud();
 camera.position.copy(VIEWS.Overview.pos);
 controls.target.copy(VIEWS.Overview.tgt);
 frame();
-(window as any).__rubin = { advance: (sec: number) => { for (let t = 0; t < sec; t += 0.05) tick(0.05); }, state, goView, runSequence, visitSteps, filterSteps, cam, camera, controls };
+(window as any).__rubin = { renderer, advance: (sec: number) => { for (let t = 0; t < sec; t += 0.05) tick(0.05); }, state, goView, runSequence, visitSteps, filterSteps, cam, camera, controls };

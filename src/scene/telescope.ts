@@ -8,6 +8,7 @@ import { MAT } from './materials';
 import { annulusMesh, beam, box, lathe, ocs, sagProfile, tube, cylinderBetween } from './util';
 import { buildLSSTCam } from './lsstcam';
 import { perforatedAlpha } from './textures';
+import { mergeStatic } from './optimize';
 
 /** Elevation axis height above the M1 vertex (inferred from the M1M3 actuator table). */
 export const ELEV_AXIS_ABOVE_M1 = 1.69;
@@ -29,21 +30,6 @@ export interface Telescope {
 }
 
 const BF = baffles as { name: string; z: number; inner: number; outer: number }[];
-
-/** Lens/filter solid of revolution between two surfaces (front at lower z). */
-export function lensSolid(front: (r: number) => number, back: (r: number) => number, rClear: number, rEdge: number, mat: THREE.Material) {
-  const n = 48;
-  const prof: [number, number][] = [];
-  for (let i = 0; i <= n; i++) {
-    const r = (rEdge * i) / n;
-    prof.push([r, front(Math.min(r, rClear))]);
-  }
-  for (let i = n; i >= 0; i--) {
-    const r = (rEdge * i) / n;
-    prof.push([r, back(Math.min(r, rClear))]);
-  }
-  return lathe(prof, 128, mat);
-}
 
 export function buildTelescope(rubin: Rubin): Telescope {
   const ota = new THREE.Group();
@@ -344,6 +330,10 @@ export function buildTelescope(rubin: Rubin): Telescope {
   L('m2baffle', 'M2 baffle', '21 black anodised vanes around M2 stop stray light that would otherwise reach the camera directly.', ocs(-2.2, -0.8, 5.7));
 
   // ------------------------------------------------------------------ LSSTCam
+  // the tube structure is rigid: bake it into one mesh per material before adding the camera
+  // (if a part of the tube is ever animated or toggled, pass it as mergeStatic(ota, [part]))
+  mergeStatic(ota);
+
   const camModel = buildLSSTCam(rubin);
   const cam = camModel.group;
   const zL1 = S.L1_entrance.z0;

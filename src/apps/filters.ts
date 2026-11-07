@@ -1,41 +1,27 @@
 // The Filter Exchange System of the LSST Camera (IN2P3/CNRS): dedicated, step-by-step animation.
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import GUI from 'lil-gui';
-import { Rubin, Band } from '../optics/trace';
+import { Rubin } from '../optics/trace';
+import { BANDS, BAND_HEX, BAND_INFO, Band } from '../scene/bands';
 import { buildLSSTCam } from '../scene/lsstcam';
-import { BAND_HEX, BANDS, FESStep } from '../scene/fes';
+import { FESStep } from '../scene/fes';
 import { cutPlane } from '../scene/materials';
 import { ocs } from '../scene/util';
-import '../style.css';
+import { CameraTween, createLabels, createViewer, faceCutPlane } from './common';
 
-const BAND_TXT: Record<Band, string> = {
-  u: 'u · near-ultraviolet',
-  g: 'g · blue-green',
-  r: 'r · red',
-  i: 'i · near-infrared',
-  z: 'z · infrared',
-  y: 'y · infrared',
-};
+const bandText = (b: Band) => `${b} · ${BAND_INFO[b].note}`;
 
 // ---------------------------------------------------------------- renderer & scene
-const canvas = document.getElementById('c') as HTMLCanvasElement;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
-renderer.localClippingEnabled = true;
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x07090d);
-const pmrem = new THREE.PMREMGenerator(renderer);
-scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-scene.environmentIntensity = 0.55;
+const { renderer, scene, camera, controls, composer } = createViewer({
+  fov: 36,
+  near: 0.01,
+  far: 100,
+  exposure: 1.0,
+  background: 0x07090d,
+  roomEnvironment: 0.55,
+});
+controls.minDistance = 0.3;
+controls.maxDistance = 12;
 scene.add(new THREE.HemisphereLight(0xdbe6f5, 0x1a1612, 0.8));
 const key = new THREE.DirectionalLight(0xffffff, 2.2);
 key.position.set(3, 6, 4);
@@ -43,12 +29,6 @@ scene.add(key);
 const rim = new THREE.DirectionalLight(0xa8c4ff, 0.9);
 rim.position.set(-4, 2, -5);
 scene.add(rim);
-
-const camera = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, 0.01, 100);
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
-controls.minDistance = 0.3;
-controls.maxDistance = 12;
 
 // camera lying with its axis horizontal and the standby socket on top (rails aligned with gravity)
 const root = new THREE.Group();
@@ -59,7 +39,7 @@ root.matrix.setPosition(4.75, HEIGHT, 0);
 scene.add(root);
 const toWorld = (v: THREE.Vector3) => v.clone().applyMatrix4(root.matrix);
 
-const cam = buildLSSTCam(new Rubin('r'));
+const cam = buildLSSTCam(Rubin.forBand('r'));
 root.add(cam.group);
 const fes = cam.fes;
 
@@ -152,7 +132,7 @@ function updateHud() {
   const loaded = BANDS.filter((b) => s.home[b] !== undefined);
   const prog = realTotal ? Math.min(1, realClock / realTotal) : 0;
   info.innerHTML = `
-    <div class="band" style="--c:${s.beam ? BAND_HEX[s.beam] : '#ccc'}">${s.beam ?? (s.transit ? s.transit.band : '∅')}<span>${s.beam ? 'in the beam · ' + BAND_TXT[s.beam] : s.transit ? 'filter moving' : 'no filter in the beam'}</span></div>
+    <div class="band" style="--c:${s.beam ? BAND_HEX[s.beam] : '#ccc'}">${s.beam ?? (s.transit ? s.transit.band : '∅')}<span>${s.beam ? 'in the beam · ' + bandText(s.beam) : s.transit ? 'filter moving' : 'no filter in the beam'}</span></div>
     <div>Carousel: <b>${loaded.join(' ')}</b> <span class="k">· ${s.loaderOut ?? '—'} waits in the loader</span></div>
     ${target !== undefined ? `<div class="seq"><b>${target ? 'Exchange → ' + target : 'Store the filter: none in the beam'}</b><div class="bar"><i style="width:${(prog * 100).toFixed(1)}%"></i></div><div class="clock">real time ${realClock.toFixed(1)} / ${realTotal.toFixed(1)} s · shown ×${state.speed}${state.paused ? ' · paused' : ''}</div></div>` : ''}`;
   const bn = document.getElementById('bNone') as HTMLButtonElement;
@@ -187,41 +167,12 @@ document.getElementById('bSwap')!.onclick = () => {
 
 // labels: only the FES ones (+ cryostat / L3 for context)
 const LABEL_IDS = new Set(['carrier', 'carousel', 'drive', 'autochanger', 'rails', 'online', 'filter', 'shutter', 'L3', 'cryostat', 'fp']);
-const labelLayer = document.getElementById('labels')!;
-const tip = document.getElementById('tip')!;
-const labelEls = cam.labels
-  .filter((l) => LABEL_IDS.has(l.id))
-  .map((l) => {
-    const el = document.createElement('button');
-    el.className = 'label';
-    el.textContent = l.title.split(' — ')[0];
-    el.onclick = (e) => {
-      e.stopPropagation();
-      tip.innerHTML = `<b>${l.title}</b><p>${l.text}</p>`;
-      tip.classList.add('show');
-    };
-    labelLayer.appendChild(el);
-    return { l, el };
-  });
-document.body.addEventListener('pointerdown', (e) => {
-  if (!(e.target as HTMLElement).closest('#tip')) tip.classList.remove('show');
-});
-const tmpV = new THREE.Vector3();
-function updateLabels() {
-  labelLayer.style.display = state.labels ? 'block' : 'none';
-  if (!state.labels) return;
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  for (const { l, el } of labelEls) {
-    const parent = l.parent ?? cam.group;
-    tmpV.copy(l.pos);
-    parent.localToWorld(tmpV);
-    tmpV.project(camera);
-    const vis = parent.visible && tmpV.z < 1 && Math.abs(tmpV.x) < 1.02 && Math.abs(tmpV.y) < 1.02;
-    el.style.display = vis ? 'block' : 'none';
-    if (vis) el.style.transform = `translate(${((tmpV.x + 1) / 2) * w}px, ${((1 - tmpV.y) / 2) * h}px)`;
-  }
-}
+const updateLabels = createLabels(
+  cam.labels.filter((l) => LABEL_IDS.has(l.id)),
+  camera,
+  controls,
+  { defaultParent: cam.group, visible: (l) => (l.parent ?? cam.group).visible },
+);
 
 // ---------------------------------------------------------------- views
 type View = { pos: THREE.Vector3; tgt: THREE.Vector3; body?: boolean; lenses?: boolean; cut?: boolean; cutOffset?: number };
@@ -233,10 +184,10 @@ const VIEWS: Record<string, View> = {
   'Inside the camera': { pos: ocs(1.9, 1.1, 3.4), tgt: ocs(0, 0.1, 4.6), body: true, cut: true, cutOffset: 0.55 },
 };
 let cutOffset = 0.55;
-let tween: { start: number; p0: THREE.Vector3; p1: THREE.Vector3; q0: THREE.Vector3; q1: THREE.Vector3 } | null = null;
+const tween = new CameraTween(camera, controls, 1400);
 function goView(name: string) {
   const v = VIEWS[name];
-  tween = { start: performance.now(), p0: camera.position.clone(), p1: toWorld(v.pos), q0: controls.target.clone(), q1: toWorld(v.tgt) };
+  tween.start(toWorld(v.pos), toWorld(v.tgt));
   state.body = v.body ?? false;
   state.lenses = v.lenses ?? false;
   state.cutaway = v.cut ?? false;
@@ -257,53 +208,26 @@ fd.add(state, 'cutaway').name('cutaway');
 fd.add(state, 'labels').name('labels');
 
 // ---------------------------------------------------------------- loop
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-composer.addPass(new OutputPass());
 const clock = new THREE.Clock();
-const axisW = new THREE.Vector3();
-const originW = new THREE.Vector3();
 let hudT = 0;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.1);
+  // the model only changes while a sequence runs (other changes call cam.update themselves)
+  const busy = queue.length > 0 && !state.paused;
   tick(dt);
-  cam.update();
-  applyVisibility();
+  if (busy) cam.update();
   hudT += dt;
   if (hudT > 0.1) {
     hudT = 0;
     updateHud();
   }
-  root.updateMatrixWorld();
-  originW.setFromMatrixPosition(root.matrixWorld);
-  axisW.set(0, 1, 0).transformDirection(root.matrixWorld);
-  if (state.cutaway) {
-    const v = camera.position.clone().sub(originW);
-    v.addScaledVector(axisW, -v.dot(axisW)).normalize();
-    cutPlane.normal.copy(v).negate();
-    cutPlane.constant = cutOffset - cutPlane.normal.dot(originW); // keep the inner FES intact
-  } else {
-    cutPlane.normal.set(0, 1, 0);
-    cutPlane.constant = 1e6;
-  }
-  if (tween) {
-    const t = Math.min(1, (performance.now() - tween.start) / 1400);
-    const e = t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
-    camera.position.lerpVectors(tween.p0, tween.p1, e);
-    controls.target.lerpVectors(tween.q0, tween.q1, e);
-    if (t >= 1) tween = null;
-  }
+  faceCutPlane(cutPlane, root, camera, state.cutaway, cutOffset); // the offset keeps the inner FES intact
+  tween.update();
   controls.update();
   composer.render();
-  updateLabels();
+  updateLabels(state.labels);
   requestAnimationFrame(frame);
 }
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setSize(window.innerWidth, window.innerHeight);
-});
 
 cam.state.shutterA = 1;
 applyVisibility();
@@ -313,6 +237,7 @@ camera.position.copy(toWorld(VIEWS['Front (from L2)'].pos));
 controls.target.copy(toWorld(VIEWS['Front (from L2)'].tgt));
 frame();
 (window as any).__rubin = {
+  renderer,
   state,
   goView,
   start,

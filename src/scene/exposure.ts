@@ -10,7 +10,7 @@ export class FocalPlaneImage {
   private out: CanvasRenderingContext2D;
   private rng = mulberry32(7);
 
-  constructor(private canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement) {
     this.size = canvas.width;
     this.out = canvas.getContext('2d')!;
     this.sky = document.createElement('canvas');

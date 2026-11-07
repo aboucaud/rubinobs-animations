@@ -6,10 +6,28 @@ filter seen in reflection shows the complementary colour of the light it transmi
 
 Colours: spectrum × CIE 1931 2° colour-matching functions (Wyman, Sloan & Shirley 2013
 multi-lobe fit) → XYZ → linear sRGB, white-balanced so that a perfect reflector is white
-(equal-energy illuminant), then the sRGB transfer curve. Data: lsst/throughputs baseline/filter_*.dat
+(equal-energy illuminant), then the sRGB transfer curve. Data: lsst/throughputs baseline/filter_*.dat,
+downloaded on first use into tools/throughputs/ (not versioned). Run: python3 tools/filter_colours.py
 """
 import json
+import urllib.request
+from pathlib import Path
+
 import numpy as np
+
+HERE = Path(__file__).resolve().parent
+DATA = HERE / 'throughputs'
+URL = 'https://raw.githubusercontent.com/lsst/throughputs/main/baseline/filter_{}.dat'
+OUT = HERE.parent / 'src' / 'data' / 'filter_colours.json'
+
+
+def throughput(band):
+    f = DATA / f'filter_{band}.dat'
+    if not f.exists():
+        DATA.mkdir(exist_ok=True)
+        print('downloading', URL.format(band))
+        urllib.request.urlretrieve(URL.format(band), f)
+    return np.loadtxt(f)
 
 
 def g(x, mu, s1, s2):
@@ -45,7 +63,7 @@ def srgb_hex(lin, norm=None):
 
 out = {}
 for b in 'ugrizy':
-    d = np.loadtxt(f'throughputs/filter_{b}.dat')
+    d = throughput(b)
     T = np.interp(lam, d[:, 0], d[:, 1], left=0, right=0)
     R = 1 - T
     t_lin = to_rgb(T)
@@ -60,4 +78,4 @@ for b in 'ugrizy':
         'visible_reflection': round(float((C[:, 1] * R).sum() / C[:, 1].sum()), 3),
     }
     print(b, out[b]['transmitted_hex'], out[b]['reflected_hex'], 'Tvis', out[b]['visible_transmission'], 'Rvis', out[b]['visible_reflection'])
-json.dump(out, open('../src/data/filter_colours.json', 'w'), indent=1)
+OUT.write_text(json.dumps(out, indent=1))

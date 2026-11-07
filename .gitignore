@@ -2,3 +2,7 @@ node_modules/
 dist/
 __pycache__/
 *.log
+# downloaded on demand by tools/filter_colours.py
+tools/throughputs/
+# screenshots from tools/shot.cjs
+shots/

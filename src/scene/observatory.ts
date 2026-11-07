@@ -3,6 +3,7 @@
 // top of dome ≈ 38–40 m) and Alexandre's photos (reference only). Everything here is schematic.
 import * as THREE from 'three';
 import { PALETTE } from './textures';
+import { mergeStatic } from './optimize';
 
 export const SITE = {
   drumR: 15, // 30 m lower enclosure
@@ -85,16 +86,12 @@ const clip = [domeCut];
 export const OBS_MAT = {
   cladding: new THREE.MeshStandardMaterial({ color: 0xffffff, map: claddingMap, bumpMap: corrBump, bumpScale: 0.6, metalness: 0.4, roughness: 0.5, clippingPlanes: clip, side: THREE.DoubleSide }),
   louvers: new THREE.MeshStandardMaterial({ color: 0xffffff, map: louverMap, metalness: 0.2, roughness: 0.85, clippingPlanes: clip, side: THREE.DoubleSide }),
-  doors: new THREE.MeshStandardMaterial({ color: 0x4a4d52, bumpMap: corrBump, bumpScale: 1, metalness: 0.5, roughness: 0.55, clippingPlanes: clip, side: THREE.DoubleSide }),
   whiteNoClip: new THREE.MeshStandardMaterial({ color: PALETTE.buildingWhite, metalness: 0.05, roughness: 0.7, side: THREE.DoubleSide }),
-  white: new THREE.MeshStandardMaterial({ color: PALETTE.buildingWhite, metalness: 0.05, roughness: 0.7, clippingPlanes: clip, side: THREE.DoubleSide }),
   whiteRoof: new THREE.MeshStandardMaterial({ color: 0xdedad6, metalness: 0.3, roughness: 0.55, side: THREE.DoubleSide }),
   chinWhite: new THREE.MeshStandardMaterial({ color: 0xf1efec, bumpMap: corrBump, bumpScale: 0.4, metalness: 0.15, roughness: 0.55, clippingPlanes: clip, side: THREE.DoubleSide }),
   drum: new THREE.MeshStandardMaterial({ color: 0xe9e6e2, bumpMap: corrBump, bumpScale: 0.5, metalness: 0.25, roughness: 0.55, clippingPlanes: clip, side: THREE.DoubleSide }),
   bldg: new THREE.MeshStandardMaterial({ color: 0xe6e3df, bumpMap: corrBump, bumpScale: 0.5, metalness: 0.25, roughness: 0.55, side: THREE.DoubleSide }),
   bldgGrey: new THREE.MeshStandardMaterial({ color: 0x8b8f94, bumpMap: corrBump, bumpScale: 0.5, metalness: 0.3, roughness: 0.6 }),
-  grating: new THREE.MeshStandardMaterial({ color: 0x5c6066, metalness: 0.6, roughness: 0.5, clippingPlanes: clip, side: THREE.DoubleSide }),
-  yellow: new THREE.MeshStandardMaterial({ color: 0xe8b81c, metalness: 0.2, roughness: 0.5, clippingPlanes: clip }),
   ringBand: new THREE.MeshStandardMaterial({ color: 0x6b4c3c, metalness: 0.4, roughness: 0.6, clippingPlanes: clip }),
   teal: new THREE.MeshStandardMaterial({ color: PALETTE.rubinTeal, metalness: 0.25, roughness: 0.5, clippingPlanes: clip }),
   lws: new THREE.MeshStandardMaterial({ color: 0x2b2d31, metalness: 0.4, roughness: 0.7, clippingPlanes: clip, side: THREE.DoubleSide }),
@@ -236,25 +233,50 @@ export const ROAD_PATHS: { x: number; z: number; h: number }[][] = ROADS.map((po
   return pts;
 });
 
+// Road segments bucketed on a coarse grid: the terrain asks for the nearest road at ~180k
+// vertices, but only roads closer than ROAD_REACH change the height there, so each lookup only
+// needs the few segments registered in its cell (exact same result as a full scan).
+const ROAD_REACH = ROAD_HALF + 12;
+const CELL = 16;
+const ROAD_SEGS: { ax: number; az: number; ah: number; ex: number; ez: number; eh: number; l2: number }[] = [];
+const ROAD_GRID = new Map<number, number[]>();
+const cellKey = (i: number, j: number) => i * 65536 + j;
+for (const path of ROAD_PATHS)
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = path[i];
+    const b = path[i + 1];
+    const id = ROAD_SEGS.length;
+    const ex = b.x - a.x;
+    const ez = b.z - a.z;
+    ROAD_SEGS.push({ ax: a.x, az: a.z, ah: a.h, ex, ez, eh: b.h - a.h, l2: ex * ex + ez * ez || 1 });
+    const i0 = Math.floor((Math.min(a.x, b.x) - ROAD_REACH) / CELL);
+    const i1 = Math.floor((Math.max(a.x, b.x) + ROAD_REACH) / CELL);
+    const j0 = Math.floor((Math.min(a.z, b.z) - ROAD_REACH) / CELL);
+    const j1 = Math.floor((Math.max(a.z, b.z) + ROAD_REACH) / CELL);
+    for (let ci = i0; ci <= i1; ci++)
+      for (let cj = j0; cj <= j1; cj++) {
+        const k = cellKey(ci, cj);
+        const list = ROAD_GRID.get(k);
+        if (list) list.push(id);
+        else ROAD_GRID.set(k, [id]);
+      }
+  }
+
+/** Nearest road (distance, road height), exact whenever the distance is below ROAD_REACH. */
 function nearestRoad(x: number, z: number) {
   let best = Infinity;
   let h = 0;
-  for (const path of ROAD_PATHS)
-    for (let i = 0; i < path.length - 1; i++) {
-      const a = path[i];
-      const b = path[i + 1];
-      const ex = b.x - a.x;
-      const ez = b.z - a.z;
-      const L2 = ex * ex + ez * ez || 1;
-      const t = Math.max(0, Math.min(1, ((x - a.x) * ex + (z - a.z) * ez) / L2));
-      const px = a.x + t * ex;
-      const pz = a.z + t * ez;
-      const d = Math.hypot(x - px, z - pz);
-      if (d < best) {
-        best = d;
-        h = a.h + t * (b.h - a.h);
-      }
+  const ids = ROAD_GRID.get(cellKey(Math.floor(x / CELL), Math.floor(z / CELL)));
+  if (!ids) return { d: best, h };
+  for (const id of ids) {
+    const s = ROAD_SEGS[id];
+    const t = Math.max(0, Math.min(1, ((x - s.ax) * s.ex + (z - s.az) * s.ez) / s.l2));
+    const d = Math.hypot(x - (s.ax + t * s.ex), z - (s.az + t * s.ez));
+    if (d < best) {
+      best = d;
+      h = s.ah + t * s.eh;
     }
+  }
   return { d: best, h };
 }
 
@@ -263,8 +285,8 @@ export function terrainHeight(x: number, z: number) {
   const h = baseTerrain(x, z);
   if (Math.hypot(x, z) > 420) return h;
   const r = nearestRoad(x, z);
-  if (r.d > ROAD_HALF + 12) return h;
-  const k = THREE.MathUtils.smoothstep(r.d, ROAD_HALF + 0.5, ROAD_HALF + 12);
+  if (r.d > ROAD_REACH) return h;
+  const k = THREE.MathUtils.smoothstep(r.d, ROAD_HALF + 0.5, ROAD_REACH);
   return r.h * (1 - k) + h * k;
 }
 
@@ -438,7 +460,6 @@ function buildDome(): Dome {
   };
   g.add(shell(OBS_MAT.cladding, 0));
   g.add(shell(OBS_MAT.louvers, inset)); // black louvered inner wall
-  void slopeY;
 
   // slit jambs: teal steel frames along the opening (seen through the open slit)
   for (const sg of [-1, 1]) {
@@ -566,8 +587,20 @@ function buildDome(): Dome {
   }
 
   // light/wind screen: dark panel filling the slit from its bottom up to the beam
-  const lws = new THREE.Mesh(new THREE.BufferGeometry(), OBS_MAT.lws);
+  // fixed-size strip updated in place (no per-frame allocation)
+  const LWS_N = 40;
+  const lwsGeo = new THREE.BufferGeometry();
+  const lwsPos = new THREE.BufferAttribute(new Float32Array((LWS_N + 1) * 2 * 3), 3);
+  lwsPos.setUsage(THREE.DynamicDrawUsage);
+  lwsGeo.setAttribute('position', lwsPos);
+  const lwsIdx: number[] = [];
+  for (let i = 0; i < LWS_N; i++) lwsIdx.push(2 * i, 2 * i + 1, 2 * i + 2, 2 * i + 1, 2 * i + 3, 2 * i + 2);
+  lwsGeo.setIndex(lwsIdx);
+  const lws = new THREE.Mesh(lwsGeo, OBS_MAT.lws);
+  lws.frustumCulled = false;
+  lws.visible = false;
   g.add(lws);
+  let lwsKey = '';
   const slitPath = [
     new THREE.Vector2(S.frontZ, S.chinTop),
     new THREE.Vector2(S.frontZ, S.slopeLow),
@@ -606,6 +639,10 @@ function buildDome(): Dome {
     return totalLen;
   };
 
+  // the dome turns as one block: bake everything but the doors, vent slats and screen
+  // moving / toggled parts must be in the keep list (see optimize.ts, CLAUDE.md)
+  mergeStatic(g, [...doors, ...slats, lws]);
+
   const labels = [
     { title: 'Rotating dome', text: '30 m wide, built by EIE (Italy). It turns independently of the telescope at up to 1.5°/s and is clad in corrugated aluminium.', pos: new THREE.Vector3(-W, 14, 0) },
     { title: 'Slit', text: 'An 11 m wide opening running up the front and over the top. Two roof doors slide sideways to open it.', pos: new THREE.Vector3(0, H + 0.5, -2) },
@@ -628,27 +665,23 @@ function buildDome(): Dome {
         return;
       }
       lws.visible = true;
+      const key = `${el.toFixed(3)}|${open.toFixed(4)}`;
+      if (key === lwsKey) return;
+      lwsKey = key;
       const e = (el * Math.PI) / 180;
       const axisY = SITE.azFloor + 7 - SITE.drumH - SITE.baseH; // elevation axis height in box coordinates
       // beam bottom edge: 5 m below the optical axis, measured perpendicular to it
       const oz = -Math.sin(e) * -5;
       const oy = axisY + Math.cos(e) * -5;
       const sTop = Math.max(0, hitS(oz, oy, Math.cos(e), Math.sin(e)) - 0.6) * open;
-      const pos: number[] = [];
-      const idx: number[] = [];
-      const N = 40;
-      for (let i = 0; i <= N; i++) {
-        const p = pointAt((sTop * i) / N);
+      for (let i = 0; i <= LWS_N; i++) {
+        const p = pointAt((sTop * i) / LWS_N);
         // sit just inside the cladding
-        pos.push(-S.slitHalf, p.y - 0.25, p.x - 0.25, S.slitHalf, p.y - 0.25, p.x - 0.25);
-        if (i < N) idx.push(2 * i, 2 * i + 1, 2 * i + 2, 2 * i + 1, 2 * i + 3, 2 * i + 2);
+        lwsPos.setXYZ(2 * i, -S.slitHalf, p.y - 0.25, p.x - 0.25);
+        lwsPos.setXYZ(2 * i + 1, S.slitHalf, p.y - 0.25, p.x - 0.25);
       }
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      geo.setIndex(idx);
-      geo.computeVertexNormals();
-      lws.geometry.dispose();
-      lws.geometry = geo;
+      lwsPos.needsUpdate = true;
+      lwsGeo.computeVertexNormals();
     },
   };
 }
@@ -778,11 +811,13 @@ export function buildObservatory() {
   const terrain = buildTerrain();
   root.add(terrain);
   const drum = buildDrum();
+  mergeStatic(drum);
   root.add(drum);
   const dome = buildDome();
   dome.group.position.y = SITE.drumH + SITE.baseH;
   root.add(dome.group);
   const building = buildServiceBuilding();
+  mergeStatic(building);
   root.add(building);
   root.add(buildRoads());
   const auxtel = buildAuxTel();
