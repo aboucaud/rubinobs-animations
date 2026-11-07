@@ -3,6 +3,10 @@
 // ribs, lightening holes...). Rendering each as its own Mesh costs one draw call and one set of GPU
 // buffers per part; merging them keeps the image identical and cuts draw calls by an order of
 // magnitude.
+//
+// RULE when editing a model: a part that moves, changes material or is shown/hidden on its own
+// after the build MUST be listed in `keep` of the mergeStatic call of its assembly. Otherwise it is
+// baked into the merged mesh and silently stops moving. (See CLAUDE.md, "Performance design".)
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 

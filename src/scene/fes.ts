@@ -137,7 +137,7 @@ function buildFilter(b: Band) {
   tab.position.set(0, th / 2, -0.405);
   g.add(tab);
   g.userData = { zBeam: z0, thickness: th, band: b };
-  mergeStatic(g);
+  mergeStatic(g); // a filter moves as one block; a part animated inside it must go in keep
   return g;
 }
 
@@ -458,6 +458,7 @@ export function buildFES(): FilterExchanger {
   L('filter', 'Filter', '75 cm curved fused-silica disc with an interference coating; 25–38 kg. Each one passes a single colour band (u, g, r, i, z or y).', ocs(0, 0.0, 4.3), filterRoot);
 
   // bake the static meshes of each rigid assembly (moving pieces and clamps are kept apart)
+  // moving / toggled parts must be in the keep list (see optimize.ts, CLAUDE.md)
   mergeStatic(carousel, socketClamps.flat());
   mergeStatic(fixed);
   mergeStatic(autochanger, [carrier, ...carriages, ...links, ...trucks.map((t) => t.m), ...latches.map((l) => l.m), ...onlineClamps.map((c) => c.m)]);

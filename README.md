@@ -44,6 +44,8 @@ Tools (`tools/`):
 | `filters/` | `src/apps/filters.ts` | the filter exchange system (carousel + autochanger), step by step with real timings |
 | `observatory/` | `src/apps/observatory.ts` | the summit, the rotating dome and the survey, from day to night |
 
+Project notes for contributors and Claude Code (conventions, the two rules to keep the optimisations working): `CLAUDE.md`.
+
 Shared modules: `src/optics/` (ray tracer), `src/scene/` (telescope, camera, filter exchanger, focal plane, observatory, rays, materials, band colours) and `src/apps/common.ts` (renderer, labels, camera tweens, cutaway plane).
 
 ## Performance

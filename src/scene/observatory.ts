@@ -640,6 +640,7 @@ function buildDome(): Dome {
   };
 
   // the dome turns as one block: bake everything but the doors, vent slats and screen
+  // moving / toggled parts must be in the keep list (see optimize.ts, CLAUDE.md)
   mergeStatic(g, [...doors, ...slats, lws]);
 
   const labels = [

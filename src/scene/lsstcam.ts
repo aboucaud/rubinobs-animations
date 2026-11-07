@@ -291,6 +291,7 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
   }
 
   // every part moves as a rigid block: bake its static meshes (animated pieces are kept apart)
+  // moving / toggled parts must be in the keep list (see optimize.ts, CLAUDE.md)
   for (const k of ['l1l2', 'body', 'shutter', 'cryostat', 'trunk', 'hexapod']) mergeStatic(parts[k], [parts.blades]);
 
   instantBeam('r');

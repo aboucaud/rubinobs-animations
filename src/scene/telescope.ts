@@ -331,6 +331,7 @@ export function buildTelescope(rubin: Rubin): Telescope {
 
   // ------------------------------------------------------------------ LSSTCam
   // the tube structure is rigid: bake it into one mesh per material before adding the camera
+  // (if a part of the tube is ever animated or toggled, pass it as mergeStatic(ota, [part]))
   mergeStatic(ota);
 
   const camModel = buildLSSTCam(rubin);

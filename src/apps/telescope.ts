@@ -145,6 +145,7 @@ function trace(): Traced {
 }
 
 function retrace() {
+  // cache key: EVERY setting that changes the trace must be in it, or stale rays are shown
   const k = [state.band, state.fieldAngle.toFixed(3), state.fieldAz.toFixed(2), state.pattern, state.rings].join('|');
   const t = traces.get(k, trace);
   rays.setData(t.rays);
