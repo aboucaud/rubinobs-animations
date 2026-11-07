@@ -92,7 +92,16 @@ interface Step {
   obsc?: Obscuration[];
 }
 
+const INSTANCES = new Map<Band, Rubin>();
+
 export class Rubin {
+  /** Shared, immutable instance for a band at its nominal wavelength (avoids rebuilding surfaces). */
+  static forBand(band: Band): Rubin {
+    let r = INSTANCES.get(band);
+    if (!r) INSTANCES.set(band, (r = new Rubin(band)));
+    return r;
+  }
+
   readonly band: Band;
   readonly wavelength: number;
   readonly nSilica: number;
@@ -193,11 +202,14 @@ export class Rubin {
    * Rays are aimed through the entrance pupil (plane z = 0.4394 m), sampled on rings
    * over the annular pupil, and started `startZ` metres above the M1 vertex.
    */
-  traceStar(
-    thx: number,
-    thy: number,
-    opts: { rings?: number; perRing?: number; startZ?: number; rOuter?: number; rInner?: number; pattern?: 'bundle' | 'fan'; fanAngle?: number } = {},
-  ) {
+  traceStar(thx: number, thy: number, opts: StarOptions = {}): TraceResult[] {
+    const out: TraceResult[] = [];
+    this.forEachStarRay(thx, thy, opts, (r) => out.push(r));
+    return out;
+  }
+
+  /** Same as traceStar, but hands each ray over as soon as it is traced (nothing is retained). */
+  forEachStarRay(thx: number, thy: number, opts: StarOptions, cb: (r: TraceResult) => void) {
     const rings = opts.rings ?? 7;
     const per = opts.perRing ?? 24;
     const startZ = opts.startZ ?? 12;
@@ -205,7 +217,8 @@ export class Rubin {
     const rI = opts.rInner ?? 2.0; // a bit inside the obscuration so the shadow of the camera/M2 shows
     const d = Rubin.fieldDirection(thx, thy);
     const zp = 0.4393899;
-    const pupil: [number, number][] = [];
+    const t = (startZ - zp) / -d[2];
+    const shoot = (px: number, py: number) => cb(this.trace([px - t * d[0], py - t * d[1], startZ], d));
     if (opts.pattern === 'fan') {
       // rays along one diameter of the pupil (a planar fan), angle measured from OCS +x
       const a = opts.fanAngle ?? 0;
@@ -213,7 +226,7 @@ export class Rubin {
       for (const sg of [-1, 1])
         for (let i = 0; i < n; i++) {
           const r = sg * (rI + ((rO - rI) * (i + 0.5)) / n);
-          pupil.push([r * Math.cos(a), r * Math.sin(a)]);
+          shoot(r * Math.cos(a), r * Math.sin(a));
         }
     } else {
       for (let i = 0; i < rings; i++) {
@@ -221,11 +234,19 @@ export class Rubin {
         const nAz = Math.max(6, Math.round((per * r) / rO));
         for (let j = 0; j < nAz; j++) {
           const a = ((j + (i % 2) * 0.5) / nAz) * Math.PI * 2;
-          pupil.push([r * Math.cos(a), r * Math.sin(a)]);
+          shoot(r * Math.cos(a), r * Math.sin(a));
         }
       }
     }
-    const t = (startZ - zp) / -d[2];
-    return pupil.map(([px, py]) => this.trace([px - t * d[0], py - t * d[1], startZ], d));
   }
+}
+
+export interface StarOptions {
+  rings?: number;
+  perRing?: number;
+  startZ?: number;
+  rOuter?: number;
+  rInner?: number;
+  pattern?: 'bundle' | 'fan';
+  fanAngle?: number;
 }

@@ -6,13 +6,11 @@ import * as THREE from 'three';
 import { Rubin, Band } from '../optics/trace';
 import { MAT, cutPlane } from './materials';
 import { cameraSkin, PALETTE } from './textures';
-import { annulusMesh, box, lathe, ocs, tube, cylinderBetween } from './util';
-import { buildFocalPlane, LAYOUT, RAFT_PITCH } from './focalplane';
+import { annulusMesh, box, lathe, lensSolid, ocs, tube, cylinderBetween } from './util';
+import { buildFocalPlane, RAFT_PITCH } from './focalplane';
 import type { Label } from './telescope';
 import { buildFES, FilterExchanger, FESState } from './fes';
-
-
-export { BAND_HEX } from './fes';
+import { mergeStatic } from './optimize';
 
 export const CAM = {
   zL1: 3.3974725882045593,
@@ -27,14 +25,6 @@ export const CAM = {
   zFilterBeam: 4.271924608204559, // r-band filter front vertex (varies ±3 mm with band)
   shutterHalf: 0.385,
 };
-
-function lensSolid(front: (r: number) => number, back: (r: number) => number, rClear: number, rEdge: number, mat: THREE.Material) {
-  const n = 48;
-  const prof: [number, number][] = [];
-  for (let i = 0; i <= n; i++) prof.push([(rEdge * i) / n, front(Math.min((rEdge * i) / n, rClear))]);
-  for (let i = n; i >= 0; i--) prof.push([(rEdge * i) / n, back(Math.min((rEdge * i) / n, rClear))]);
-  return lathe(prof, 128, mat);
-}
 
 export interface LSSTCam {
   group: THREE.Group;
@@ -78,6 +68,8 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
   const lensL1 = lensSolid((r) => S.L1_entrance.zAt(r, 0), (r) => S.L1_exit.zAt(r, 0), 0.775, 0.785, MAT.silica);
   const lensL2 = lensSolid((r) => S.L2_entrance.zAt(r, 0), (r) => S.L2_exit.zAt(r, 0), 0.551, 0.56, MAT.silica);
   l1l2.add(lensL1, lensL2);
+  parts.L1 = lensL1;
+  parts.L2 = lensL2;
   // L1 toroidal ring with triangular section
   const zL1e = S.L1_entrance.zAt(0.785, 0);
   l1l2.add(lathe([[0.785, zL1e - 0.02], [0.84, zL1e + 0.06], [0.785, zL1e + 0.12], [0.785, zL1e - 0.02]], 128, MAT.cameraBlack));
@@ -107,7 +99,6 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
     }
     l1l2.add(bolts);
   }
-  parts.lenses = new THREE.Group();
   L('L1', 'L1 — 1.57 m lens', 'The largest high-performance optical lens ever made: fused silica, 1.57 m wide, 82 mm thick. It is the camera’s front window to the telescope.', ocs(0, -0.84, zL1e + 0.06), l1l2);
   L('L2', 'L2 lens', '1.1 m fused-silica lens with one aspheric face. L1 and L2 share one assembly; a stack of black vanes behind L1 stops stray light.', ocs(0.58, 0, zL2 + 0.03), l1l2);
 
@@ -131,10 +122,6 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
     body.add(tube(rB - 0.02, rB - 0.005, z0, CAM.zBodyTop, MAT.aluDark));
   }
   body.add(lathe([[0.8, CAM.zBody0 - 0.02], [0.86, CAM.zBody0 + 0.02], [0.86, CAM.zBody0 + 0.1], [0.8, CAM.zBody0 + 0.12]], 128, MAT.cameraBlack)); // front flange
-  for (let k = 0; k < 8; k++) {
-    const a = (k / 8) * Math.PI * 2 + Math.PI / 8;
-    void a; // (longerons are inside the skin on the real camera)
-  }
   body.add(annulusMesh(0.0, rB + 0.02, CAM.zBodyTop, MAT.cameraBlack, 0.06)); // back flange
   L('body', 'Camera body', 'Aluminium housing, 1.65 m wide. Holds the lenses, shutter and filter exchanger around the cryostat. Total camera mass: 3 t.', ocs(-0.7, -0.45, 4.75), body);
 
@@ -303,11 +290,12 @@ export function buildLSSTCam(rubin: Rubin): LSSTCam {
     update();
   }
 
+  // every part moves as a rigid block: bake its static meshes (animated pieces are kept apart)
+  for (const k of ['l1l2', 'body', 'shutter', 'cryostat', 'trunk', 'hexapod']) mergeStatic(parts[k], [parts.blades]);
+
   instantBeam('r');
   state.shutterA = 1;
   update();
 
   return { group, labels, parts, filters, fes, state, update, setExplode, instantBeam, focalPlaneImage: { canvas: fpCanvas, texture: fpTex, mesh: fpImg } };
 }
-
-export { LAYOUT };

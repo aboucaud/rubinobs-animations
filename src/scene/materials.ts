@@ -54,18 +54,6 @@ export const MAT = {
     side: THREE.DoubleSide,
     clippingPlanes: cut,
   }),
-  filterCoat: new THREE.MeshPhysicalMaterial({
-    color: 0xff7a5c,
-    metalness: 0.2,
-    roughness: 0.05,
-    transmission: 0.75,
-    ior: 1.458,
-    thickness: 0.02,
-    iridescence: 1,
-    iridescenceIOR: 1.8,
-    transparent: true,
-    side: THREE.DoubleSide,
-  }),
   // Painted TMA steel
   // Rubin teal: TMA, piers, centre section, cell, camera rotator (all steel is this colour on site)
   paint: std({ color: PALETTE.rubinTeal, metalness: 0.25, roughness: 0.5, bumpMap: bump, bumpScale: 0.6 }),
@@ -78,8 +66,6 @@ export const MAT = {
   holeDark: new THREE.MeshBasicMaterial({ color: 0x1c2326, side: THREE.DoubleSide, clippingPlanes: cut }),
   cameraBlack: std({ color: PALETTE.cameraBlack, metalness: 0.45, roughness: 0.48 }, true),
   cartYellow: std({ color: PALETTE.cartYellow, metalness: 0.2, roughness: 0.5 }),
-  paintBlue: std({ color: PALETTE.rubinTeal, metalness: 0.25, roughness: 0.5 }),
-  blueCut: std({ color: PALETTE.rubinTeal, metalness: 0.25, roughness: 0.5 }, true),
   // Black anodised baffles
   black: std({ color: PALETTE.baffleBlack, metalness: 0.3, roughness: 0.7, side: THREE.DoubleSide }),
   blackCut: std({ color: 0x0d0e10, metalness: 0.3, roughness: 0.7 }, true),

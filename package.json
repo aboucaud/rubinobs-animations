@@ -1,7 +1,7 @@
 {
   "name": "rubinobs-animations",
   "version": "0.1.0",
-  "description": "",
+  "description": "Interactive, physically accurate animations of the Vera C. Rubin Observatory, the Simonyi Survey Telescope and LSSTCam",
   "scripts": {
     "dev": "vite",
     "build": "tsc -p . && vite build",

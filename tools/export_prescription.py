@@ -1,5 +1,12 @@
-# Export batoid LSST prescription (per band) + reference ray traces to JSON
-import batoid, numpy as np, json
+# Export the batoid LSST prescription (per band) + reference ray traces to src/data/prescription.json.
+# Needs `pip install batoid`. Run from anywhere: python3 tools/export_prescription.py
+import json
+from pathlib import Path
+
+import batoid
+import numpy as np
+
+OUT = Path(__file__).resolve().parent.parent / 'src' / 'data' / 'prescription.json'
 wl = dict(u=365e-9,g=480e-9,r=622e-9,i=755e-9,z=869e-9,y=971e-9)
 out = {}
 for b in "ugrizy":
@@ -26,7 +33,6 @@ for b in "ugrizy":
         ok = ~tr.vignetted
         refs.append(dict(theta=th, x=float(np.mean(tr.x[ok])), y=float(np.mean(tr.y[ok])), rms=float(np.sqrt(np.mean((tr.x[ok]-tr.x[ok].mean())**2+(tr.y[ok]-tr.y[ok].mean())**2))), n=int(ok.sum())))
     out[b]=dict(wavelength=wl[b], n_silica=n, surfaces=surfs, ref=refs)
-json.dump(out, open('/home/claude/rubin/tools/prescription.json','w'), indent=1)
 for b in out: print(b, out[b]['n_silica'], [(r['theta'], round(r['y']*1e3,3), round(r['rms']*1e6,2), r['n']) for r in out[b]['ref']])
 # raw individual rays for the r band, for exact validation of the JS tracer
 tel = batoid.Optic.fromYaml("LSST_r.yaml")
@@ -35,5 +41,5 @@ r0 = rays.copy()
 tr = tel.trace(rays.copy())
 raw=[dict(p=[float(r0.x[i]),float(r0.y[i]),float(r0.z[i])], d=[float(r0.vx[i]),float(r0.vy[i]),float(r0.vz[i])], out=[float(tr.x[i]),float(tr.y[i])], vig=bool(tr.vignetted[i])) for i in range(len(r0))]
 out['raw_r']=raw
-json.dump(out, open('/home/claude/rubin/tools/prescription.json','w'), indent=1)
-print(raw[:3])
+OUT.write_text(json.dumps(out, indent=1))
+print('wrote', OUT)
