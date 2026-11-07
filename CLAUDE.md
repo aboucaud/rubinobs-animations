@@ -21,6 +21,9 @@ To check a page visually: `npm run preview`, then `node tools/shot.cjs <page>/ <
 - `src/apps/` — one script per page. `common.ts` holds what every page shares: `createViewer`
   (renderer, scene, camera, controls, post-processing, resize), `createLabels`, `CameraTween`,
   `faceCutPlane`, `glowTexture`. A new page should be built on it, not copy boilerplate.
+- `src/scene/human.ts` — `buildHuman(pos, lookAt, height)`: one-mesh standing figure (1.75 m reference)
+  used for scale on the telescope, camera and observatory pages. Place figures where they do not hide
+  the subject in the preset views, and outside any volume swept by a moving part.
 - `src/scene/util.ts` — geometry helpers in the OCS-aligned frame (`ocs`, `lathe`, `lensSolid`, `tube`, `box`…).
 
 ## Performance design (Nov 2026): what is automatic, what to watch
@@ -56,6 +59,11 @@ observatory 2564 → 658; peak JS heap during a dense ray-slider sweep 55.7 → 
 **Tried and rejected:** `renderer.compileAsync` before the first frame compiled ~25 % more shader
 programs than it saved (state mismatch with the composer's render target), so pages render the first
 frame synchronously.
+
+## Sources
+
+The README's **Sources** section lists every repository, document, data set and visual reference the
+animations are built from. Add any new source there in the same commit that uses it.
 
 ## Tools
 
