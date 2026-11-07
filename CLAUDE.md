@@ -49,6 +49,12 @@ setting that changes the trace (band, field angle, field direction, pattern, den
 that changes the trace (wavelength, fan angle, start height…) must be added to that key, or stale
 bundles will be shown. The camera page caches one bundle per band (`traced` map).
 
+**Pitfall: `cam.update()` resets visibilities.** `buildLSSTCam().update()` shows the camera body
+whenever the camera is not exploded. A page that hides parts (the filters page hides the body)
+must re-apply its visibility after every `cam.update()`: on the filters page always call
+`refreshModel()`, never `cam.update()` alone. (Regression fixed in Nov 2026: the body covered
+the filter during an exchange.)
+
 **Measured effect** (software WebGL, so only draw calls and memory are meaningful):
 draw calls per frame telescope 1978 → 298, camera 1200 → 260, filters 1051 → 187,
 observatory 2564 → 658; peak JS heap during a dense ray-slider sweep 55.7 → ~24 MB.

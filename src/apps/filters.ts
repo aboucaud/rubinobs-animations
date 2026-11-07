@@ -62,6 +62,13 @@ const state = {
   cutaway: false,
 };
 
+/** Pose the model, then re-apply this page's display choices: cam.update() resets some visibilities
+ *  (it shows the camera body whenever the camera is not exploded), so always use this pair. */
+function refreshModel() {
+  cam.update();
+  applyVisibility();
+}
+
 function applyVisibility() {
   const p = cam.parts;
   p.body.visible = state.body;
@@ -162,7 +169,7 @@ document.getElementById('bPause')!.onclick = () => (state.paused = !state.paused
 document.getElementById('bSwap')!.onclick = () => {
   if (queue.length) return;
   fes.swapLoader(fes.state.home.y !== undefined ? 'u' : 'y');
-  cam.update();
+  refreshModel();
 };
 
 // labels: only the FES ones (+ cryostat / L3 for context)
@@ -212,10 +219,10 @@ const clock = new THREE.Clock();
 let hudT = 0;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.1);
-  // the model only changes while a sequence runs (other changes call cam.update themselves)
+  // the model only changes while a sequence runs (other changes call refreshModel themselves)
   const busy = queue.length > 0 && !state.paused;
   tick(dt);
-  if (busy) cam.update();
+  if (busy) refreshModel();
   hudT += dt;
   if (hudT > 0.1) {
     hudT = 0;
@@ -242,9 +249,9 @@ frame();
   goView,
   start,
   fes,
+  cam,
   advance: (sec: number) => {
     for (let t = 0; t < sec; t += 0.05) tick(0.05);
-    cam.update();
-    applyVisibility();
+    refreshModel();
   },
 };
