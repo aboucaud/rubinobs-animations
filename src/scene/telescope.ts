@@ -213,8 +213,6 @@ export function buildTelescope(rubin: Rubin): Telescope {
         }
       groups.lowerBox = lb;
     }
-    L('elring', 'Elevation rings', 'Two huge rings centred on the elevation axis carry the whole 350-tonne tube. The mirror cell (dark grey) sits between the centre section and the lower teal box.', ocs(6.2, 0, zAx + 6.25));
-    L('center', 'Elevation centre section', 'Stiff steel ring that carries the mirror cell below and the four top-end piers above. The elevation axis runs through it.', ocs(5.55, 0, 2.2));
   }
 
   // ------------------------------------------------------------------ Top-end assembly piers (APPROX, 4 X-braced trusses)
@@ -235,7 +233,6 @@ export function buildTelescope(rubin: Rubin): Telescope {
   }
   ota.add(piers);
   groups.piers = piers;
-  L('tea', 'Top-end piers', 'Eight round steel tubes in V pairs hold the top end (M2 + camera) about 6 m above the primary mirror.', ocs(5.0 * Math.cos(Math.PI / 4), 5.0 * Math.sin(Math.PI / 4), 4.6));
 
   // Mid-level baffle ring
   const mid = BF.find((b) => b.name === 'MidLevel')!;
@@ -334,9 +331,8 @@ export function buildTelescope(rubin: Rubin): Telescope {
   // (if a part of the tube is ever animated or toggled, pass it as mergeStatic(ota, [part]))
   mergeStatic(ota);
 
-  const camModel = buildLSSTCam(rubin);
+  const camModel = buildLSSTCam(rubin, { uniformSensors: true }); // CCD types are detailed on the camera page
   const cam = camModel.group;
-  const zL1 = S.L1_entrance.z0;
   const zDet = S.Detector.z0;
   const filter = camModel.parts.filters as THREE.Group;
   const buildFilter = (r: Rubin) => camModel.instantBeam(r.band);
@@ -347,8 +343,6 @@ export function buildTelescope(rubin: Rubin): Telescope {
   groups.carousel = camModel.parts.carousel;
   groups.focalPlane = camModel.parts.focalPlane;
   L('camera', 'LSSTCam', 'The largest digital camera ever built for astronomy: 3.2 gigapixels, 1.65 m wide, 3.7 m long, 3 t. It hangs upside-down in the middle of the telescope, through the hole in M2.', ocs(0.8, 0, 6.2));
-  L('L1', 'L1 lens', '1.57 m fused-silica lens, the largest high-performance optical lens ever made. Light enters the camera here.', ocs(0.0, -0.78, zL1));
-  L('filter', 'Filter (u g r i z y)', '75 cm curved filter. Only one colour band passes at a time; five filters wait in the carousel around the cryostat.', ocs(0.37, 0, S.Filter_entrance.z0));
   L('fp', 'Focal plane', '189 science CCDs in 21 rafts + 4 corner rafts for guiding and wavefront sensing. 64 cm across, flat to < 10 µm, kept at −100 °C.', ocs(-0.3, 0, zDet));
 
   return { ota, labels, filter, setBand: buildFilter, groups };

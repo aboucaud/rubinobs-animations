@@ -11,7 +11,25 @@ npm run validate   # ray tracer vs batoid; must print "OK" (CI runs it)
 ```
 
 To check a page visually: `npm run preview`, then `node tools/shot.cjs <page>/ <name> "<js>"` → `shots/<name>.png`
-(software WebGL: slow, but enough to compare before/after).
+(software WebGL: slow, but enough to compare before/after). Add `"" 4000 phone` or `"" 4000 phone-land` for a
+phone in portrait (390×844) or landscape (844×390). Where playwright's own Chromium cannot be downloaded,
+set `CHROME=/usr/bin/google-chrome` (and `NODE_PATH` to a global playwright install).
+
+## Phone layout (Nov 2026): every UI change must keep it
+
+Every page must stay usable on a phone in portrait and landscape: no panel may cover another one
+(header, settings menu, info panel, inset, steps, bottom bar), and the animation keeps the middle of the screen.
+- `initPhoneLayout()` (`common.ts`, called by `createViewer`; a 2D page calls it itself) is the single
+  source of truth: it sets `body.phone` for narrow *or* short screens (`max-width: 720px, max-height: 500px`).
+  Phone CSS keys on `body.phone`, never on its own `@media` width query; JS uses `isPhone()`.
+- Settings menus come from `createGui(title)` (closed by default on phones), not `new GUI()`.
+  lil-gui 0.21 class names are `lil-root`, `lil-closed`, `lil-title`.
+- `#info` shows only its key line on a phone: the `.band` line and any child with class `key`.
+  Tapping it shows the rest. Put new essential state in a `.key` line, details in plain lines.
+- Panels that sit above the bottom bar use `var(--bar-h)` (kept up to date by `initPhoneLayout`).
+  In landscape the bar is one row that scrolls sideways.
+- Panels have `z-index: 2`, labels `1`: a label never draws over a panel.
+- Before committing a UI change, take `phone` and `phone-land` shots of the pages it touches.
 
 ## Code layout
 
@@ -20,7 +38,7 @@ To check a page visually: `npm run preview`, then `node tools/shot.cjs <page>/ <
   materials, textures, rays, band colours (`bands.ts`: the single source for band colours and texts).
 - `src/apps/` — one script per page. `common.ts` holds what every page shares: `createViewer`
   (renderer, scene, camera, controls, post-processing, resize), `createLabels`, `CameraTween`,
-  `faceCutPlane`, `glowTexture`. A new page should be built on it, not copy boilerplate.
+  `faceCutPlane`, `glowTexture`, `createGui`, `initPhoneLayout` / `isPhone`. A new page should be built on it, not copy boilerplate.
 - `src/scene/human.ts` — `buildHuman(pos, lookAt, height)`: one-mesh standing figure (1.75 m reference)
   used for scale on the telescope, camera and observatory pages. Place figures where they do not hide
   the subject in the preset views, and outside any volume swept by a moving part.

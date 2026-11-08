@@ -79,6 +79,7 @@ export const MAT = {
   // CCD silicon: e2v (deep violet AR coat) vs ITL (bronze/olive AR coat)
   e2v: new THREE.MeshPhysicalMaterial({ color: 0x3a2a6b, metalness: 0.6, roughness: 0.15, iridescence: 0.6, clearcoat: 0.4, envMapIntensity: 0.4 }),
   itl: new THREE.MeshPhysicalMaterial({ color: 0x5b4a2a, metalness: 0.6, roughness: 0.15, iridescence: 0.5, clearcoat: 0.4, envMapIntensity: 0.4 }),
+  sensor: new THREE.MeshPhysicalMaterial({ color: 0x2c3048, metalness: 0.6, roughness: 0.15, clearcoat: 0.4, envMapIntensity: 0.4 }),
   wfs: new THREE.MeshPhysicalMaterial({ color: 0x2a5b4f, metalness: 0.6, roughness: 0.15, clearcoat: 0.4, envMapIntensity: 0.4 }),
   fee: std({ color: 0x1f5a3a, metalness: 0.3, roughness: 0.5 }, true),
   raftBase: std({ color: 0x6d6f73, metalness: 0.7, roughness: 0.4 }, true),

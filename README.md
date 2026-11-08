@@ -32,7 +32,7 @@ Tools (`tools/`):
 | `validate.ts` | ray tracer vs batoid: individual rays (positions, vignetting) and star centroids in all bands |
 | `export_prescription.py` | regenerates `src/data/prescription.json` from batoid (`pip install batoid`) |
 | `filter_colours.py` | regenerates `src/data/filter_colours.json` from the lsst/throughputs filter curves (downloaded on first use into `tools/throughputs/`, not versioned) |
-| `shot.cjs` | screenshot of a page with software WebGL, against `npm run preview`: `node tools/shot.cjs telescope/ name "__rubin.goView('Focal plane')"` → `shots/name.png` |
+| `shot.cjs` | screenshot of a page with software WebGL, against `npm run preview`: `node tools/shot.cjs telescope/ name "__rubin.goView('Focal plane')"` → `shots/name.png`; add `"" 4000 phone` or `phone-land` for a phone in portrait or landscape |
 
 ## Pages
 

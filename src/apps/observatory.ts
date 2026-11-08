@@ -1,13 +1,12 @@
 import * as THREE from 'three';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
-import GUI from 'lil-gui';
 import { Rubin } from '../optics/trace';
 import { buildTelescope, ELEV_AXIS_ABOVE_M1 } from '../scene/telescope';
 import { buildAzimuth, AXIS_HEIGHT } from '../scene/mount';
 import { RayBundle } from '../scene/rays';
 import { buildObservatory, SITE, domeCut, terrainHeight } from '../scene/observatory';
 import { buildHuman, HUMAN_MAT } from '../scene/human';
-import { CameraTween, createLabels, createViewer } from './common';
+import { CameraTween, createLabels, createViewer, createGui } from './common';
 
 const TIME_SCALE = 6; // animation runs 6× faster than reality during the survey
 
@@ -350,7 +349,7 @@ function updateHud() {
         : 'Dome closed';
   info.innerHTML = `
     <div class="band" style="--c:#7fd6d8">${tod}<span>Cerro Pachón, Chile · 2,650 m</span></div>
-    <div>${phase}</div>
+    <div class="key">${phase}</div>
     <div>Telescope az <b>${(((state.telAz % 360) + 360) % 360).toFixed(1)}°</b> el <b>${state.telEl.toFixed(1)}°</b> · Dome az <b>${(((state.domeAz % 360) + 360) % 360).toFixed(1)}°</b></div>
     ${state.observing ? `<div>Visits tonight: <b>${state.visits}</b> · local time <b>${fmtClock(state.realClock)}</b> <span class="k">(×${TIME_SCALE} speed)</span></div>` : ''}
     <div class="k">The 350 t telescope slews at up to 10.5°/s; the 600 t dome only manages 1.5°/s, so it starts turning toward the next field before the exposure ends.</div>`;
@@ -413,8 +412,7 @@ function goView(name: string) {
   state.cutaway = !!v.cut;
   gui.controllersRecursive().forEach((c) => c.updateDisplay());
 }
-const gui = new GUI({ title: 'Observatory' });
-if (window.innerWidth < 720) gui.close();
+const gui = createGui('Observatory');
 const fv = gui.addFolder('Views');
 for (const k of Object.keys(VIEWS)) fv.add({ [k]: () => goView(k) }, k);
 const fd = gui.addFolder('Display');

@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import GUI from 'lil-gui';
 import { Rubin, TraceResult } from '../optics/trace';
 import { BANDS, BAND_HEX, BAND_INFO, Band } from '../scene/bands';
 import { buildLSSTCam, CAM } from '../scene/lsstcam';
@@ -8,7 +7,7 @@ import { bakeRays, RayBundle, RayData } from '../scene/rays';
 import { ocs } from '../scene/util';
 import { FocalPlaneImage } from '../scene/exposure';
 import { buildHuman } from '../scene/human';
-import { CameraTween, createLabels, createViewer, easeInOutCubic as ease, faceCutPlane } from './common';
+import { CameraTween, createLabels, createViewer, easeInOutCubic as ease, faceCutPlane, createGui } from './common';
 
 const bandText = (b: Band) => `${b} · ${BAND_INFO[b].range} · ${BAND_INFO[b].note}`;
 
@@ -204,7 +203,7 @@ function updateHud() {
   info.innerHTML = `
     <div class="band" style="--c:${cs.beam ? BAND_HEX[cs.beam] : '#ccc'}">${cs.beam ?? '∅'}<span>${cs.beam ? bandText(cs.beam) : cs.transit ? 'filter in transit' : 'no filter in the beam'}</span></div>
     <div>Shutter: <b>${state.shutter}</b> · Carousel: <b>${loaded.join(' ')}</b> <span class="k">(${loader} waits in the loader)</span></div>
-    ${busy ? `<div class="seq"><b>${seqName}</b><br>${step.label}<div class="clock">real time ${realClock.toFixed(1)} s</div></div>` : `<div class="k">Pick an action below. Times are shown as they happen on the real camera.</div>`}`;
+    ${busy ? `<div class="seq key"><b>${seqName}</b><br>${step.label}<div class="clock">real time ${realClock.toFixed(1)} s</div></div>` : `<div class="k">Pick an action below. Times are shown as they happen on the real camera.</div>`}`;
   document.querySelectorAll<HTMLButtonElement>('#bar button').forEach((b) => {
     const f = b.dataset.band as Band | undefined;
     b.disabled = busy || (!!f && (cs.home[f] === undefined || f === cs.beam));
@@ -274,8 +273,7 @@ function goView(name: string) {
   gui.controllersRecursive().forEach((c) => c.updateDisplay());
 }
 
-const gui = new GUI({ title: 'LSSTCam' });
-if (window.innerWidth < 720) gui.close();
+const gui = createGui('LSSTCam');
 const fv = gui.addFolder('Views');
 for (const k of Object.keys(VIEWS)) fv.add({ [k]: () => goView(k) }, k);
 const fo = gui.addFolder('Display');

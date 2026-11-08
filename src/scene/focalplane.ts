@@ -73,14 +73,15 @@ export function ccdAt(x: number, y: number): CcdInfo | null {
   return null;
 }
 
-/** 3D focal plane: sensors face −z (down toward M3), silicon surface at the detector plane zDet. */
-export function buildFocalPlane(zDet: number): THREE.Group {
+/** 3D focal plane: sensors face −z (down toward M3), silicon surface at the detector plane zDet.
+ *  `uniform`: one material for every sensor (overview pages that do not detail the CCD types). */
+export function buildFocalPlane(zDet: number, uniform = false): THREE.Group {
   const g = new THREE.Group();
   g.name = 'FocalPlane';
   const t = 0.0015;
   const geo = new THREE.BoxGeometry(1, t, 1);
   for (const c of LAYOUT) {
-    const mat = c.kind === 'e2v' ? MAT.e2v : c.kind === 'itl' ? MAT.itl : c.kind === 'wfs' ? MAT.wfs : MAT.itl;
+    const mat = uniform ? MAT.sensor : c.kind === 'e2v' ? MAT.e2v : c.kind === 'itl' ? MAT.itl : c.kind === 'wfs' ? MAT.wfs : MAT.itl;
     const m = new THREE.Mesh(geo, mat);
     m.scale.set(c.w, 1, c.h);
     m.position.copy(ocs(c.cx, c.cy, zDet + c.dz + t / 2));
