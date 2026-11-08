@@ -24,6 +24,14 @@ To check a page visually: `npm run preview`, then `node tools/shot.cjs <page>/ <
 - `src/scene/human.ts` — `buildHuman(pos, lookAt, height)`: one-mesh standing figure (1.75 m reference)
   used for scale on the telescope, camera and observatory pages. Place figures where they do not hide
   the subject in the preset views, and outside any volume swept by a moving part.
+- `src/survey/` — the survey page: `astro.ts` (Sun, Moon, sidereal time, coordinates), `footprint.ts`
+  (rubin_scheduler regions and band ratios, field grid), `scheduler.ts` (blob pairs, kinematic model),
+  `coverage.ts` (per-texel visits, raster of the LSSTCam outline), `skymap.ts` (Mollweide map and local
+  sky drawn per pixel in one fragment shader, stars as points). It is a 2D page: `src/apps/survey.ts`
+  sets up its own renderer instead of `createViewer`. The coverage textures (~5 MB) are re-uploaded at
+  most 5×/s at high speed and the time-of-last-visit texture only in the "Last visit" mode: keep it so.
+- `src/scene/fes_times.ts` — timings of the filter exchange, shared by the filters page and the survey
+  scheduler (no three.js import, so the scheduler can be run under node).
 - `src/scene/util.ts` — geometry helpers in the OCS-aligned frame (`ocs`, `lathe`, `lensSolid`, `tube`, `box`…).
 
 ## Performance design (Nov 2026): what is automatic, what to watch
@@ -83,3 +91,5 @@ there in the same commit that uses it.
 - `tools/export_prescription.py` → `src/data/prescription.json` (needs batoid).
 - `tools/filter_colours.py` → `src/data/filter_colours.json` (downloads lsst/throughputs on first use
   into `tools/throughputs/`, git-ignored).
+- `tools/sky_data.py` → `src/data/stars.json`, `src/data/milkyway.png` (downloads d3-celestial on first
+  use into `tools/d3-celestial/`, git-ignored).

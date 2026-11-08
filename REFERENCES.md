@@ -10,6 +10,11 @@ Everything the animations are built from. Keep this list up to date when a new s
 | [lsst/obs_lsst](https://github.com/lsst/obs_lsst) — `policy/cameraHeader.yaml`, `policy/rafts.yaml`, `policy/lsstCam/R*.yaml` | focal-plane layout: raft and CCD positions, e2v / ITL sensor sizes, corner guiders and wavefront sensors |
 | [lsst/throughputs](https://github.com/lsst/throughputs) — `baseline/filter_*.dat` | filter transmission curves → filter colours in reflection and transmission (`tools/filter_colours.py`) |
 | [lsst-ts/ts_xml](https://github.com/lsst-ts/ts_xml) — `python/lsst/ts/xml/tables/m1m3/fa_table.py` | M1M3 actuator count and extent; height of the elevation axis above the M1 vertex (inferred) |
+| [lsst/rubin_scheduler](https://github.com/lsst/rubin_scheduler) v4.6.1 — `scheduler/utils/sky_area.py` (`Phase3AreaMap`), `scheduler/example/lsst_surveys.py`, `scheduler/model_observatory/kinem_model.py`, `scheduler/schedulers/filter_scheduler.py`, `utils/site.py`, `utils/rotskypos.py` | survey footprint regions and band ratios, blob pairs and pair time, exposure times, mount / dome / optics timings, u ↔ y filter swap with the Moon, site coordinates, rotSkyPos convention (survey page) |
+| [ofrohn/d3-celestial](https://github.com/ofrohn/d3-celestial) v0.7.35 (BSD-3-Clause) — `data/stars.6.json`, `data/mw.json` | stars to V = 6 from the XHIP compilation (Anderson & Francis 2012, VizieR V/137D) and the Milky Way outline catalogue of J. R. Vieira (survey page background, `tools/sky_data.py`) |
+| *The Astronomical Almanac*, low-precision formulae for the Sun and the Moon; IAU 1982 GMST | Sun, Moon, illumination and sidereal time on the survey page (`src/survey/astro.ts`) |
+| Hipparcos (ESA 1997) equatorial → galactic rotation matrix | galactic plane and footprint regions |
+| viridis colour map (van der Walt & Smith, matplotlib), polynomial fit | "Visits" map colour scale |
 | Wyman, Sloan & Shirley 2013, *Simple Analytic Approximations to the CIE XYZ Color Matching Functions*, JCGT 2(2) | CIE 1931 colour-matching functions used for the filter colours |
 
 ## Rubin technical documents
@@ -28,6 +33,8 @@ Everything the animations are built from. Keep this list up to date when a new s
 - Martin et al., M1M3 fabrication (SPIE 7018) — https://wp.optics.arizona.edu/loft/wp-content/uploads/sites/6/2025/03/70180G_1.pdf
 - Neill et al. 2014, *Baseline design of the LSST Telescope Mount Assembly* (SPIE 9145) — https://www.lsst.org/node/603 ; Callahan et al. 2016, *LSST mount final design* (SPIE 9906) — https://www.lsst.org/node/885
 - *LSST Telescope Design Developments* (poster) — https://wp.optics.arizona.edu/loft/wp-content/uploads/sites/6/2025/03/LSST_Telescope_Design_Developments.pdf
+- Bianco et al. 2022, *Optimization of the Observing Cadence for the Rubin Observatory Legacy Survey of Space and Time*, ApJS 258, 1 — https://arxiv.org/abs/2108.01683 (survey strategy and the Survey Cadence Optimization Committee)
+- Naghib et al. 2019, *A framework for telescope schedulers: with applications to the Large Synoptic Survey Telescope*, AJ 157, 151 — https://arxiv.org/abs/1810.04815 (feature-based scheduler)
 - Ivezić et al. 2019, *LSST: from Science Drivers to Reference Design and Anticipated Data Products*, ApJ 873, 111 — https://arxiv.org/abs/0805.2366
 
 ## Official Rubin Observatory material
