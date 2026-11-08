@@ -70,7 +70,6 @@ export function buildTelescope(rubin: Rubin): Telescope {
     m1m3.add(tube(r - 0.006, r + 0.006, zBack + 0.025, zt - 0.03, MAT.borosilicate, 96));
   }
   ota.add(m1m3);
-  groups.m1m3 = m1m3;
   L('M1', 'M1 — primary mirror', '8.4 m outer annulus of the M1M3 monolith (spin-cast honeycomb borosilicate). Concave hyperboloid, R = 19.835 m, k = −1.215. First reflection.', ocs(-3.6, 0, S.M1.zAt(3.6, 0)));
   L('M3', 'M3 — tertiary mirror', 'Inner 5 m of the same glass, 23.4 cm lower and more steeply curved (R = 8.34 m). Third reflection, sends light up into the camera.', ocs(1.4, 1.0, S.M3.zAt(1.7, 0)));
 
@@ -134,7 +133,6 @@ export function buildTelescope(rubin: Rubin): Telescope {
       }
   }
   ota.add(cell);
-  groups.cell = cell;
   L('cell', 'M1M3 mirror cell', '~75 t steel cell. 156 pneumatic actuators + 6 hardpoints push on the glass to correct its shape (active optics). Blowers keep the glass at air temperature.', ocs(0, -4.95, -1.4));
 
   // ------------------------------------------------------------------ Centre section (APPROX)
@@ -150,7 +148,6 @@ export function buildTelescope(rubin: Rubin): Telescope {
     g.translate(0, z0, 0);
     const cs = new THREE.Mesh(g, MAT.paintCut);
     ota.add(cs);
-    groups.center = cs;
     // inner black baffle surface
     ota.add(tube(4.29, 4.301, z0, z1, MAT.blackCut));
     // ---------------------------------------------------------------- elevation rings + lower cross-box (photos)
@@ -211,7 +208,6 @@ export function buildTelescope(rubin: Rubin): Telescope {
           o.rotation.y = sy > 0 ? Math.PI : 0;
           ota.add(o);
         }
-      groups.lowerBox = lb;
     }
   }
 
@@ -232,7 +228,6 @@ export function buildTelescope(rubin: Rubin): Telescope {
     }
   }
   ota.add(piers);
-  groups.piers = piers;
 
   // Mid-level baffle ring
   const mid = BF.find((b) => b.name === 'MidLevel')!;
@@ -266,7 +261,6 @@ export function buildTelescope(rubin: Rubin): Telescope {
     ter.add(d);
   }
   ota.add(ter);
-  groups.topEnd = ter;
   L('ter', 'Top-end ring', 'Steel I-beam ring 9.8 m across. Its two flanges double as light baffles at the top of the telescope.', ocs(0, 4.9, 8.06));
 
   // ------------------------------------------------------------------ Spider spindle, centre plate, vanes
@@ -295,19 +289,19 @@ export function buildTelescope(rubin: Rubin): Telescope {
     }
   }
   ota.add(spider);
-  groups.spider = spider;
   L('spider', 'Spider & spindle', 'Thin vanes (5 cm in projection) suspend the central spindle that carries M2 and the camera. They cast the diffraction spikes on bright stars.', ocs(2.6, 2.6 * 0.3, SPIDER.z));
 
   // ------------------------------------------------------------------ M2 + cell + baffle
-  const m2 = new THREE.Group();
+  const m2 = new THREE.Group(); // cell, hexapod and baffle (structure)
+  const m2glass = new THREE.Group(); // the mirror itself
   const rM2 = 1.71;
-  m2.add(lathe(sagProfile(S.M2, 0.9, rM2, 60), 160, MAT.silver));
+  m2glass.add(lathe(sagProfile(S.M2, 0.9, rM2, 60), 160, MAT.silver));
   const back: [number, number][] = [];
   back.push([0.9, S.M2.zAt(0.9, 0)]);
   back.push([0.9, S.M2.zAt(0.9, 0) + 0.1]);
   back.push([rM2, S.M2.zAt(rM2, 0) + 0.1]);
   back.push([rM2, S.M2.zAt(rM2, 0)]);
-  m2.add(lathe(back, 160, MAT.ule));
+  m2glass.add(lathe(back, 160, MAT.ule));
   // cell (APPROX)
   m2.add(tube(0.95, 1.8, S.M2.zAt(rM2, 0) + 0.12, 6.75, MAT.steelSolid, 96));
   // M2 hexapod struts to the spindle
@@ -321,15 +315,20 @@ export function buildTelescope(rubin: Rubin): Telescope {
   const skirt: [number, number][] = vanes.map((v) => [v.inner + 0.14, v.z] as [number, number]);
   m2.add(lathe([...skirt, ...skirt.slice().reverse().map(([r, z]) => [r + 0.01, z] as [number, number])], 128, MAT.black));
   for (const v of vanes) m2.add(annulusMesh(v.inner, v.inner + 0.14, v.z, MAT.black, 0.004, 128));
-  ota.add(m2);
-  groups.m2 = m2;
+  ota.add(m2, m2glass);
   L('M2', 'M2 — secondary mirror', '3.42 m convex mirror (Corning ULE glass, 10 cm thick, 1.8 m central hole). Second reflection, sends light back down to M3.', ocs(-1.3, 0, S.M2.zAt(1.3, 0)));
   L('m2baffle', 'M2 baffle', '21 black anodised vanes around M2 stop stray light that would otherwise reach the camera directly.', ocs(-2.2, -0.8, 5.7));
 
   // ------------------------------------------------------------------ LSSTCam
-  // the tube structure is rigid: bake it into one mesh per material before adding the camera
-  // (if a part of the tube is ever animated or toggled, pass it as mergeStatic(ota, [part]))
-  mergeStatic(ota);
+  // Everything but the two mirrors goes into `structure`, which the page can hide to show only the
+  // optics. Both are rigid: bake each into one mesh per material before adding the camera.
+  const structure = new THREE.Group();
+  structure.name = 'Structure';
+  for (const c of [...ota.children]) if (c !== m1m3 && c !== m2glass) structure.add(c);
+  ota.add(structure);
+  mergeStatic(structure);
+  mergeStatic(ota, [structure]);
+  groups.structure = structure;
 
   const camModel = buildLSSTCam(rubin, { uniformSensors: true }); // CCD types are detailed on the camera page
   const cam = camModel.group;

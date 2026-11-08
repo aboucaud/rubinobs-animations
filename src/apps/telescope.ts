@@ -186,7 +186,13 @@ function requestRetrace() {
 }
 
 // ---------------------------------------------------------------- labels
-const updateLabels = createLabels(tel.labels, camera, controls, { defaultParent: tel.ota, margin: 1.05, visible: (_l, dist) => dist < 45 });
+// labels of the parts hidden with the mount (only the mirrors and the camera stay)
+const STRUCTURE_LABELS = new Set(['cell', 'ter', 'spider', 'm2baffle']);
+const updateLabels = createLabels(tel.labels, camera, controls, {
+  defaultParent: tel.ota,
+  margin: 1.05,
+  visible: (l, dist) => dist < 45 && (state.mount || !STRUCTURE_LABELS.has(l.id)),
+});
 
 // ---------------------------------------------------------------- info panel & focal-plane inset
 const info = document.getElementById('info')!;
@@ -299,7 +305,7 @@ for (const k of Object.keys(VIEWS)) fView.add({ [k]: () => goView(k) }, k);
 fView.add(state, 'cutaway').name('cutaway');
 fView.add(state, 'labels').name('labels');
 fView.add(state, 'glass').name('lenses & filters');
-fView.add(state, 'mount').name('mount (approx.)');
+fView.add(state, 'mount').name('mount & structure');
 fView.add(state, 'bloom', 0, 2, 0.05).name('glow').onChange((v: number) => (bloom!.strength = v));
 const fPoint = gui.addFolder('Pointing');
 // preset pointings: the elevation slider glides to the target (ease in-out); dragging it cancels
@@ -339,7 +345,7 @@ function frame() {
   const ease = 1 - Math.exp(-dt * 5);
   elGroup.rotation.x += (THREE.MathUtils.degToRad(90 - state.elevation) - elGroup.rotation.x) * ease;
   azGroup.rotation.y += (THREE.MathUtils.degToRad(-state.azimuth) - azGroup.rotation.y) * ease;
-  pier.visible = azimuth.visible = state.mount;
+  pier.visible = floor.visible = azimuth.visible = tel.groups.structure.visible = state.mount;
   fadeBase(camera.position.y < FLOOR_TOP);
   tel.groups.lenses.visible = tel.groups.filter.visible = state.glass;
 
