@@ -67,3 +67,36 @@ header p { margin: 2px 0 0; font-size: 11px; opacity: .6; }
 @media (max-width: 720px) {
   #steps { top: auto; bottom: 120px; width: auto; right: 14px; max-height: 26vh; }
 }
+
+/* survey page */
+#sky { position: fixed; pointer-events: none; }
+#sky span { position: absolute; font: 600 10px system-ui, sans-serif; opacity: .7; }
+#sky .n { top: -14px; left: 50%; transform: translateX(-50%); }
+#sky .s { bottom: -14px; left: 50%; transform: translateX(-50%); }
+#sky .e { left: -12px; top: 50%; transform: translateY(-50%); }
+#sky .w { right: -14px; top: 50%; transform: translateY(-50%); }
+#sky div { position: absolute; top: 100%; margin-top: 16px; width: 100%; text-align: center; font-size: 10px; opacity: .6; }
+#info .chip { display: inline-block; min-width: 18px; text-align: center; font-weight: 700; color: var(--c); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  border-radius: 5px; padding: 0 3px; margin-right: 2px; }
+#info .chip.on { background: color-mix(in srgb, var(--c) 35%, transparent); color: #fff; border-color: var(--c); }
+#info .chip.off { opacity: .45; border-style: dashed; }
+#info .row { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+#info .cycle { position: relative; height: 8px; display: flex; border-radius: 3px; overflow: hidden; background: rgba(255,255,255,.08); margin-top: 4px; }
+#info .cycle i { background: rgba(160,180,210,.35); }
+#info .cycle b { background: color-mix(in srgb, var(--c) 70%, transparent); }
+#info .cycle u { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; }
+#info .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin-top: 4px; }
+#info .stats b { display: block; font-size: 16px; font-variant-numeric: tabular-nums; }
+#info .stats span { font-size: 10.5px; opacity: .65; }
+#info .ramp { height: 6px; border-radius: 3px; background: linear-gradient(90deg, #440154, #3b528b, #21918c, #5ec962, #fde725); }
+@media (max-width: 720px) {
+  #info .stats b { font-size: 13px; }
+}
+body.survey #bar { width: max-content; }
+#info .more { display: grid; gap: 4px; }
+@media (max-width: 720px) {
+  body.survey header p { display: none; }
+  body.survey #info { top: calc(max(12px, env(safe-area-inset-top)) + 44px); max-width: calc(100vw - 150px); }
+  body.survey #info .more { display: none; }
+  body.survey #sky div { display: none; }
+}

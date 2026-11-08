@@ -17,6 +17,7 @@ import { cutPlane } from './materials';
 import { box, lathe, lensSolid, ocs, tube } from './util';
 import { mergeStatic } from './optimize';
 import type { Label } from './telescope';
+import { FES_TIMES } from './fes_times';
 
 const P = prescription as unknown as Record<Band, { surfaces: any[] }>;
 
@@ -576,7 +577,7 @@ export function buildFES(): FilterExchanger {
       {
         label: 'Checks',
         detail: 'Shutter closed, camera rotator within ±5° of its zero so the rails are aligned with gravity, carousel position confirmed.',
-        real: 3,
+        real: FES_TIMES.checks,
         run: () => {},
       },
     ];
@@ -585,13 +586,13 @@ export function buildFES(): FilterExchanger {
         {
           label: `Unclamp the ${from} filter`,
           detail: 'The online clamps release the filter; it now hangs on the autochanger trucks only.',
-          real: 5,
+          real: FES_TIMES.unclamp,
           run: (t) => (st.onlineClamp = 1 - ease(t)),
         },
         {
           label: `Return ${from} to its socket`,
           detail: 'Slow 9 cm start, then the main move: up the front, the 90° tilt, and straight back along the top rails into the empty standby socket. The carrier travels with it.',
-          real: 14,
+          real: FES_TIMES.ret,
           run: (t) => {
             st.beam = null;
             st.transit = { band: from, s: 1 - moveProfile(t) };
@@ -603,7 +604,7 @@ export function buildFES(): FilterExchanger {
         {
           label: 'Lock in the carousel',
           detail: 'The socket clamps lock the filter; the autochanger latches let go of its pins.',
-          real: 6,
+          real: FES_TIMES.lock,
           run: (t) => {
             st.socketClamp = ease(t);
             st.latch = 1 - ease(t);
@@ -615,7 +616,7 @@ export function buildFES(): FilterExchanger {
       out.push({
         label: 'All five filters stored',
         detail: 'No filter in the beam: the carrier waits empty at the standby socket.',
-        real: 1,
+        real: FES_TIMES.stored,
         run: () => {},
       });
       return out;
@@ -630,14 +631,14 @@ export function buildFES(): FilterExchanger {
       out.push({
         label: `Carousel turns ${slots}/5 of a turn`,
         detail: `Brake released, ${slots === 1 ? '72°' : '144°'} rotation of 200 kg of filters and structure, then realignment with the autochanger to better than 0.1 mm.`,
-        real: slots === 1 ? 26 : 30.5,
+        real: slots === 1 ? FES_TIMES.turn1 : FES_TIMES.turn2,
         run: (t) => (st.carouselAngle = a0 + (a1 - a0) * ease(t)),
       });
     out.push(
       {
         label: `Grab ${target}`,
         detail: 'The autochanger latches close on the pins of the new filter; the socket clamps unlock (an unlocking cable is pulled).',
-        real: 6,
+        real: FES_TIMES.grab,
         run: (t) => {
           st.latch = ease(t);
           st.socketClamp = 1 - ease(t);
@@ -646,7 +647,7 @@ export function buildFES(): FilterExchanger {
       {
         label: `Bring ${target} into the beam`,
         detail: 'Straight out of the socket along the top rails, the 90° tilt around the front of the cryostat, then down into position: about 1 m, the main 91 cm in about 6 s.',
-        real: 14,
+        real: FES_TIMES.insert,
         run: (t) => (st.transit = { band: target, s: moveProfile(t) }),
         done: () => {
           st.transit = null;
@@ -656,7 +657,7 @@ export function buildFES(): FilterExchanger {
       {
         label: 'Clamp online',
         detail: 'The online clamps close. The filter sits a few millimetres in front of the shutter and L3, repeatable to better than 0.1 mm.',
-        real: 8,
+        real: FES_TIMES.clamp,
         run: (t) => (st.onlineClamp = ease(t)),
       },
     );

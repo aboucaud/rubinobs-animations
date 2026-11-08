@@ -6,3 +6,5 @@ __pycache__/
 tools/throughputs/
 # screenshots from tools/shot.cjs
 shots/
+# downloaded on demand by tools/sky_data.py
+tools/d3-celestial/
