@@ -1,13 +1,12 @@
 // The Filter Exchange System of the LSST Camera (IN2P3/CNRS): dedicated, step-by-step animation.
 import * as THREE from 'three';
-import GUI from 'lil-gui';
 import { Rubin } from '../optics/trace';
 import { BANDS, BAND_HEX, BAND_INFO, Band } from '../scene/bands';
 import { buildLSSTCam } from '../scene/lsstcam';
 import { FESStep } from '../scene/fes';
 import { cutPlane } from '../scene/materials';
 import { ocs } from '../scene/util';
-import { CameraTween, createLabels, createViewer, faceCutPlane } from './common';
+import { CameraTween, createLabels, createViewer, faceCutPlane, createGui } from './common';
 
 const bandText = (b: Band) => `${b} · ${BAND_INFO[b].note}`;
 
@@ -141,7 +140,7 @@ function updateHud() {
   info.innerHTML = `
     <div class="band" style="--c:${s.beam ? BAND_HEX[s.beam] : '#ccc'}">${s.beam ?? (s.transit ? s.transit.band : '∅')}<span>${s.beam ? 'in the beam · ' + bandText(s.beam) : s.transit ? 'filter moving' : 'no filter in the beam'}</span></div>
     <div>Carousel: <b>${loaded.join(' ')}</b> <span class="k">· ${s.loaderOut ?? '—'} waits in the loader</span></div>
-    ${target !== undefined ? `<div class="seq"><b>${target ? 'Exchange → ' + target : 'Store the filter: none in the beam'}</b><div class="bar"><i style="width:${(prog * 100).toFixed(1)}%"></i></div><div class="clock">real time ${realClock.toFixed(1)} / ${realTotal.toFixed(1)} s · shown ×${state.speed}${state.paused ? ' · paused' : ''}</div></div>` : ''}`;
+    ${target !== undefined ? `<div class="seq key"><b>${target ? 'Exchange → ' + target : 'Store the filter: none in the beam'}</b><div class="bar"><i style="width:${(prog * 100).toFixed(1)}%"></i></div><div class="clock">real time ${realClock.toFixed(1)} / ${realTotal.toFixed(1)} s · shown ×${state.speed}${state.paused ? ' · paused' : ''}</div></div>` : ''}`;
   const bn = document.getElementById('bNone') as HTMLButtonElement;
   bn.disabled = !!queue.length || s.beam === null;
   bn.classList.toggle('active', s.beam === null && !s.transit);
@@ -202,8 +201,7 @@ function goView(name: string) {
   applyVisibility();
   gui.controllersRecursive().forEach((c) => c.updateDisplay());
 }
-const gui = new GUI({ title: 'Filter exchange' });
-if (window.innerWidth < 720) gui.close();
+const gui = createGui('Filter exchange');
 const fv = gui.addFolder('Views');
 for (const k of Object.keys(VIEWS)) fv.add({ [k]: () => goView(k) }, k);
 const fd = gui.addFolder('Display');

@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import GUI from 'lil-gui';
 import { Rubin } from '../optics/trace';
 import { BAND_HEX, BAND_INFO, Band } from '../scene/bands';
 import { buildTelescope, ELEV_AXIS_ABOVE_M1 } from '../scene/telescope';
@@ -9,7 +8,7 @@ import { RayBuilder, RayBundle, RayData, rayBytes, TraceCache } from '../scene/r
 import { ocs, ocsv } from '../scene/util';
 import { LAYOUT, ccdAt } from '../scene/focalplane';
 import { buildHuman } from '../scene/human';
-import { CameraTween, createLabels, createViewer, faceCutPlane, glowTexture } from './common';
+import { CameraTween, createLabels, createViewer, faceCutPlane, glowTexture, createGui } from './common';
 
 // ---------------------------------------------------------------- renderer & scene
 const { renderer, scene, camera, controls, composer, bloom, onResize } = createViewer({
@@ -288,8 +287,7 @@ function goView(name: string) {
 }
 
 // ---------------------------------------------------------------- GUI
-const gui = new GUI({ title: 'Simonyi Telescope' });
-if (window.innerWidth < 720) gui.close();
+const gui = createGui('Simonyi Telescope');
 const fLight = gui.addFolder('Light');
 fLight.add(state, 'rings', 3, 14, 1).name('ray density').onChange(requestRetrace);
 fLight.add(state, 'speed', 0.2, 8, 0.1).name('light speed (m/s)').onChange(updateInfo);

@@ -7,7 +7,37 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import GUI from 'lil-gui';
 import '../style.css';
+
+// ---------------------------------------------------------------- phone layout
+/**
+ * Phones, in portrait (narrow) or landscape (short). The single source of truth: it toggles
+ * `body.phone`, which every phone rule in style.css keys on, so CSS and JS always agree.
+ */
+const PHONE = window.matchMedia('(max-width: 720px), (max-height: 500px)');
+export const isPhone = () => PHONE.matches;
+
+/**
+ * Phone layout for any page (3D or 2D). On a phone the #info panel shows only its key line
+ * (`.band` and any `.key` child); tapping it shows the rest. `--bar-h` tracks the height of the
+ * bottom #bar so panels can sit just above it.
+ */
+export function initPhoneLayout() {
+  const apply = () => document.body.classList.toggle('phone', PHONE.matches);
+  apply();
+  PHONE.addEventListener('change', apply);
+  document.getElementById('info')?.addEventListener('click', (e) => (e.currentTarget as HTMLElement).classList.toggle('open'));
+  const bar = document.getElementById('bar');
+  if (bar) new ResizeObserver(() => document.body.style.setProperty('--bar-h', `${bar.offsetHeight}px`)).observe(bar);
+}
+
+/** The settings panel, closed by default on phones. */
+export function createGui(title: string) {
+  const gui = new GUI({ title });
+  if (isPhone()) gui.close();
+  return gui;
+}
 
 export interface ViewerOptions {
   fov: number;
@@ -23,6 +53,7 @@ export interface ViewerOptions {
 }
 
 export function createViewer(o: ViewerOptions) {
+  initPhoneLayout();
   const canvas = document.getElementById('c') as HTMLCanvasElement;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: !!o.logarithmicDepthBuffer });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -99,7 +130,7 @@ export function createLabels<L extends LabelItem>(
     // element and the `shown` flag must agree from the start
     el.style.display = 'none';
     layer.appendChild(el);
-    return { l, el, shown: false };
+    return { l, el, shown: false, flip: false };
   });
   document.body.addEventListener('pointerdown', (e) => {
     if (!(e.target as HTMLElement).closest('#tip')) tip.classList.remove('show');
@@ -122,7 +153,15 @@ export function createLabels<L extends LabelItem>(
         e.el.style.display = vis ? 'block' : 'none';
         e.shown = vis;
       }
-      if (vis) e.el.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px)`;
+      if (!vis) continue;
+      const x = ((v.x + 1) / 2) * w;
+      // labels in the right part of the screen open to the left of their dot, so they stay on screen
+      const flip = x > 0.6 * w;
+      if (flip !== e.flip) {
+        e.el.classList.toggle('flip', flip);
+        e.flip = flip;
+      }
+      e.el.style.transform = `translate(${x}px, ${((1 - v.y) / 2) * h}px)`;
     }
   };
 }

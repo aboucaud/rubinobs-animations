@@ -21,21 +21,21 @@ header p { margin: 2px 0 0; font-size: 11px; opacity: .6; }
   font: 600 11px/1 system-ui, sans-serif; color: #fff; background: rgba(10,16,30,.72);
   border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 4px 8px; margin: -10px 0 0 8px; }
 .label::before { content: ""; position: absolute; left: -9px; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+/* right part of the screen: the label opens to the left of its dot (set by createLabels) */
+.label.flip { translate: -100% 0; margin-left: -8px; }
+.label.flip::before { left: auto; right: -9px; }
 #tip { position: fixed; right: 14px; bottom: max(14px, env(safe-area-inset-bottom)); max-width: 320px; display: none;
   background: rgba(8,12,22,.9); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 10px 12px; }
 #tip.show { display: block; }
 #tip p { margin: 6px 0 0; opacity: .85; }
-.lil-gui.root { position: fixed; top: max(10px, env(safe-area-inset-top)); right: 10px; }
-@media (max-width: 720px) {
-  #info { max-width: 62vw; font-size: 11px; padding: 8px 10px; }
-  #info .band { font-size: 18px; }
-  #inset { width: 130px; height: 130px; }
-  #insetWrap div { max-width: 130px; }
-}
-
+.lil-gui.lil-root { top: max(10px, env(safe-area-inset-top)); right: 10px; }
+/* panels stay above the 3D labels */
+#labels { z-index: 1; }
+header, #info, #steps, #bar, #insetWrap { z-index: 2; }
+#tip { z-index: 3; }
 #info .seq { margin-top: 4px; padding: 6px 8px; border-radius: 8px; background: rgba(90,180,255,.1); border: 1px solid rgba(90,180,255,.25); }
 #info .clock { font-variant-numeric: tabular-nums; opacity: .75; font-size: 11px; margin-top: 2px; }
-#bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom));
+#bar { position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content; bottom: max(14px, env(safe-area-inset-bottom));
   display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; max-width: calc(100vw - 28px);
   background: rgba(8,12,22,.78); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 8px 10px; }
 #bar button { font: 600 13px system-ui, sans-serif; color: #fff; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.18);
@@ -47,12 +47,6 @@ header p { margin: 2px 0 0; font-size: 11px; opacity: .6; }
 #bar .sep { font-size: 11px; opacity: .6; margin-left: 6px; }
 #bar .slider { font-size: 11px; opacity: .85; display: flex; align-items: center; gap: 6px; margin-left: 6px; }
 #bar input[type=range] { width: 110px; }
-@media (max-width: 720px) {
-  #bar { gap: 4px; padding: 6px; }
-  #bar button { padding: 6px 8px; font-size: 12px; }
-  #bar .sep { display: none; }
-  #tip { bottom: 120px; }
-}
 #steps { position: fixed; left: 14px; top: calc(max(12px, env(safe-area-inset-top)) + 190px); width: 300px; max-height: calc(100vh - 330px); overflow: auto;
   background: rgba(8,12,22,.72); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 8px 10px; font-size: 12px; }
 #steps:empty { display: none; }
@@ -64,6 +58,39 @@ header p { margin: 2px 0 0; font-size: 11px; opacity: .6; }
 #info .bar { height: 4px; background: rgba(255,255,255,.12); border-radius: 2px; margin-top: 5px; overflow: hidden; }
 #info .bar i { display: block; height: 100%; background: #5aa8ff; }
 #bar select { background: rgba(255,255,255,.08); color: #fff; border: 1px solid rgba(255,255,255,.2); border-radius: 6px; padding: 4px; }
-@media (max-width: 720px) {
-  #steps { top: auto; bottom: 120px; width: auto; right: 14px; max-height: 26vh; }
+
+/* ---------------------------------------------------------------- phones
+   body.phone is set by initPhoneLayout (common.ts) for narrow (portrait) or short (landscape)
+   screens. Rule: on a phone, no panel may cover another one, and the animation keeps the middle
+   of the screen. Check new UI with the phone screenshots described in CLAUDE.md. */
+body.phone header { max-width: calc(100vw - 170px); }
+body.phone header h1 { font-size: 13px; letter-spacing: .05em; }
+body.phone header p { display: none; }
+body.phone .lil-gui.lil-root { --width: min(260px, 70vw); max-height: 70dvh; }
+body.phone .lil-gui.lil-root.lil-closed { width: auto; }
+/* info panel: key line only (.band and .key), tap for the rest */
+body.phone #info { top: calc(max(12px, env(safe-area-inset-top)) + 42px); max-width: min(330px, calc(100vw - 28px));
+  font-size: 11px; padding: 6px 10px; cursor: pointer; }
+body.phone #info .band { font-size: 17px; }
+body.phone #info .band::after { content: "▸ more"; margin-left: auto; padding-left: 8px; font-size: 10px; font-weight: 400; color: #c9d1dc; opacity: .7; }
+body.phone #info.open .band::after { content: "▾ less"; }
+body.phone #info:not(.open) > :not(.band):not(.key) { display: none; }
+body.phone #inset { width: 120px; height: 120px; }
+body.phone #insetWrap div { max-width: 120px; }
+body.phone #bar { gap: 4px; padding: 6px; }
+body.phone #bar button { padding: 6px 8px; font-size: 12px; }
+body.phone #bar .sep { display: none; }
+body.phone #bar input[type=range] { width: 80px; }
+/* panels that sit just above the bottom bar (--bar-h is kept up to date by initPhoneLayout) */
+body.phone #steps, body.phone #tip { top: auto; bottom: calc(max(14px, env(safe-area-inset-bottom)) + var(--bar-h, 0px) + 8px); }
+body.phone #steps { left: 14px; right: 14px; width: auto; max-height: 22vh; }
+body.phone #steps .step:not(.now) { display: none; }
+body.phone #steps:not(:has(.now, .k)) { display: none; }
+body.phone #tip { max-width: min(320px, calc(100vw - 28px)); }
+body.phone .label { font-size: 10px; padding: 3px 6px; }
+@media (orientation: landscape) {
+  /* landscape phone: one row of buttons that scrolls sideways */
+  body.phone #bar { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; }
+  body.phone #bar > * { flex: none; }
+  body.phone #info { max-width: min(300px, 40vw); }
 }
