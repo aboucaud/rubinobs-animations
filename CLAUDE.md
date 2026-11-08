@@ -69,6 +69,11 @@ observatory 2564 → 658; peak JS heap during a dense ray-slider sweep 55.7 → 
 programs than it saved (state mismatch with the composer's render target), so pages render the first
 frame synchronously.
 
+## Sources
+
+The README's **Sources** section lists every repository, document, data set and visual reference the
+animations are built from. Add any new source there in the same commit that uses it.
+
 ## Tools
 
 - `tools/export_prescription.py` → `src/data/prescription.json` (needs batoid).
