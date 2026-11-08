@@ -5,7 +5,8 @@ import { Rubin } from '../optics/trace';
 import { buildTelescope, ELEV_AXIS_ABOVE_M1 } from '../scene/telescope';
 import { buildAzimuth, AXIS_HEIGHT } from '../scene/mount';
 import { RayBundle } from '../scene/rays';
-import { buildObservatory, SITE, domeCut } from '../scene/observatory';
+import { buildObservatory, SITE, domeCut, terrainHeight } from '../scene/observatory';
+import { buildHuman, HUMAN_MAT } from '../scene/human';
 import { CameraTween, createLabels, createViewer } from './common';
 
 const TIME_SCALE = 6; // animation runs 6× faster than reality during the survey
@@ -130,6 +131,16 @@ elGroup.add(tel.ota);
 azGroup.add(elGroup);
 scene.add(azGroup);
 azGroup.add(buildAzimuth());
+
+// people for scale: two at the drum entrance, one on the telescope floor beside the mount (clipped
+// with the dome; on the far side of the cut in the default inside views), clear of the top end
+{
+  const door = new THREE.Vector3(-SITE.drumR * Math.sin(0.5), 0, SITE.drumR * Math.cos(0.5));
+  for (const [x, z, h] of [[-8.6, 16.6, 1.78], [-6.9, 17.2, 1.66]]) scene.add(buildHuman(new THREE.Vector3(x, terrainHeight(x, z), z), door, h));
+  const inside = HUMAN_MAT.clone();
+  inside.clippingPlanes = [domeCut];
+  scene.add(buildHuman(new THREE.Vector3(-2.7, SITE.azFloor - 0.6, -13.2), new THREE.Vector3(0, 0, 0), 1.75, inside));
+}
 
 // starlight: a glowing column along the optical axis, plus live-traced rays inside the telescope
 const beamMat = new THREE.ShaderMaterial({

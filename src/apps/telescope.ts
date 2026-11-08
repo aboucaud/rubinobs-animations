@@ -8,6 +8,7 @@ import { cutPlane, MAT } from '../scene/materials';
 import { RayBuilder, RayBundle, RayData, rayBytes, TraceCache } from '../scene/rays';
 import { ocs, ocsv } from '../scene/util';
 import { LAYOUT, ccdAt } from '../scene/focalplane';
+import { buildHuman } from '../scene/human';
 import { CameraTween, createLabels, createViewer, faceCutPlane, glowTexture } from './common';
 
 // ---------------------------------------------------------------- renderer & scene
@@ -83,6 +84,10 @@ scene.add(azGroup);
 // Mount & pier placeholder (APPROX: TMA envelope to be replaced by the NOIRLab CAD)
 const azimuth = buildAzimuth();
 azGroup.add(azimuth);
+// people for scale, standing on the azimuth platform in front of the mirror cell (they turn with it), below
+// the optics in the default views and at least 2 m under the elevation structure at any elevation
+azGroup.add(buildHuman(new THREE.Vector3(3.3, 0, 5.4), new THREE.Vector3(0, 0, 0), 1.78));
+azGroup.add(buildHuman(new THREE.Vector3(2.4, 0, 5.9), new THREE.Vector3(3.3, 0, 5.4), 1.65));
 const pier = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 15.65, 96, 1, true), MAT.concrete);
 pier.position.y = -0.6 - 15.65 / 2;
 scene.add(pier);

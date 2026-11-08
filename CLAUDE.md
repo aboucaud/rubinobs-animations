@@ -21,6 +21,9 @@ To check a page visually: `npm run preview`, then `node tools/shot.cjs <page>/ <
 - `src/apps/` — one script per page. `common.ts` holds what every page shares: `createViewer`
   (renderer, scene, camera, controls, post-processing, resize), `createLabels`, `CameraTween`,
   `faceCutPlane`, `glowTexture`. A new page should be built on it, not copy boilerplate.
+- `src/scene/human.ts` — `buildHuman(pos, lookAt, height)`: one-mesh standing figure (1.75 m reference)
+  used for scale on the telescope, camera and observatory pages. Place figures where they do not hide
+  the subject in the preset views, and outside any volume swept by a moving part.
 - `src/scene/util.ts` — geometry helpers in the OCS-aligned frame (`ocs`, `lathe`, `lensSolid`, `tube`, `box`…).
 
 ## Performance design (Nov 2026): what is automatic, what to watch
