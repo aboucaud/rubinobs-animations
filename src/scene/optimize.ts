@@ -59,7 +59,10 @@ export function mergeStatic(root: THREE.Object3D, keep: Iterable<THREE.Object3D 
     const mesh = new THREE.Mesh(merged, b.material);
     mesh.renderOrder = b.renderOrder;
     mesh.name = 'merged';
-    for (const m of b.meshes) m.removeFromParent();
+    for (const m of b.meshes) {
+      m.removeFromParent();
+      if (import.meta.env?.DEV) lockMerged(m);
+    }
     root.add(mesh);
     removed += b.meshes.length - 1;
   }
@@ -86,5 +89,24 @@ function flipWinding(g: THREE.BufferGeometry) {
         a[(v + 1) * s + k] = a[(v + 2) * s + k];
         a[(v + 2) * s + k] = t;
       }
+  }
+}
+
+/**
+ * Development guard (vite dev only): a mesh baked into a merged mesh is no longer rendered, so
+ * moving it, changing its material or toggling it would silently do nothing. Make any such attempt
+ * throw instead, naming the culprit: the fix is to add the object to the `keep` list.
+ */
+function lockMerged(m: THREE.Mesh) {
+  const fail = (what: string) => () => {
+    throw new Error(`mergeStatic: "${m.name || m.uuid}" was baked into a merged mesh but its ${what} is changed later. Add it to the keep list of its mergeStatic call.`);
+  };
+  for (const k of ['position', 'quaternion', 'scale', 'rotation'] as const) {
+    const ro = new Proxy(m[k] as object, { set: fail(k), defineProperty: fail(k) });
+    Object.defineProperty(m, k, { get: () => ro, configurable: true });
+  }
+  for (const k of ['visible', 'material'] as const) {
+    const v = m[k];
+    Object.defineProperty(m, k, { get: () => v, set: fail(k), configurable: true });
   }
 }
