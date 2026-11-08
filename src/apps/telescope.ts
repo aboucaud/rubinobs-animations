@@ -11,14 +11,13 @@ import { buildHuman } from '../scene/human';
 import { CameraTween, createLabels, createViewer, faceCutPlane, glowTexture, createGui } from './common';
 
 // ---------------------------------------------------------------- renderer & scene
-const { renderer, scene, camera, controls, composer, bloom, onResize } = createViewer({
+const { renderer, scene, camera, controls, composer, onResize } = createViewer({
   fov: 40,
   near: 0.02,
   far: 2000,
   exposure: 0.9,
   background: 0x05070d,
   roomEnvironment: 0.55,
-  bloom: [0.9, 0.3, 1.3],
 });
 camera.position.set(17, 12, 19);
 controls.target.set(0, AXIS_HEIGHT + 1.5, 0);
@@ -64,11 +63,10 @@ const state = {
   showPaths: true,
   cutaway: true,
   labels: true,
-  glass: true,
+  glass: true, // lenses & filters shown; only the 'Focal plane' view hides them
   elevation: 90,
   azimuth: 0,
   mount: true,
-  bloom: 0.9,
 };
 
 const tel = buildTelescope(Rubin.forBand(BAND));
@@ -298,15 +296,13 @@ const fLight = gui.addFolder('Light');
 fLight.add(state, 'rings', 3, 14, 1).name('ray density').onChange(requestRetrace);
 fLight.add(state, 'speed', 0.2, 8, 0.1).name('light speed (m/s)').onChange(updateInfo);
 fLight.add(state, 'continuous').name('continuous light');
-fLight.add({ fire: () => ((state.continuous = false), (head = 0), gui.controllersRecursive().forEach((c) => c.updateDisplay())) }, 'fire').name('▶ send one wavefront');
 fLight.add(state, 'showPaths').name('show full paths');
+fLight.add({ fire: () => ((state.continuous = false), (head = 0), gui.controllersRecursive().forEach((c) => c.updateDisplay())) }, 'fire').name('▶ send one wavefront');
 const fView = gui.addFolder('View');
 for (const k of Object.keys(VIEWS)) fView.add({ [k]: () => goView(k) }, k);
 fView.add(state, 'cutaway').name('cutaway');
 fView.add(state, 'labels').name('labels');
-fView.add(state, 'glass').name('lenses & filters');
 fView.add(state, 'mount').name('mount & structure');
-fView.add(state, 'bloom', 0, 2, 0.05).name('glow').onChange((v: number) => (bloom!.strength = v));
 const fPoint = gui.addFolder('Pointing');
 // preset pointings: the elevation slider glides to the target (ease in-out); dragging it cancels
 const POINTINGS: Record<string, number> = { Zenith: 90, '35° elevation': 35, Horizon: 0 };
