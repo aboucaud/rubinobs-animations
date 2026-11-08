@@ -56,4 +56,9 @@ Shared modules: `src/optics/` (ray tracer), `src/scene/` (telescope, camera, fil
 ## Status
 
 - Exact: optical surfaces (M1–M3, L1–L3, filters per band), baffles and spider, focal-plane layout, camera body radius.
+- Scale: standing adults (1.65–1.78 m, `src/scene/human.ts`) on the azimuth platform (telescope page), beside the camera cart (camera page), at the drum entrance and on the telescope floor (observatory page).
 - Schematic: the mount (TMA), mirror cell, centre section and camera internals (carousel sockets, autochanger rails, shutter frame, cryostat interior, utility trunk), dome and summit buildings. These will be replaced as better geometry (NOIRLab CAD, LSSTCam drawings) becomes available.
+
+## References
+
+Every repository, document, data set and visual reference the animations are built from is listed in [REFERENCES.md](REFERENCES.md).
