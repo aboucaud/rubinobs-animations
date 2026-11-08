@@ -9,7 +9,9 @@ const R_RING = 6.25;
 
 export function buildAzimuth(): THREE.Group {
   const g = new THREE.Group();
-  const plat = new THREE.Mesh(new THREE.CylinderGeometry(8.2, 8.4, 0.6, 96), MAT.paint);
+  // own material: the telescope page fades it when seen from below
+  const plat = new THREE.Mesh(new THREE.CylinderGeometry(8.2, 8.4, 0.6, 96), MAT.paint.clone());
+  plat.name = 'platform';
   plat.position.y = -0.3;
   g.add(plat);
   const cover = new THREE.MeshStandardMaterial({ color: 0xb9bcb8, metalness: 0.3, roughness: 0.6 });

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import GUI from 'lil-gui';
 import { Rubin } from '../optics/trace';
-import { BANDS, BAND_HEX, BAND_INFO, Band } from '../scene/bands';
+import { BAND_HEX, BAND_INFO, Band } from '../scene/bands';
 import { buildTelescope, ELEV_AXIS_ABOVE_M1 } from '../scene/telescope';
 import { buildAzimuth, AXIS_HEIGHT } from '../scene/mount';
 import { cutPlane, MAT } from '../scene/materials';
@@ -53,11 +53,11 @@ scene.add(fill);
 }
 
 // ---------------------------------------------------------------- telescope hierarchy
+// r band and a 3D ray bundle on this page; other bands are shown on the camera and filters pages
+const BAND: Band = 'r';
 const state = {
-  band: 'r' as Band,
-  fieldAngle: 1.0,
+  fieldAngle: 0, // star at the centre of the field; moved by tapping the focal-plane inset
   fieldAz: 0,
-  pattern: 'fan' as 'fan' | 'bundle',
   rings: 7,
   speed: 2.0,
   continuous: true,
@@ -71,7 +71,8 @@ const state = {
   bloom: 0.9,
 };
 
-const tel = buildTelescope(Rubin.forBand(state.band));
+const tel = buildTelescope(Rubin.forBand(BAND));
+tel.setBand(Rubin.forBand(BAND));
 const azGroup = new THREE.Group();
 const elGroup = new THREE.Group();
 elGroup.position.y = AXIS_HEIGHT;
@@ -86,10 +87,22 @@ azGroup.add(azimuth);
 const pier = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 15.65, 96, 1, true), MAT.concrete);
 pier.position.y = -0.6 - 15.65 / 2;
 scene.add(pier);
-{
-  const floor = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 0.3, 96), MAT.floor);
-  floor.position.y = -0.75;
-  scene.add(floor);
+const floor = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 0.3, 96), MAT.floor);
+floor.position.y = -0.75;
+scene.add(floor);
+// seen from below, the floor, pier and azimuth platform would hide the whole telescope: fade them
+const FLOOR_TOP = -0.6;
+const baseMats = [MAT.floor, MAT.concrete, (azimuth.getObjectByName('platform') as THREE.Mesh).material as THREE.Material];
+let baseFaded = false;
+function fadeBase(fade: boolean) {
+  if (fade === baseFaded) return;
+  baseFaded = fade;
+  for (const m of baseMats) {
+    m.transparent = fade;
+    m.opacity = fade ? 0.18 : 1;
+    m.depthWrite = !fade;
+    m.needsUpdate = true;
+  }
 }
 
 // ---------------------------------------------------------------- rays
@@ -106,7 +119,7 @@ tel.ota.add(star);
 type Landing = { x: number; y: number; ok: number; total: number; blocked: Record<string, number> };
 type Traced = { rays: RayData; landing: Landing };
 // Baked traces, keyed by every input of the trace: going back to a configuration already seen
-// costs nothing (switching bands, densities or patterns back and forth), and the 2 MB budget
+// costs nothing (moving the star or the density back and forth), and the 2 MB budget
 // (≈ 130 default fans, or ≈ 15 of the densest 3D bundles) bounds the memory the cache can hold.
 const traces = new TraceCache<Traced>(2 * 1024 * 1024, (t) => rayBytes(t.rays) + 256);
 let landing: Landing = { x: 0, y: 0, ok: 0, total: 0, blocked: {} };
@@ -119,7 +132,7 @@ function fieldAngles() {
 }
 
 function trace(): Traced {
-  const rubin = Rubin.forBand(state.band);
+  const rubin = Rubin.forBand(BAND);
   const [thx, thy] = fieldAngles();
   const out = new RayBuilder();
   const blocked: Record<string, number> = {};
@@ -128,7 +141,7 @@ function trace(): Traced {
   let ok = 0;
   let total = 0;
   // each ray is baked into typed arrays as soon as it is traced, then dropped
-  rubin.forEachStarRay(thx, thy, { rings: state.rings, perRing: state.rings * 3, startZ: 12.5, rInner: 2.2, rOuter: 4.25, pattern: state.pattern, fanAngle: 0 }, (r) => {
+  rubin.forEachStarRay(thx, thy, { rings: state.rings, perRing: state.rings * 3, startZ: 12.5, rInner: 2.2, rOuter: 4.25, pattern: 'bundle', fanAngle: 0 }, (r) => {
     out.add(r);
     total++;
     if (!r.ok) {
@@ -146,19 +159,18 @@ function trace(): Traced {
 
 function retrace() {
   // cache key: EVERY setting that changes the trace must be in it, or stale rays are shown
-  const k = [state.band, state.fieldAngle.toFixed(3), state.fieldAz.toFixed(2), state.pattern, state.rings].join('|');
+  const k = [state.fieldAngle.toFixed(3), state.fieldAz.toFixed(2), state.rings].join('|');
   const t = traces.get(k, trace);
   rays.setData(t.rays);
   landing = t.landing;
-  const rubin = Rubin.forBand(state.band);
-  const col = new THREE.Color(BAND_HEX[state.band]);
+  const rubin = Rubin.forBand(BAND);
+  const col = new THREE.Color(BAND_HEX[BAND]);
   rays.material.uniforms.uColor.value.copy(col);
   spot.material.color.copy(col).multiplyScalar(2);
   spot.position.copy(ocs(landing.x, landing.y, rubin.surfaces.Detector.z0 - 0.002));
   const [thx, thy] = fieldAngles();
   const d = Rubin.fieldDirection(thx, thy);
   star.position.copy(ocsv([-d[0] * 60, -d[1] * 60, -d[2] * 60]));
-  tel.setBand(rubin);
   updateInfo();
   drawInset();
 }
@@ -175,7 +187,7 @@ const updateLabels = createLabels(tel.labels, camera, controls, { defaultParent:
 // ---------------------------------------------------------------- info panel & focal-plane inset
 const info = document.getElementById('info')!;
 function updateInfo() {
-  const b = BAND_INFO[state.band];
+  const b = BAND_INFO[BAND];
   const ccd = ccdAt(landing.x, landing.y);
   const r = Math.hypot(landing.x, landing.y);
   const blockedTxt = Object.entries(landing.blocked)
@@ -185,19 +197,16 @@ function updateInfo() {
     .join(', ');
   const travelNs = ((rays.meanOkLength - (12.5 - 9.818)) / 0.299792458).toFixed(0);
   info.innerHTML = `
-    <div class="band" style="--c:${BAND_HEX[state.band]}">${state.band}<span>${b.range} · ${b.note}${b.falseColour ? ' (false colour)' : ''}</span></div>
+    <div class="band" style="--c:${BAND_HEX[BAND]}">${BAND}<span>${b.range} · ${b.note}${b.falseColour ? ' (false colour)' : ''}</span></div>
     <div>Star at <b>${state.fieldAngle.toFixed(2)}°</b> from the centre of the field</div>
     <div>Lands at <b>${(landing.x * 1e3).toFixed(1)}, ${(landing.y * 1e3).toFixed(1)} mm</b> (r = ${(r * 1e3).toFixed(1)} mm)</div>
-    <div>Sensor: <b>${ccd ? `${ccd.raft} ${ccd.ccd}` : 'gap between CCDs'}</b>${ccd ? ` <span class="k">${kindName(ccd.kind)}</span>` : ''}</div>
+    <div>Sensor: <b>${ccd ? `${ccd.raft} ${ccd.ccd}` : 'gap between CCDs'}</b></div>
     <div>Rays reaching detector: <b>${landing.ok}/${landing.total}</b>${blockedTxt ? ` <span class="k">blocked: ${blockedTxt}</span>` : ''}</div>
     <div class="k">Light needs ≈ ${travelNs} ns from the top of the telescope to the CCDs. Here it is slowed ≈ ${(299792458 / state.speed / 1e6).toFixed(0)} million ×.</div>`;
 }
 function prettyObsc(k: string) {
   if (k.startsWith('M2Baffle')) return 'M2 baffle';
   return ({ Spider: 'spider', CameraBody: 'camera', M1: 'M1 inner edge', M2: 'M2 edge', CenterCap: 'spindle', M1CaBaffle: 'M1 baffle', Center: 'centre baffle' } as Record<string, string>)[k] ?? k;
-}
-function kindName(k: string) {
-  return ({ e2v: 'Teledyne e2v CCD250', itl: 'ITL STA3800', guider: 'guide sensor', wfs: 'wavefront sensor' } as Record<string, string>)[k];
 }
 
 const inset = document.getElementById('inset') as HTMLCanvasElement;
@@ -220,8 +229,8 @@ function drawInset() {
     g.beginPath();
     g.arc(S / 2, S / 2, 0.317 * k, 0, Math.PI * 2);
     g.stroke();
+    g.fillStyle = '#4a5070'; // one colour: the CCD types are detailed on the camera page
     for (const c of LAYOUT) {
-      g.fillStyle = c.kind === 'e2v' ? '#4b3a8c' : c.kind === 'itl' ? '#7a6436' : c.kind === 'wfs' ? '#2f7a69' : '#8a7444';
       g.fillRect(X(c.cx - c.w / 2), Y(c.cy + c.h / 2), c.w * k, c.h * k);
     }
     inset.width = inset.height = insetBase.width;
@@ -231,7 +240,7 @@ function drawInset() {
   ictx.drawImage(insetBase, 0, 0);
   ictx.setTransform(dpr, 0, 0, dpr, 0, 0);
   // spot
-  const col = BAND_HEX[state.band];
+  const col = BAND_HEX[BAND];
   ictx.fillStyle = col;
   ictx.shadowColor = col;
   ictx.shadowBlur = 10;
@@ -251,7 +260,6 @@ inset.addEventListener('pointerdown', (e) => {
   const ang = (Math.hypot(x, y) / EFL) * (180 / Math.PI);
   state.fieldAngle = Math.round(Math.min(1.75, ang) * 100) / 100;
   state.fieldAz = Math.round((Math.atan2(y, x) * 180) / Math.PI);
-  gui.controllersRecursive().forEach((c) => c.updateDisplay());
   requestRetrace();
 });
 
@@ -278,10 +286,6 @@ function goView(name: string) {
 const gui = new GUI({ title: 'Simonyi Telescope' });
 if (window.innerWidth < 720) gui.close();
 const fLight = gui.addFolder('Light');
-fLight.add(state, 'band', BANDS).name('filter').onChange(requestRetrace);
-fLight.add(state, 'fieldAngle', 0, 1.75, 0.01).name('star offset (°)').onChange(requestRetrace);
-fLight.add(state, 'fieldAz', -180, 180, 1).name('star direction (°)').onChange(requestRetrace);
-fLight.add(state, 'pattern', { 'fan (one slice)': 'fan', '3D bundle': 'bundle' }).name('rays').onChange(requestRetrace);
 fLight.add(state, 'rings', 3, 14, 1).name('ray density').onChange(requestRetrace);
 fLight.add(state, 'speed', 0.2, 8, 0.1).name('light speed (m/s)').onChange(updateInfo);
 fLight.add(state, 'continuous').name('continuous light');
@@ -295,8 +299,13 @@ fView.add(state, 'glass').name('lenses & filters');
 fView.add(state, 'mount').name('mount (approx.)');
 fView.add(state, 'bloom', 0, 2, 0.05).name('glow').onChange((v: number) => (bloom!.strength = v));
 const fPoint = gui.addFolder('Pointing');
-fPoint.add(state, 'elevation', 15, 90, 0.5).name('elevation (°)');
+// preset pointings: the elevation slider glides to the target (ease in-out); dragging it cancels
+const POINTINGS: Record<string, number> = { Zenith: 90, '35° elevation': 35, Horizon: 0 };
+let slew: { from: number; to: number; t: number; dur: number } | null = null;
+fPoint.add(state, 'elevation', 0, 90, 0.5).name('elevation (°)').onChange(() => (slew = null));
 fPoint.add(state, 'azimuth', -270, 270, 1).name('azimuth (°)');
+for (const [name, el] of Object.entries(POINTINGS))
+  fPoint.add({ [name]: () => (slew = { from: state.elevation, to: el, t: 0, dur: 1 + Math.abs(el - state.elevation) / 30 }) }, name);
 
 // ---------------------------------------------------------------- loop
 const clock = new THREE.Clock();
@@ -316,10 +325,19 @@ function frame() {
   const arrival = state.continuous ? 1 : Math.max(0, Math.min(1, (head - rays.meanOkLength) / 0.3)) * Math.exp(-Math.max(0, head - rays.meanOkLength - 0.3) / 2);
   spot.material.opacity = arrival;
 
-  // pointing (eased)
-  elGroup.rotation.x += (THREE.MathUtils.degToRad(90 - state.elevation) - elGroup.rotation.x) * 0.08;
-  azGroup.rotation.y += (THREE.MathUtils.degToRad(-state.azimuth) - azGroup.rotation.y) * 0.08;
+  // pointing: preset slews drive the elevation slider, which the tube follows (eased)
+  if (slew) {
+    slew.t = Math.min(1, slew.t + dt / slew.dur);
+    const e = slew.t * slew.t * (3 - 2 * slew.t);
+    state.elevation = Math.round((slew.from + (slew.to - slew.from) * e) * 10) / 10;
+    fPoint.controllers[0].updateDisplay();
+    if (slew.t === 1) slew = null;
+  }
+  const ease = 1 - Math.exp(-dt * 5);
+  elGroup.rotation.x += (THREE.MathUtils.degToRad(90 - state.elevation) - elGroup.rotation.x) * ease;
+  azGroup.rotation.y += (THREE.MathUtils.degToRad(-state.azimuth) - azGroup.rotation.y) * ease;
   pier.visible = azimuth.visible = state.mount;
+  fadeBase(camera.position.y < FLOOR_TOP);
   tel.groups.lenses.visible = tel.groups.filter.visible = state.glass;
 
   // cutaway plane always faces the viewer, through the optical axis
