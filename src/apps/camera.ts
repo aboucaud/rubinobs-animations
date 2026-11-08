@@ -7,6 +7,7 @@ import { cutPlane, MAT } from '../scene/materials';
 import { bakeRays, RayBundle, RayData } from '../scene/rays';
 import { ocs } from '../scene/util';
 import { FocalPlaneImage } from '../scene/exposure';
+import { buildHuman } from '../scene/human';
 import { CameraTween, createLabels, createViewer, easeInOutCubic as ease, faceCutPlane } from './common';
 
 const bandText = (b: Band) => `${b} · ${BAND_INFO[b].range} · ${BAND_INFO[b].note}`;
@@ -69,6 +70,9 @@ root.add(cam.group);
   base.position.y = 0.06;
   scene.add(base);
 }
+// a technician for scale, behind the cart's back end on the near side (left of the default views,
+// beyond the exploded parts)
+scene.add(buildHuman(new THREE.Vector3(-4.4, 0, 1.0), new THREE.Vector3(0, 0, 0), 1.75));
 
 const fpImage = new FocalPlaneImage(cam.focalPlaneImage.canvas);
 
