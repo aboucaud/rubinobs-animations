@@ -74,8 +74,9 @@ frame synchronously.
 
 ## Sources
 
-The README's **Sources** section lists every repository, document, data set and visual reference the
-animations are built from. Add any new source there in the same commit that uses it.
+Every repository, document, data set and visual reference the animations are built from is listed in
+`REFERENCES.md` (moved out of the README in Nov 2026; the README only links to it). Add any new source
+there in the same commit that uses it.
 
 ## Tools
 
