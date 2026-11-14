@@ -96,6 +96,16 @@ Every repository, document, data set and visual reference the animations are bui
 `REFERENCES.md` (moved out of the README in Nov 2026; the README only links to it). Add any new source
 there in the same commit that uses it.
 
+## Film (`film/`, `src/apps/film.ts`, `tools/film.cjs`)
+
+One scene (the telescope, with LSSTCam at its true place) driven by a single film time `t`:
+`render(t)` sets every mechanism, the camera path and the caption for that instant, so frames can be
+rendered in any order except for the filter exchange, which is replayed forward (rewinding resets it).
+The storyboard is the data at the top of `film.ts`: `CAPTIONS`, `PATH` (camera keyframes, in the
+camera model's frame `'cam'`, which follows it while it moves, or the telescope frame `'ota'`) and the
+time ramps in `render`. The film reuses the scene builders, so model changes show up in it for free;
+it re-applies its part visibility after `cam.update()` (see the pitfall above).
+
 ## Tools
 
 - `tools/export_prescription.py` → `src/data/prescription.json` (needs batoid).

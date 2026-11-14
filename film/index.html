@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Rubin Observatory — from the filter to the stars (film)</title>
+  <style>
+    #caption { position: fixed; left: 50%; bottom: 7%; transform: translateX(-50%); max-width: 92vw; text-align: center;
+      font: 600 clamp(12px, 2.6vh, 26px)/1.35 system-ui, sans-serif; color: #f1f4f8; text-shadow: 0 1px 6px #000, 0 0 2px #000;
+      transition: opacity .4s; pointer-events: none; }
+    #caption small { display: block; font-weight: 400; font-size: .72em; opacity: .8; margin-top: .2em; }
+    #clock { position: fixed; right: 12px; top: 10px; font: 11px monospace; opacity: .5; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="caption"></div>
+  <div id="clock"></div>
+  <script type="module" src="/src/apps/film.ts"></script>
+</body>
+</html>

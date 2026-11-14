@@ -16,6 +16,7 @@ export default defineConfig({
         camera: resolve(import.meta.dirname, 'camera/index.html'),
         observatory: resolve(import.meta.dirname, 'observatory/index.html'),
         filters: resolve(import.meta.dirname, 'filters/index.html'),
+        film: resolve(import.meta.dirname, 'film/index.html'),
       },
       output: {
         manualChunks: (id: string) => (id.includes('node_modules/three/') ? 'three' : id.includes('node_modules/lil-gui/') ? 'gui' : undefined),
