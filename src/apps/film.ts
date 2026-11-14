@@ -34,6 +34,7 @@ scene.add(key);
 const fill = new THREE.DirectionalLight(0xc8d8ff, 0.5);
 fill.position.set(-18, 8, -14);
 scene.add(fill);
+let stars: THREE.Points;
 {
   // starfield (seeded: identical in every render of the film)
   let seed = 7;
@@ -52,8 +53,24 @@ scene.add(fill);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(p, 3));
   g.setAttribute('color', new THREE.BufferAttribute(c, 3));
-  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, vertexColors: true })));
+  stars = new THREE.Points(g, new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, vertexColors: true }));
+  scene.add(stars);
 }
+
+// Studio backdrop for the opening: a soft grey gradient sphere around the viewer (inside the
+// starfield, outside the telescope), faded out during the descent to reveal the night sky.
+const backdropMat = new THREE.ShaderMaterial({
+  uniforms: { uTop: { value: new THREE.Color('#7b8088') }, uBottom: { value: new THREE.Color('#2c2f34') }, uOpacity: { value: 1 } },
+  vertexShader: /* glsl */ `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: /* glsl */ `uniform vec3 uTop; uniform vec3 uBottom; uniform float uOpacity; varying vec3 vDir;
+    void main(){ float h = smoothstep(-0.6, 0.8, vDir.y); gl_FragColor = vec4(mix(uBottom, uTop, h), uOpacity); }`,
+  side: THREE.BackSide,
+  transparent: true,
+  depthWrite: false,
+});
+const backdrop = new THREE.Mesh(new THREE.SphereGeometry(400, 48, 24), backdropMat);
+backdrop.renderOrder = -10;
+scene.add(backdrop);
 
 const tel = buildTelescope(Rubin.forBand('r'));
 const cam = tel.cam;
@@ -111,29 +128,40 @@ tel.ota.add(star);
 // Times in seconds of film. Scene 1: filter exchange (×10) · 2: the camera closes ·
 // 3: exploded view and back · 4: the camera descends into the telescope · 5: starlight.
 export const DURATION = 40;
-const LIFT = 12; // the camera is shown 12 m above its place in the telescope until scene 4
-const FES_START = 0.5;
+const LIFT = 18; // the camera is shown 18 m above its place in the telescope (out of sight) until scene 4
+const FES_START = 0.8;
 const FES_SPEED = 10;
 const W = { lightSpeed: 4, wavefront: 29.5 };
 
 const CAPTIONS: [number, number, string, string][] = [
-  [0, 9, 'Inside LSSTCam, the filter changer swaps the r filter for g', 'a 75 cm filter travels about 1 m · 82 s in reality, shown 10× faster'],
-  [9, 13, 'LSSTCam closes around its filters', '3.2 gigapixels · 1.65 m wide · 3 tonnes'],
-  [13, 20, 'Lenses, shutter, filters, cryostat, electronics', 'exploded view'],
-  [20, 28, 'The camera takes its place at the heart of the Simonyi telescope', 'schematic: the real installation uses dedicated handling equipment'],
+  [0, 9.2, 'The filter changer of LSSTCam swaps the r filter for g', 'built by IN2P3/CNRS · 82 s in reality, shown 10× faster'],
+  [9.2, 20, 'The camera is built around it', 'cryostat and focal plane · shutter · lenses L1 and L2 · body · electronics and hexapod'],
+  [20, 28, 'LSSTCam takes its place at the heart of the Simonyi telescope', '3.2 gigapixels · 1.65 m wide · 3 tonnes · schematic installation'],
   [28, 40, 'Starlight: three mirrors, three lenses, one filter', 'M1 → M2 → M3 → L1 · L2 · filter g · L3 → focal plane'],
+];
+
+// Scene 2: each part slides in along the optical axis from `dz` metres away (OCS z: + = towards
+// the back of the camera, up here), in this order, from the inside out.
+const ASSEMBLY: { part: string; dz: number; t0: number; t1: number }[] = [
+  { part: 'cryostat', dz: 1.3, t0: 9.4, t1: 11.0 },
+  { part: 'shutter', dz: -0.9, t0: 10.4, t1: 12.0 },
+  { part: 'l1l2', dz: -1.4, t0: 11.4, t1: 13.2 },
+  { part: 'body', dz: 2.2, t0: 12.8, t1: 14.8 },
+  { part: 'trunk', dz: 1.8, t0: 14.4, t1: 16.2 },
+  { part: 'hexapod', dz: 1.8, t0: 15.6, t1: 17.4 },
 ];
 
 // camera path: keyframes in the camera model's frame ('cam', it moves with it) or in the telescope frame
 type Key = { t: number; f: 'cam' | 'ota'; pos: [number, number, number]; tgt: [number, number, number] };
 const PATH: Key[] = [
-  // filter changer, close and in cutaway, from the side of the standby socket (OCS +y = local −z)
-  { t: 0, f: 'cam', pos: [2.1, 4.4, -1.3], tgt: [0, 5.15, -0.1] },
-  { t: 8, f: 'cam', pos: [1.8, 4.7, -1.8], tgt: [0, 5.2, -0.1] },
-  // whole camera (3.7 m long), then far enough for the exploded view (≈ 7 m)
-  { t: 12, f: 'cam', pos: [4.0, 5.6, -3.4], tgt: [0, 5.25, 0] },
-  { t: 16, f: 'cam', pos: [6.6, 6.6, -5.8], tgt: [0, 5.7, 0] },
-  { t: 19.5, f: 'cam', pos: [5.0, 6.2, -4.6], tgt: [0, 5.3, 0] },
+  // the filter changer alone, seen from the side so the filter's path is in profile
+  { t: 0, f: 'cam', pos: [3.7, 5.1, -0.8], tgt: [0, 4.95, -0.15] },
+  { t: 8.8, f: 'cam', pos: [3.4, 5.35, -1.8], tgt: [0, 5.0, -0.15] },
+  // pull back while the camera is assembled around it: first the parts arriving from below
+  // (shutter, lenses), then those arriving from above (body, electronics, hexapod)
+  { t: 11.8, f: 'cam', pos: [5.6, 4.6, -3.4], tgt: [0, 4.3, 0] },
+  { t: 14.6, f: 'cam', pos: [8.0, 6.8, -5.2], tgt: [0, 5.9, 0] },
+  { t: 17.6, f: 'cam', pos: [6.6, 6.0, -4.6], tgt: [0, 5.4, 0] },
   // follow the descent from the front of the telescope, where the elevation rings are seen edge-on
   { t: 22.5, f: 'cam', pos: [3.0, 7.0, -9.0], tgt: [0, 5.0, 0] },
   { t: 27.5, f: 'ota', pos: [4.0, 12.0, -24.0], tgt: [0, 5.0, 0] },
@@ -193,23 +221,28 @@ let captionKey = '';
 function render(t: number) {
   // --- mechanisms
   playFES(Math.max(0, (t - FES_START) * FES_SPEED));
-  const ex = ramp(t, 13.3, 15.8) * (1 - ramp(t, 17.2, 19.7));
-  cam.state.explode = ex;
+  cam.state.explode = 0;
   cam.state.shutterA = 1 - ramp(t, 28.5, 29.3); // the shutter opens for the starlight
   cam.update();
-  // what the camera model shows: the parts around the filter changer come back one by one in scene 2
+  // scene 1 shows the filter changer alone; in scene 2 the other parts slide in one by one
+  // (after cam.update(), which would show the body again: see CLAUDE.md)
   const p = cam.parts;
-  const back = (at: number) => t >= at;
-  p.shutter.visible = back(9.6);
-  p.l1l2.visible = back(10.2) && t < 37.2;
-  p.trunk.visible = p.hexapod.visible = back(10.8);
-  if (!back(11.6)) p.body.visible = false; // otherwise cam.update() decides (hidden when exploded)
-  p.filters.visible = t < 37.2; // lenses and filter hidden for the final look at the focal plane
-  camGroup.position.y = LIFT * (1 - ramp(t, 20.6, 26.6));
+  for (const a of ASSEMBLY) {
+    p[a.part].visible = t >= a.t0;
+    p[a.part].position.copy(ocs(0, 0, a.dz * (1 - ramp(t, a.t0, a.t1))));
+  }
+  p.l1l2.visible &&= t < 37.2; // lenses and filter hidden for the final look at the focal plane
+  p.filters.visible = t < 37.2;
+  camGroup.position.y = LIFT * (1 - ramp(t, 20.6, 27));
 
-  // --- cutaway: through the filter changer in scene 1, through the telescope in scene 5
-  const cutOn = t < 12 || t >= 28.5;
-  faceCutPlane(cutPlane, tel.ota, camera, cutOn, t < 12 ? 0.48 : 0);
+  // --- backdrop: studio grey for the camera, night sky for the telescope
+  const sky = ramp(t, 21, 24.5);
+  backdropMat.uniforms.uOpacity.value = 1 - sky;
+  backdrop.visible = sky < 1;
+  stars.visible = sky > 0;
+
+  // --- cutaway: through the telescope for the starlight
+  faceCutPlane(cutPlane, tel.ota, camera, t >= 28.5);
 
   // --- light
   const light = t >= W.wavefront;
@@ -236,6 +269,7 @@ function render(t: number) {
   const s = (i + f) / (PATH.length - 1);
   camera.position.copy(pCurve.getPoint(s, tmp));
   camera.lookAt(qCurve.getPoint(s, tmp));
+  backdrop.position.copy(camera.position);
   // close-ups of a 1.6 m camera need a near plane well under a metre
   camera.near = 0.02;
   camera.updateProjectionMatrix();
