@@ -82,9 +82,9 @@ tel.ota.position.y = -ELEV_AXIS_ABOVE_M1;
 elGroup.add(tel.ota);
 azGroup.add(elGroup);
 scene.add(azGroup);
-azGroup.add(buildAzimuth());
-azGroup.add(buildHuman(new THREE.Vector3(3.3, 0, 5.4), new THREE.Vector3(0, 0, 0), 1.78));
-azGroup.add(buildHuman(new THREE.Vector3(2.4, 0, 5.9), new THREE.Vector3(3.3, 0, 5.4), 1.65));
+const azimuth = buildAzimuth();
+const people = [buildHuman(new THREE.Vector3(3.3, 0, 5.4), new THREE.Vector3(0, 0, 0), 1.78), buildHuman(new THREE.Vector3(2.4, 0, 5.9), new THREE.Vector3(3.3, 0, 5.4), 1.65)];
+azGroup.add(azimuth, ...people);
 const pier = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 15.65, 96, 1, true), MAT.concrete);
 pier.position.y = -0.6 - 15.65 / 2;
 scene.add(pier);
@@ -288,6 +288,9 @@ function ownLooks(root: THREE.Object3D): Look[] {
     const m = o as THREE.Mesh;
     if (!m.isMesh || Array.isArray(m.material)) return;
     const mat = m.material.clone() as Look['mat'];
+    // Material.clone() gives the copy its own copies of the clipping planes, which would never
+    // follow the live cut plane (L1–L2 stayed whole in draft 4): keep the shared planes
+    mat.clippingPlanes = m.material.clippingPlanes;
     m.material = mat;
     out.push({ mesh: m, mat, opacity: mat.opacity, color: mat.color?.clone(), clip: mat.clippingPlanes, transparent: mat.transparent, depthWrite: mat.depthWrite });
   });
@@ -318,7 +321,9 @@ function cuttable(looks: Look[], on: boolean) {
     }
   }
 }
-const structureLooks = ownLooks(tel.groups.structure);
+// everything but the mirrors and the camera: what fades out when the light leaves the star
+const STRUCTURE: THREE.Object3D[] = [tel.groups.structure, azimuth, ...people, pier, floor];
+const structureLooks = STRUCTURE.flatMap(ownLooks);
 const glassLooks = [...ownLooks(cam.parts.l1l2), ...ownLooks(cam.parts.filters)];
 
 /** monotone cubic through (x_i, y_i) (Fritsch–Carlson): smooth, never overshoots */
@@ -390,15 +395,17 @@ function render(t: number) {
 
   // --- cutaway: through the telescope for the starlight
   // plan 4: the half of the telescope facing us is wiped away while the camera goes in (the cut
-  // plane sweeps in from 12 m in front of the axis), then wiped back; plan 5: the usual cutaway
+  // plane sweeps in from 12 m in front of the axis), then wiped back: the installed telescope is
+  // whole. Plan 6: once the light has left M3, the camera is cut open the same way (from 1.2 m).
   const descentCut = t >= 22.8 && t < 27.3;
   cuttable(structureLooks, descentCut);
-  const wipe = 12 * (1 - ramp(t, 22.8, 24.0)) + 12 * ramp(t, 26.0, 27.3);
-  faceCutPlane(cutPlane, tel.ota, camera, descentCut || t >= 28.5, descentCut ? wipe : 0);
-  // plan 6: the structure fades out as the plunge starts; only the mirrors and the camera remain
-  const structure = 1 - ramp(t, 34.8, 35.8);
+  const wipe = descentCut ? 12 * (1 - ramp(t, 22.8, 24.0)) + 12 * ramp(t, 26.0, 27.3) : 1.2 * (1 - ramp(t, 35, 36));
+  faceCutPlane(cutPlane, tel.ota, camera, descentCut || t >= 35, wipe);
+  // plan 5: as soon as the light leaves the star, the structure fades out: only the mirrors (and
+  // the camera) remain — the key effect of the shot
+  const structure = 1 - ramp(t, 29.5, 31.0);
   fade(structureLooks, structure);
-  tel.groups.structure.visible = structure > 0.01;
+  for (const o of STRUCTURE) o.visible = structure > 0.01;
 
   // --- light
   const light = t >= LIGHT.start;
