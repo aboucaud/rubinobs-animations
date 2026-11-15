@@ -151,30 +151,32 @@ export function buildTelescope(rubin: Rubin): Telescope {
     // inner black baffle surface
     ota.add(tube(4.29, 4.301, z0, z1, MAT.blackCut));
     // ---------------------------------------------------------------- elevation rings + lower cross-box (photos)
-    // Two large rings centred on the elevation axis carry the whole tube; a teal box with oval
-    // lightening holes closes the bottom of the cradle under the dark-grey mirror cell.
+    // Two half-rings centred on the elevation axis carry the whole tube and roll in the azimuth
+    // cradles. They stop at the elevation axis: there are no arches above it. A teal box
+    // with oval lightening holes closes the bottom under the dark-grey mirror cell.
     const zAx = ELEV_AXIS_ABOVE_M1;
     const rOut = 6.25;
     const rIn = 5.45;
+    const a0 = Math.PI;
+    const a1 = 2 * Math.PI;
     for (const sg of [-1, 1]) {
       const ring = new THREE.Shape();
-      ring.absarc(0, 0, rOut, 0, Math.PI * 2, false);
-      const inner = new THREE.Path();
-      inner.absarc(0, 0, rIn, 0, Math.PI * 2, true);
-      ring.holes.push(inner);
-      const ringGeo = new THREE.ExtrudeGeometry(ring, { depth: 0.7, bevelEnabled: false, curveSegments: 128 });
+      ring.absarc(0, 0, rOut, a0, a1, false);
+      ring.absarc(0, 0, rIn, a1, a0, true);
+      ring.closePath();
+      const ringGeo = new THREE.ExtrudeGeometry(ring, { depth: 0.7, bevelEnabled: false, curveSegments: 64 });
       const rm = new THREE.Mesh(ringGeo, MAT.paintCut);
       rm.rotation.y = Math.PI / 2; // shape plane → three YZ, extrusion along X
       rm.position.set(sg > 0 ? 5.75 : -6.45, zAx, 0);
       ota.add(rm);
-      // dark bearing track on the rim
-      const track = new THREE.Mesh(new THREE.CylinderGeometry(rOut + 0.02, rOut + 0.02, 0.5, 160, 1, true), MAT.steel);
+      // dark bearing track on the rim (cylinder angle θ = π − shape angle)
+      const track = new THREE.Mesh(new THREE.CylinderGeometry(rOut + 0.02, rOut + 0.02, 0.5, 80, 1, true, Math.PI - a1, a1 - a0), MAT.steel);
       track.rotation.z = Math.PI / 2;
       track.position.set(sg * 6.1, zAx, 0);
       ota.add(track);
       // round lightening holes, drawn as dark discs on both faces
-      for (let k = 0; k < 18; k++) {
-        const a = (k / 18) * Math.PI * 2;
+      for (let deg = 190; deg <= 350; deg += 20) {
+        const a = (deg * Math.PI) / 180;
         const hole = new THREE.Mesh(new THREE.CircleGeometry(0.26, 24), MAT.holeDark);
         hole.rotation.y = (sg * Math.PI) / 2;
         hole.position.copy(ocs(sg * 6.46, 5.85 * Math.cos(a), zAx + 5.85 * Math.sin(a)));
