@@ -240,7 +240,7 @@ export function buildFES(): FilterExchanger {
     const ringOut = new THREE.Mesh(new THREE.CylinderGeometry(0.715, 0.715, 0.11, 200, 1, true), outer);
     ringOut.position.y = zR + 0.055;
     carousel.add(ringOut);
-    carousel.add(tube(0.6, 0.62, zR, zR + 0.11, M.dark, 160));
+    carousel.add(tube(0.6, 0.62, zR + 0.001, zR + 0.109, M.dark, 160)); // ends 1 mm inside the caps
     for (const z of [zR, zR + 0.11]) {
       const a = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.715, 160), M.dark);
       a.rotation.x = -Math.PI / 2;
@@ -250,7 +250,8 @@ export function buildFES(): FilterExchanger {
     // radial webs visible through the slots
     for (let i = 0; i < 40; i++) {
       const a = ((i + 0.5) / 40) * Math.PI * 2;
-      const w = box(0.665 * Math.cos(a), 0.665 * Math.sin(a), zR + 0.055, 0.1, 0.008, 0.11, M.darker);
+      // 3 mm short of each cap: a web end flush with a cap z-fights (grey/black flicker)
+      const w = box(0.665 * Math.cos(a), 0.665 * Math.sin(a), zR + 0.055, 0.1, 0.008, 0.104, M.darker);
       w.rotation.y = a;
       carousel.add(w);
     }
@@ -311,16 +312,18 @@ export function buildFES(): FilterExchanger {
   const fixed = new THREE.Group();
   fixed.name = 'fes-fixed';
   {
+    // in front of the ring and within r < 0.78 m: behind it or further out, the drive would poke
+    // out of the back or the side of the camera body
     const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.16, 24), M.motor);
-    motor.position.copy(ocs(0.2, -0.76, zR + 0.15));
+    motor.position.copy(ocs(0.2, -0.71, zR - 0.1));
     fixed.add(motor);
     const pinion = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 24), M.steel);
-    pinion.position.copy(ocs(0.2, -0.745, zR + 0.09));
+    pinion.position.copy(ocs(0.2, -0.71, zR - 0.005));
     fixed.add(pinion);
-    const bracket = box(0.2, -0.79, zR + 0.06, 0.12, 0.05, 0.14, M.dark);
+    const bracket = box(0.2, -0.735, zR - 0.1, 0.08, 0.02, 0.12, M.dark);
     fixed.add(bracket);
   }
-  L('drive', 'Carousel drive', 'A motor and brake turn the carousel ring through its gear. Before a filter can leave, the carousel is realigned to better than 0.1 mm with the autochanger.', ocs(0.2, -0.8, zR + 0.15), fixed);
+  L('drive', 'Carousel drive', 'A motor and brake turn the carousel ring through its gear. Before a filter can leave, the carousel is realigned to better than 0.1 mm with the autochanger.', ocs(0.2, -0.74, zR - 0.1), fixed);
 
   const autochanger = new THREE.Group();
   autochanger.name = 'autochanger';
@@ -337,8 +340,8 @@ export function buildFES(): FilterExchanger {
       [4.295, -0.56],
       [4.295, 0.5],
       [zArm, 0.5],
-      [zArm, 0.67],
-      [zFr, 0.67],
+      [zArm, 0.64], // top at 0.64, so the outer top corner (r = 0.80 m) stays inside the body
+      [zFr, 0.64],
     ];
     plateShape.moveTo(pts[0][0], pts[0][1]);
     for (const p of pts.slice(1)) plateShape.lineTo(p[0], p[1]);
@@ -373,10 +376,11 @@ export function buildFES(): FilterExchanger {
       }
     }
     // front frame: bottom beam, top beam, white V bar (as in the CNRS animation)
-    autochanger.add(box(0, -0.53, zFr + 0.02, 2 * X + 0.05, 0.06, 0.04, M.dark));
-    autochanger.add(box(0, 0.61, zFr + 0.02, 2 * X + 0.05, 0.06, 0.04, M.dark));
+    // beams are 1 mm short of the plates' outer faces and edges on every side: flush faces z-fight
+    autochanger.add(box(0, -0.53, zFr + 0.02, 2 * X + 0.048, 0.058, 0.038, M.dark));
+    autochanger.add(box(0, 0.61, zFr + 0.02, 2 * X + 0.048, 0.058, 0.038, M.dark));
     // rear cross-beam at the end of the arms
-    autochanger.add(box(0, 0.62, zArm - 0.03, 2 * X + 0.05, 0.05, 0.05, M.dark));
+    autochanger.add(box(0, 0.614, zArm - 0.03, 2 * X + 0.048, 0.048, 0.048, M.dark));
     // linear drives: ball-screw rails on the outside of the arms, with motors at the rear
     for (const sx of [-1, 1]) {
       autochanger.add(box(sx * DX, 0.67, (zFr + zArm) / 2 + 0.05, 0.05, 0.05, zArm - zFr - 0.05, M.alu));
@@ -384,7 +388,8 @@ export function buildFES(): FilterExchanger {
       screw.position.copy(ocs(sx * DX, 0.70, (zFr + zArm) / 2 + 0.05));
       autochanger.add(screw);
       // cross-ties from the drive rail to the arm
-      for (const z of [zFr + 0.06, 4.7, zArm - 0.06]) autochanger.add(box(sx * (DX + X + 0.025) / 2, 0.65, z, X + 0.025 - DX, 0.03, 0.03, M.dark));
+      // ending 2 mm into the plate (not flush with its outer face) and low enough to stay inside the body
+      for (const z of [zFr + 0.06, 4.7, zArm - 0.06]) autochanger.add(box(sx * (DX + X + 0.002) / 2, 0.645, z, X + 0.002 - DX, 0.03, 0.03, M.dark));
       const mot = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.14, 24), M.motor);
       mot.position.copy(ocs(sx * DX, 0.67, zArm + 0.1));
       autochanger.add(mot);

@@ -472,4 +472,4 @@ if (TITLE !== null) {
   };
   loop();
 }
-(window as any).__film = { render, duration: DURATION, captions: CAPTIONS, renderer, camera, PATH_TO, lightHead, ready: true };
+(window as any).__film = { render, duration: DURATION, captions: CAPTIONS, renderer, composer, scene, camera, tel, PATH_TO, lightHead, ready: true };

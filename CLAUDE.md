@@ -90,6 +90,23 @@ observatory 2564 → 658; peak JS heap during a dense ray-slider sweep 55.7 → 
 programs than it saved (state mismatch with the composer's render target), so pages render the first
 frame synchronously.
 
+## Modelling rule: no coplanar faces (Nov 2026)
+
+The glitches seen in the first 1080p film (grey/black flicker on the filter exchanger, stripes on
+the L1–L2 barrel, notches at the trunk's end, parts showing through the camera body) were not a
+renderer or depth-precision problem (near 0.02 m / far 2000 m is fine at these distances) but
+**geometry**: two parts of different materials with a face in the same plane (a beam end flush
+with a plate, vanes flush with a tube, a disc of exactly the skin's radius). The depth test cannot
+decide between them, so the winner changes from pixel to pixel and from frame to frame.
+- When parts touch, make one 1–2 mm smaller or recessed (see the comments "flush … z-fights" in
+  `fes.ts`, `lsstcam.ts`, `telescope.ts`). Same for concentric cylinders: never the same radius.
+- Everything inside LSSTCam must stay within the skin (r = 0.805 m) and in front of the back
+  flange (z = 5.535 m); the body was lengthened to 5.565 m to cover the carousel ring.
+- Check with `node tools/zfight-image.cjs 1280x720 <t…>` (flickering pixels in magenta) and
+  `node tools/zfight.cjs <t…>` (coplanar faces, parts poking out of the body), against `npm run dev`.
+  After the fixes: ~10–20 flickering pixels per 1280×720 frame in the opening (was 130–400),
+  only scattered edge pixels elsewhere.
+
 ## Sources
 
 Every repository, document, data set and visual reference the animations are built from is listed in

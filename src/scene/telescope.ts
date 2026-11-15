@@ -236,7 +236,8 @@ export function buildTelescope(rubin: Rubin): Telescope {
   // Mid-level baffle ring
   const mid = BF.find((b) => b.name === 'MidLevel')!;
   ota.add(annulusMesh(mid.inner, mid.outer, mid.z, MAT.black, 0.03));
-  ota.add(tube(5.0, 5.125, mid.z - 0.45, mid.z, MAT.paint));
+  // 3 mm inside the baffle's rim (r = 5.125 m): a flush outer face z-fights with the rim
+  ota.add(tube(5.0, mid.outer - 0.003, mid.z - 0.45, mid.z, MAT.paint));
 
   // ------------------------------------------------------------------ Top-end ring (I-beam: flanges are the two baffles)
   const ter = new THREE.Group();

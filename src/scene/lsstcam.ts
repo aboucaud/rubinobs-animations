@@ -16,7 +16,7 @@ export const CAM = {
   zL1: 3.3974725882045593,
   zBody0: 3.5019725882045593,
   rBody: 0.80469,
-  zBodyTop: 5.45,
+  zBodyTop: 5.565, // back flange (5.535–5.595) just behind the carousel ring (5.42–5.53), which it must cover
   zTrunkTop: 3.3974725882045593 + 3.73,
   zShutter: 4.312,
   zCarousel: 4.95,
@@ -84,7 +84,8 @@ export function buildLSSTCam(rubin: Rubin, opts: { uniformSensors?: boolean } = 
       const t = i / (n - 1);
       const z = z0 + (z1 - z0) * t;
       const rIn = 0.792 - (0.792 - 0.585) * t;
-      l1l2.add(annulusMesh(rIn, 0.8, z, MAT.blackCut, 0.004, 128));
+      // vanes stop at the inner face of the outer tube: a rim flush with its outer face z-fights
+      l1l2.add(annulusMesh(rIn, 0.796, z, MAT.blackCut, 0.004, 128));
     }
     l1l2.add(tube(0.796, 0.8, z0 - 0.02, z1, MAT.blackCut, 128));
     // bright retaining ring and bolt circle on the front of the L1 cell
@@ -129,18 +130,26 @@ export function buildLSSTCam(rubin: Rubin, opts: { uniformSensors?: boolean } = 
   const shutter = mk('shutter');
   const zSh = CAM.zShutter;
   {
+    // 1.44 × 0.8 m frame with chamfered corners: square corners (r = 0.82 m) would poke through
+    // the camera body (r = 0.80 m)
     const fr = new THREE.Shape();
-    fr.moveTo(-0.72, -0.4);
-    fr.lineTo(0.72, -0.4);
-    fr.lineTo(0.72, 0.4);
-    fr.lineTo(-0.72, 0.4);
+    const cx = 0.72, cy = 0.4, ch = 0.06;
+    fr.moveTo(-cx + ch, -cy);
+    fr.lineTo(cx - ch, -cy);
+    fr.lineTo(cx, -cy + ch);
+    fr.lineTo(cx, cy - ch);
+    fr.lineTo(cx - ch, cy);
+    fr.lineTo(-cx + ch, cy);
+    fr.lineTo(-cx, cy - ch);
+    fr.lineTo(-cx, -cy + ch);
     fr.closePath();
     const hole = new THREE.Path();
     hole.absarc(0, 0, CAM.shutterHalf, 0, Math.PI * 2, true);
     fr.holes.push(hole);
-    const g = new THREE.ExtrudeGeometry(fr, { depth: 0.028, bevelEnabled: false, curveSegments: 64 });
+    // front face 2 mm behind the plane of the autochanger trucks (coplanar faces z-fight)
+    const g = new THREE.ExtrudeGeometry(fr, { depth: 0.026, bevelEnabled: false, curveSegments: 64 });
     g.rotateX(-Math.PI / 2);
-    g.translate(0, zSh - 0.006, 0);
+    g.translate(0, zSh - 0.004, 0);
     shutter.add(new THREE.Mesh(g, MAT.aluDark));
   }
   const bladeGeo = new THREE.BoxGeometry(0.275, 0.003, 0.82);
@@ -232,9 +241,12 @@ export function buildLSSTCam(rubin: Rubin, opts: { uniformSensors?: boolean } = 
     const c = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, len, 96, 1, true), m);
     c.position.y = CAM.zBodyTop + len / 2;
     trunk.add(c);
-    trunk.add(tube(0.57, 0.595, CAM.zBodyTop, CAM.zTrunkTop - 0.28, MAT.aluDark, 72));
+    // inner wall right under the skin (same 96 facets, 2 mm inside) and 5 mm short of its front
+    // edge: a gap would show the skin's bumpy inside, flush ends flicker
+    trunk.add(tube(0.57, 0.598, CAM.zBodyTop + 0.005, CAM.zTrunkTop - 0.28, MAT.aluDark, 96));
   }
-  trunk.add(annulusMesh(0, 0.6, CAM.zTrunkTop - 0.28, MAT.aluDark, 0.04, 72));
+  // rim 2 mm inside the skin (r = 0.6 m): a rim flush with the skin flickers along the trunk's end
+  trunk.add(annulusMesh(0, 0.598, CAM.zTrunkTop - 0.28, MAT.aluDark, 0.04, 96));
   for (let k = 0; k < 6; k++) {
     const a = (k / 6) * Math.PI * 2;
     trunk.add(box(0.38 * Math.cos(a), 0.38 * Math.sin(a), 6.1, 0.24, 0.16, 0.9, k % 2 ? MAT.fee : MAT.aluDark)); // electronics crates
