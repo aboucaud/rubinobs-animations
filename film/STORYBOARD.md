@@ -148,9 +148,9 @@ télescope et disparaît ~1,5 s (vers 24 – 26 s). → voir décision D1.
 - 28,5 – 29,3 s : l'obturateur de la caméra s'ouvre ;
 - 28,5 – 29,5 s : une étoile apparaît au-dessus du télescope, au centre du champ ;
 - 29,5 s : un front d'onde part de l'étoile (faisceau 3D, bande r, rouge orangé) ;
-- ~31 s : il se réfléchit sur **M1** (le grand miroir, en bas) et remonte ;
-- ~32,5 s : il se réfléchit sur **M2** (en haut) et redescend ;
-- ~34 s : il se réfléchit sur **M3** (au centre de M1) et remonte vers la caméra.
+- 31,7 s : il se réfléchit sur **M1** (le grand miroir, en bas) et remonte ;
+- 32,8 s : il se réfléchit sur **M2** (en haut) et redescend ;
+- 33,9 s : il se réfléchit sur **M3** (au centre de M1) et remonte vers la caméra.
 
 **Caméra** : vue large de face du télescope en coupe (à ~21 m, à hauteur du tube), **fixe
 pendant tout le trajet M1 → M2 → M3**, pour que les trois réflexions se lisent bien.
@@ -161,8 +161,8 @@ pendant tout le trajet M1 → M2 → M3**, pour que les trois réflexions se lis
 
 ## Plan 6 — On suit la lumière vers la caméra (34,5 → 38,5 s)
 
-**Action** : juste après la réflexion sur M3, la lumière remonte vers la caméra et **ralentit
-fortement** (de ~6 m/s à ~0,25 m/s entre 34,5 et 36 s), le temps de la suivre.
+**Action** : la lumière va à vitesse constante (5,7 m/s) jusqu'à M3 ; juste après la réflexion,
+elle **freine fortement** (de 5,7 à ~0,3 m/s entre 34,0 et 34,6 s), le temps de la suivre.
 
 **Caméra** : la plongée commence ici. La caméra entre dans le tube ouvert par la coupe, rejoint
 l'axe juste au-dessus de M3, puis **remonte le long du faisceau en suivant les rayons**, jusque
@@ -176,11 +176,11 @@ version 1.)
 ## Plan 7 — Arrivée sur le plan focal (38,5 → 44 s)
 
 **Action** (la lumière avance lentement, ~0,25 m/s) :
-- ~38,5 s : elle traverse L1 ;
-- ~39,5 s : L2 ;
-- ~41 s : le filtre r ;
-- ~41,5 s : L3 ;
-- ~42 s : elle touche le plan focal (189 capteurs) ; un point lumineux s'allume ;
+- 38,5 s : elle traverse L1 ;
+- 40,2 s : L2 ;
+- 41,5 s : le filtre r ;
+- 41,7 s : L3 ;
+- 42,0 s : elle touche le plan focal (189 capteurs) ; un point lumineux s'allume ;
 - 42 – 44 s : le faisceau continue de pulser ; plan fixe sur le point lumineux.
 
 **Caméra** : rapproche jusqu'au plan focal (vue en contre-plongée, comme la vue « Focal plane »

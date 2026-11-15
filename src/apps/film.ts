@@ -98,19 +98,30 @@ const BAND = 'r' as const;
 const rays = new RayBundle();
 tel.ota.add(rays.object);
 let landing = { x: 0, y: 0 };
+/** mean optical path length (m) from the start of the rays to each surface they hit (rays reaching the CCDs) */
+const PATH_TO: Record<string, number> = {};
 {
   const b = new RayBuilder();
   let x = 0;
   let y = 0;
   let n = 0;
+  const sum: Record<string, number> = {};
   Rubin.forBand(BAND).forEachStarRay(0, 0, { rings: 7, perRing: 21, startZ: 12.5, rInner: 2.2, rOuter: 4.25, pattern: 'bundle' }, (r) => {
     b.add(r);
     if (!r.ok) return;
+    let d = 0;
+    r.hits.forEach((h, i) => {
+      const a = r.points[i];
+      const c = r.points[i + 1];
+      d += Math.hypot(c[0] - a[0], c[1] - a[1], c[2] - a[2]);
+      sum[h] = (sum[h] ?? 0) + d;
+    });
     const p = r.points[r.points.length - 1];
     x += p[0];
     y += p[1];
     n++;
   });
+  for (const k in sum) PATH_TO[k] = sum[k] / n;
   rays.setData(b.finish());
   landing = { x: x / n, y: y / n };
   rays.material.uniforms.uColor.value.set(BAND_HEX[BAND]);
@@ -128,11 +139,10 @@ tel.ota.add(star);
 // ---------------------------------------------------------------- storyboard
 // Times in seconds of film. Scene 1: filter exchange (×10) · 2: the camera closes ·
 // 3: exploded view and back · 4: the camera descends into the telescope · 5: starlight.
-export const DURATION = 42;
+export const DURATION = 44;
 const LIFT = 18; // the camera is shown 18 m above its place in the telescope (out of sight) until scene 4
 const FES_START = 0.8;
 const FES_SPEED = 10;
-const W = { wavefront: 29.5 };
 const CAM_CENTRE = 5.25; // OCS z of the middle of the camera: pivot when it turns upright
 
 // titles, shown alone at the top of the frame (storyboard v2)
@@ -180,29 +190,57 @@ const PATH: Key[] = [
   // follow the descent from the front of the telescope, where the elevation rings are seen edge-on
   { t: 22.5, f: 'cam', pos: [3.0, 7.0, -9.0], tgt: [0, 5.0, 0] },
   { t: 27.5, f: 'ota', pos: [4.0, 12.0, -24.0], tgt: [0, 5.0, 0] },
-  { t: 31.5, f: 'ota', pos: [1.5, 6.0, -21.0], tgt: [0, 4.2, 0] },
-  // into the camera, down to the focal plane, then hold while the light lands
-  { t: 35.5, f: 'ota', pos: [1.9, 4.0, -2.6], tgt: [0, 4.35, 0] },
-  { t: 40, f: 'ota', pos: [0.7, 3.95, -0.35], tgt: [0, 4.43, 0] },
-  { t: 42, f: 'ota', pos: [0.62, 3.96, -0.31], tgt: [0, 4.43, 0] },
+  // plan 5: wide front view of the telescope in cutaway, still while the light goes M1 → M2 → M3
+  { t: 29.5, f: 'ota', pos: [1.5, 6.0, -21.0], tgt: [0, 4.2, 0] },
+  { t: 34.3, f: 'ota', pos: [1.5, 6.0, -21.0], tgt: [0, 4.2, 0] },
+  // plan 6: into the open tube, onto the axis just above M3, then up the beam with the rays
+  { t: 36.5, f: 'ota', pos: [1.0, 1.0, -2.2], tgt: [0, 3.2, 0] },
+  { t: 38.5, f: 'ota', pos: [0.6, 2.6, -1.1], tgt: [0, 4.0, 0] },
+  // plan 7: up to the focal plane, then hold while the light lands
+  { t: 42, f: 'ota', pos: [0.7, 3.95, -0.35], tgt: [0, 4.43, 0] },
+  { t: 44, f: 'ota', pos: [0.62, 3.96, -0.31], tgt: [0, 4.43, 0] },
 ];
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const ramp = (t: number, a: number, b: number) => ease(clamp01((t - a) / (b - a)));
 
-// Light: fast through the telescope, then slowed right down inside the camera, so the last metre
-// (L1 → L2 → filter → L3 → CCDs) is seen in the close-up. Speed in m of path per s of film.
-const SLOW = { from: 35, to: 36.5, v: 0.28 };
-const IN_CAMERA = 1.0; // metres of path left when the light has slowed down (≈ from L1 on)
-const FAST = (rays.meanOkLength - IN_CAMERA - SLOW.v * (SLOW.to - SLOW.from) / 2) / (SLOW.from - W.wavefront + (SLOW.to - SLOW.from) / 2);
-function lightHead(t: number) {
+// Light (storyboard v2): constant speed through the telescope, so the three mirror reflections read
+// clearly in the wide view (M3 reached at LIGHT.m3), then braked hard just after M3 and slowed
+// again before the lenses, so the light can be followed into the camera: it enters L1 at LIGHT.l1
+// and lands on the CCDs at LIGHT.ccd. The speeds after M3 are solved for those two times.
+const LIGHT = { start: 29.5, m3: 33.9, brake: [34.0, 34.6], l1: 38.5, ease: [38.0, 39.0], ccd: 42.0 };
+const V_FAST = PATH_TO.M3 / (LIGHT.m3 - LIGHT.start);
+const sstep = (t: number, a: number, b: number) => {
+  const k = clamp01((t - a) / (b - a));
+  return k * k * (3 - 2 * k);
+};
+function headWith(t: number, vMid: number, vSlow: number) {
   let h = 0;
-  const dt = 0.005;
-  for (let x = W.wavefront; x < t; x += dt) {
-    const k = clamp01((x - SLOW.from) / (SLOW.to - SLOW.from));
-    h += (FAST + (SLOW.v - FAST) * k * k * (3 - 2 * k)) * Math.min(dt, t - x);
+  const dt = 0.004;
+  for (let x = LIGHT.start; x < t; x += dt) {
+    const v = V_FAST + (vMid - V_FAST) * sstep(x, LIGHT.brake[0], LIGHT.brake[1]) + (vSlow - vMid) * sstep(x, LIGHT.ease[0], LIGHT.ease[1]);
+    h += v * Math.min(dt, t - x);
   }
   return h;
+}
+const solve = (f: (v: number) => number, target: number) => {
+  let lo = 0.01;
+  let hi = 5;
+  for (let i = 0; i < 40; i++) {
+    const m = (lo + hi) / 2;
+    if (f(m) < target) lo = m;
+    else hi = m;
+  }
+  return (lo + hi) / 2;
+};
+let V_MID = 0.6;
+let V_SLOW = 0.3;
+for (let i = 0; i < 6; i++) {
+  V_MID = solve((v) => headWith(LIGHT.l1, v, V_SLOW), PATH_TO.L1_entrance);
+  V_SLOW = solve((v) => headWith(LIGHT.ccd, V_MID, v), PATH_TO.Detector);
+}
+function lightHead(t: number) {
+  return headWith(t, V_MID, V_SLOW);
 }
 
 // ---------------------------------------------------------------- the filter exchange, replayed deterministically
@@ -266,8 +304,9 @@ function render(t: number) {
     const away = 1 - ramp(t, a.t0, a.t1);
     p[a.part].position.copy(ocs((a.dx ?? 0) * away, 0, a.dz * away));
   }
-  p.l1l2.visible &&= t < 37.2; // lenses and filter hidden for the final look at the focal plane
-  p.filters.visible = t < 37.2;
+  // lenses and filter stay while the light crosses them, then go just before it lands (D2, proposal)
+  p.l1l2.visible &&= t < 41.5;
+  p.filters.visible = t < 41.5;
   // the camera lies horizontally (standby socket on top) until it turns upright before the descent
   const lift = LIFT * (1 - ramp(t, 20.6, 27));
   camGroup.rotation.x = (Math.PI / 2) * (1 - ramp(t, 18.2, 20.3));
@@ -285,7 +324,7 @@ function render(t: number) {
   faceCutPlane(cutPlane, tel.ota, camera, t >= 28.5);
 
   // --- light
-  const light = t >= W.wavefront;
+  const light = t >= LIGHT.start;
   rays.object.visible = star.visible = light;
   const head = lightHead(t);
   const arrived = head > rays.meanOkLength + 0.3;
@@ -294,7 +333,7 @@ function render(t: number) {
   u.uHead.value = head;
   u.uBase.value = arrived ? 0.07 * ramp(t, 36, 37) : 0;
   spot.material.opacity = light ? clamp01((head - rays.meanOkLength) / 0.3) : 0;
-  star.material.opacity = ramp(t, W.wavefront - 1, W.wavefront);
+  star.material.opacity = ramp(t, LIGHT.start - 1, LIGHT.start);
 
   // --- camera path
   tel.ota.updateMatrixWorld(true);
@@ -338,4 +377,4 @@ if (CAPTURE) {
   };
   loop();
 }
-(window as any).__film = { render, duration: DURATION, renderer, camera, ready: true };
+(window as any).__film = { render, duration: DURATION, renderer, camera, PATH_TO, lightHead, ready: true };
