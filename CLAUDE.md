@@ -128,6 +128,8 @@ it re-applies its part visibility after `cam.update()` (see the pitfall above).
 Final videos are built in two stages (`tools/film.cjs`): `master` renders the film once, without text
 (`film/?notext`), in resumable 4 s segments; `titles` + `compose` then add the titles with ffmpeg, so
 title or language changes cost minutes, not a new 3D render. Only scene changes need a new `master`.
+Local rendering guide (dependencies, commands, what to rerun after which change): `film/RENDERING.md`;
+keep it in sync with `tools/film.cjs`.
 
 ## Tools
 

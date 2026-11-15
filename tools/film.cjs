@@ -12,17 +12,23 @@
 //   node tools/film.cjs compose [master.mp4] [out base]         master + titles → final videos
 //        → shots/film.webm (AV1, for the web) and shots/film.mp4 (H.264, plays everywhere)
 // A title change only needs `titles` + `compose` (minutes), never a new `master` (hours).
+// Step-by-step guide, dependencies included: film/RENDERING.md
 const { chromium } = require('playwright');
 const { spawn, execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
 const URL = 'http://localhost:4173/film/';
-const GL = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
+// Software WebGL (SwiftShader) by default: identical everywhere, slow. FILM_GL=gpu tries the
+// machine's GPU instead (much faster where headless Chromium can use it). CHROME=/path/to/chrome
+// uses that browser instead of Playwright's own Chromium.
+const GL = process.env.FILM_GL === 'gpu'
+  ? ['--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=default']
+  : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
 
 async function openFilm(size, query) {
   const [w, h] = size.split('x').map(Number);
-  const b = await chromium.launch({ args: GL });
+  const b = await chromium.launch({ args: GL, executablePath: process.env.CHROME });
   const p = await b.newPage({ viewport: { width: w, height: h } });
   p.on('pageerror', (e) => console.error('page error:', e.message));
   await p.goto(`${URL}?${query}`);
