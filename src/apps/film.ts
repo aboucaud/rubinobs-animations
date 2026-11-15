@@ -190,9 +190,11 @@ const PATH: Key[] = [
   // follow the descent from the front of the telescope, where the elevation rings are seen edge-on
   { t: 22.5, f: 'cam', pos: [3.0, 7.0, -9.0], tgt: [0, 5.0, 0] },
   { t: 27.5, f: 'ota', pos: [4.0, 12.0, -24.0], tgt: [0, 5.0, 0] },
-  // plan 5: wide front view of the telescope in cutaway, still while the light goes M1 → M2 → M3
+  // plan 5: wide front view of the whole telescope while the structure fades out
   { t: 29.5, f: 'ota', pos: [1.8, 6.6, -25.0], tgt: [0, 4.5, 0] },
-  { t: 34.3, f: 'ota', pos: [1.8, 6.6, -25.0], tgt: [0, 4.5, 0] },
+  { t: 31.0, f: 'ota', pos: [1.8, 6.6, -25.0], tgt: [0, 4.5, 0] },
+  // once the structure has faded: gentle zoom on the mirrors, M1 and M2 kept whole in the frame
+  { t: 34.3, f: 'ota', pos: [1.1, 5.6, -15.5], tgt: [0, 3.9, 0] },
   // plan 6: into the open tube, onto the axis just above M3, then up the beam with the rays
   { t: 36.5, f: 'ota', pos: [1.0, 1.0, -2.2], tgt: [0, 3.2, 0] },
   { t: 38.5, f: 'ota', pos: [0.6, 2.6, -1.1], tgt: [0, 4.0, 0] },

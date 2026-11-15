@@ -17,6 +17,7 @@ forme de la PR #12 (anneaux d'élévation en demi-anneaux). Brouillon correspond
   caméra). C'est l'effet principal du plan.
 - Plan 6 : la **coupe de la caméra** n'arrive qu'au moment du zoom sur la caméra, une fois la lumière
   repartie de M3 (balayage de 35 à 36 s) ; avant, la caméra reste entière.
+- Plan 5 : une fois la structure effacée, léger zoom avant sur les miroirs (31 → 34,3 s).
 - Plans 6 et 7 : la coupe s'applique aussi aux lentilles L1 et L2 (dans le brouillon 4, elles
   restaient entières et masquaient une partie de la vue).
 
@@ -178,8 +179,9 @@ de 26 à 27,3 s, le télescope se referme.
 - 32,8 s : il se réfléchit sur **M2** (en haut) et redescend ;
 - 33,9 s : il se réfléchit sur **M3** (au centre de M1) et remonte vers la caméra.
 
-**Caméra** : vue large de face du télescope (à ~25 m, à hauteur du tube), **fixe
-pendant tout le trajet M1 → M2 → M3**, pour que les trois réflexions se lisent bien.
+**Caméra** : vue large de face du télescope (à ~25 m, à hauteur du tube), fixe jusqu'à la fin du
+fondu (31 s). Puis **léger zoom avant sur les miroirs** (de ~25 m à ~15 m, 31 → 34,3 s), en
+gardant M1 et M2 entiers dans le champ, sous le titre.
 
 **Titre (28 – 34,5 s)** : *Starlight bounces off three mirrors: M1, M2, M3*
 
