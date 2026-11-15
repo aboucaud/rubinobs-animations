@@ -6,56 +6,76 @@ Document de travail : c'est la référence du film. On le corrige ici d'abord ; 
 **Comment l'annoter** : modifie directement le texte, ou ajoute des lignes `> À CHANGER : …`
 sous le plan concerné. Les temps sont en secondes de film.
 
-État décrit : brouillon 3, version horizontale (la version verticale est abandonnée).
+État : **version 2 du storyboard**, avec tes corrections. Elle n'est pas encore codée : le dernier
+rendu (brouillon 3) correspond à la version 1.
+
+### Changements depuis la version 1
+
+- Formats : ajout d'une version web compressée (AV1).
+- Textes : en haut au centre, un titre seul (plus de ligne de sous-titre).
+- Filtres : l'échange se fait de g vers r ; la lumière de la fin est dans la bande r.
+- Plan 1 : vue de face du filtre (l'angle par défaut de la page « filter exchange »), plus de profil.
+- Plans 5 à 7 refaits : on voit la lumière se réfléchir sur M1, M2 puis M3 en vue large ; la
+  plongée ne commence qu'une fois la lumière repartie de M3. Elle se fait en suivant les rayons
+  vers la caméra, pendant qu'ils ralentissent fortement, jusqu'à leur arrivée sur le plan focal.
+  Le film passe de 42 à 44 s.
 
 ---
 
 ## Réglages généraux
 
-| Réglage | Valeur actuelle |
+| Réglage | Valeur |
 |---|---|
-| Durée totale | 42 s |
-| Format du rendu final | MP4 (H.264), 1920×1080, 30 images/s (brouillons : 640×360, 15 images/s) |
-| Prise de vue | un seul plan-séquence, sans coupe |
+| Durée totale | 44 s |
+| Prise de vue | un seul plan-séquence, sans coupe, 1920×1080, 30 images/s (brouillons : 640×360, 15 images/s) |
+| Version web | **WebM AV1** : la plus légère pour un affichage rapide (estimation : 3 – 6 Mo pour 44 s en 1080p), lue par Chrome, Firefox, Edge et les Safari récents |
+| Version de secours | MP4 H.264 : lue partout (plus lourde, ~10 – 20 Mo), proposée par la page web aux navigateurs sans AV1 |
 | Fond, plans 1 à 3 | studio gris neutre, dégradé (gris moyen en haut, gris foncé en bas) |
 | Fond, plans 4 à 7 | ciel de nuit étoilé (fondu depuis le gris entre 21 et 24,5 s) |
-| Textes à l'écran | en anglais, en bas au centre : un titre et une ligne de sous-titre |
+| Textes à l'écran | en anglais, **en haut au centre, un titre seul** |
 | Son | aucun |
-| Filtre au départ / à l'arrivée | r → g (la lumière de la fin est donc dans la bande g, en bleu) |
+| Filtre au départ / à l'arrivée | **g → r** (la lumière de la fin est dans la bande r, en rouge orangé) |
+
+Note sur le WebP animé : pour 44 s en 1080p, il pèserait bien plus qu'une vidéo (plusieurs dizaines
+de Mo). Je ne le propose donc que pour un extrait court, si besoin (voir D7).
 
 ---
 
 ## Plan 1 — Le changeur de filtre (0 → 9 s)
 
 **On voit** : le changeur de filtre seul (carrousel, autochanger, 6 filtres, moteur), sans
-cryostat ni corps de caméra, sans coupe. Il est couché à l'horizontale : axe optique dans la
-largeur de l'image, lentille L1 côté droit, emplacement d'attente du filtre en haut.
+cryostat ni corps de caméra, sans coupe. Il est couché, l'emplacement d'attente du filtre en haut.
 
-**Action** : séquence réelle d'échange r → g, accélérée ×10 (82 s réelles en 8,2 s) :
+**Action** : séquence réelle d'échange g → r, accélérée ×10 (82 s réelles en 8,2 s) :
 
 | Film | Étape (durée réelle) |
 |---|---|
 | 0,8 – 1,1 s | Vérifications (3 s) |
-| 1,1 – 1,6 s | Desserrage du filtre r (5 s) |
-| 1,6 – 3,0 s | Retour de r dans son logement (14 s) |
+| 1,1 – 1,6 s | Desserrage du filtre g (5 s) |
+| 1,6 – 3,0 s | Retour de g dans son logement (14 s) |
 | 3,0 – 3,6 s | Verrouillage dans le carrousel (6 s) |
 | 3,6 – 6,2 s | Le carrousel tourne de 1/5 de tour (26 s) |
-| 6,2 – 6,8 s | L'autochanger saisit g (6 s) |
-| 6,8 – 8,2 s | g est amené dans le faisceau (14 s) |
+| 6,2 – 6,8 s | L'autochanger saisit r (6 s) |
+| 6,8 – 8,2 s | r est amené dans le faisceau (14 s) |
 | 8,2 – 9,0 s | Serrage en position (8 s) |
 
-**Caméra** : vue de côté, légèrement au-dessus, à ~3 m ; lent travelling tournant d'environ 15°.
+**Caméra** : **vue de face, depuis l'avant (côté des lentilles), en léger trois-quarts et un
+peu au-dessus** : l'angle par défaut de la page « filter exchange ». On voit le filtre de face,
+et donc sa couleur, pendant qu'il entre et sort du faisceau. Plan presque fixe, très léger
+rapprochement.
 
-**Texte (0 – 9,2 s)** :
-- *The filter changer of LSSTCam swaps the r filter for g*
-- *built by IN2P3/CNRS · 82 s in reality, shown 10× faster*
+**Titre (0 – 9,2 s)** : *The filter changer swaps the g filter for r (10× faster than reality)*
 
 ---
 
 ## Plan 2 — La caméra se construit autour (9,2 → 18 s)
 
-**Action** : les pièces glissent le long de l'axe (donc horizontalement) jusqu'à leur place,
-de l'intérieur vers l'extérieur. Chacune apparaît hors de sa place puis vient s'emboîter :
+**Transition** : de 9 à 10,5 s, la caméra tourne autour du changeur pour passer de la vue de
+face à la vue de côté (axe optique dans la largeur de l'image), afin que les pièces arrivent
+par les côtés et utilisent toute la largeur.
+
+**Action** : les pièces glissent le long de l'axe jusqu'à leur place, de l'intérieur vers
+l'extérieur :
 
 | Film | Pièce | Arrive par |
 |---|---|---|
@@ -70,9 +90,7 @@ de l'intérieur vers l'extérieur. Chacune apparaît hors de sa place puis vient
 arrivent : d'abord centrée sur l'avant (obturateur, lentilles), puis sur l'arrière (corps,
 tronc, hexapode), puis sur la caméra complète à 17,6 s.
 
-**Texte (9,2 – 20 s)** :
-- *The camera is built around it*
-- *cryostat and focal plane · shutter · lenses L1 and L2 · body · electronics and hexapod*
+**Titre (9,2 – 20 s)** : *The camera is built around it*
 
 ---
 
@@ -83,7 +101,7 @@ tronc, hexapode), puis sur la caméra complète à 17,6 s.
 
 **Caméra** : glisse vers une vue de trois-quarts avant, à ~6 m.
 
-**Texte** : celui du plan 2 jusqu'à 20 s, puis celui du plan 4.
+**Titre** : celui du plan 2 jusqu'à 20 s, puis celui du plan 4.
 
 ---
 
@@ -96,55 +114,59 @@ le télescope apparaît en dessous.
 **Caméra** : suit la descente depuis l'avant du télescope (anneaux d'élévation vus par la
 tranche), puis s'élève et recule vers une vue d'ensemble de trois-quarts avant (à ~27 m) à 27,5 s.
 
-**Texte (20 – 28 s)** :
-- *LSSTCam takes its place at the heart of the Simonyi telescope*
-- *3.2 gigapixels · 1.65 m wide · 3 tonnes · schematic installation*
+**Titre (20 – 28 s)** : *LSSTCam takes its place in the Simonyi telescope*
 
 **Défaut connu** : pendant la descente, la caméra traverse le tube opaque central du haut du
 télescope et disparaît ~1,5 s (vers 24 – 26 s). → voir décision D1.
 
 ---
 
-## Plan 5 — La lumière d'une étoile (27,5 → 31,5 s)
+## Plan 5 — La lumière d'une étoile, de M1 à M3 (27,5 → 34,5 s)
 
 **Action** :
 - 28,5 s : le télescope passe en vue en coupe (la moitié face à nous est retirée) ;
 - 28,5 – 29,3 s : l'obturateur de la caméra s'ouvre ;
 - 28,5 – 29,5 s : une étoile apparaît au-dessus du télescope, au centre du champ ;
-- 29,5 s : un front d'onde part de l'étoile (faisceau 3D, bande g, en bleu) : M1 → M2 → M3,
-  puis remonte vers la caméra. La lumière va vite dans cette partie.
+- 29,5 s : un front d'onde part de l'étoile (faisceau 3D, bande r, rouge orangé) ;
+- ~31 s : il se réfléchit sur **M1** (le grand miroir, en bas) et remonte ;
+- ~32,5 s : il se réfléchit sur **M2** (en haut) et redescend ;
+- ~34 s : il se réfléchit sur **M3** (au centre de M1) et remonte vers la caméra.
 
-**Caméra** : descend vers une vue de face du télescope en coupe (à ~21 m, à hauteur du tube).
+**Caméra** : vue large de face du télescope en coupe (à ~21 m, à hauteur du tube), **fixe
+pendant tout le trajet M1 → M2 → M3**, pour que les trois réflexions se lisent bien.
 
-**Texte (28 – 42 s)** :
-- *Starlight: three mirrors, three lenses, one filter*
-- *M1 → M2 → M3 → L1 · L2 · filter g · L3 → focal plane*
-
----
-
-## Plan 6 — Plongée vers la caméra (31,5 → 35,5 s)
-
-**Action** : la lumière termine son trajet dans le télescope.
-
-**Caméra** : avance vers la caméra jusqu'à une vue de l'intérieur, sous L1.
-
-**Défaut connu** : la vue traverse la structure du haut du télescope vers 33 – 34 s. → décision D2.
+**Titre (28 – 34,5 s)** : *Starlight bounces off three mirrors: M1, M2, M3*
 
 ---
 
-## Plan 7 — Arrivée sur le plan focal (35,5 → 42 s)
+## Plan 6 — On suit la lumière vers la caméra (34,5 → 38,5 s)
 
-**Action** :
-- 35 – 36,5 s : la lumière ralentit fortement (≈ 0,3 m/s) ;
-- 37,2 s : lentilles et filtre masqués, pour bien voir les capteurs ;
-- ~39 s : la lumière entre dans le cadre, par L1 ;
-- ~40 s : elle touche le plan focal (189 capteurs) ; un point lumineux s'allume ;
-- 40 – 42 s : le faisceau continue de pulser ; plan fixe sur le point lumineux.
+**Action** : juste après la réflexion sur M3, la lumière remonte vers la caméra et **ralentit
+fortement** (de ~6 m/s à ~0,25 m/s entre 34,5 et 36 s), le temps de la suivre.
 
-**Caméra** : rapproche jusqu'au plan focal (vue en contre-plongée, comme la vue
-« Focal plane » de la page télescope), puis plan quasi fixe jusqu'à la fin.
+**Caméra** : la plongée commence ici. La caméra entre dans le tube ouvert par la coupe, rejoint
+l'axe juste au-dessus de M3, puis **remonte le long du faisceau en suivant les rayons**, jusque
+sous L1. (Ce trajet passe sous la structure du haut du télescope : il règle le défaut D2 de la
+version 1.)
 
-**Texte** : celui du plan 5, jusqu'à la fin.
+**Titre (34,5 – 44 s)** : *…then three lenses and a filter, down to the 3.2-gigapixel focal plane*
+
+---
+
+## Plan 7 — Arrivée sur le plan focal (38,5 → 44 s)
+
+**Action** (la lumière avance lentement, ~0,25 m/s) :
+- ~38,5 s : elle traverse L1 ;
+- ~39,5 s : L2 ;
+- ~41 s : le filtre r ;
+- ~41,5 s : L3 ;
+- ~42 s : elle touche le plan focal (189 capteurs) ; un point lumineux s'allume ;
+- 42 – 44 s : le faisceau continue de pulser ; plan fixe sur le point lumineux.
+
+**Caméra** : rapproche jusqu'au plan focal (vue en contre-plongée, comme la vue « Focal plane »
+de la page télescope), puis plan quasi fixe jusqu'à la fin.
+
+**Titre** : celui du plan 6, jusqu'à la fin.
 
 ---
 
@@ -152,12 +174,15 @@ télescope et disparaît ~1,5 s (vers 24 – 26 s). → voir décision D1.
 
 - **D1 — Insertion de la caméra** : (a) rendre transparent ou couper le tube central pendant la
   descente ; (b) garder tel quel ; (c) reproduire la vraie procédure d'installation (laquelle ?).
-- **D2 — Plongée du plan 6** : passer sous la structure plutôt qu'à travers (trajectoire un peu
-  plus longue), ou couper la structure à ce moment-là.
+- **D2 — Lentilles et filtre au plan 7** : dans la version 1, ils étaient masqués à la fin pour bien
+  voir les capteurs. Maintenant que la lumière les traverse lentement à l'écran, je propose de les
+  **garder visibles** pendant que la lumière passe, puis de les estomper juste avant qu'elle touche
+  le plan focal (~41,5 s). Autre option : les garder jusqu'au bout.
 - **D3 — Fluidité** : lisser le mouvement de caméra (supprimer les à-coups aux changements de
   direction). Je le ferai dans tous les cas, sauf avis contraire.
-- **D4 — Textes** : langue (anglais / français / les deux en deux versions) ; textes à revoir ?
+- **D4 — Titres** : textes ci-dessus à valider. Une version française en plus ?
 - **D5 — Début et fin** : carton titre au début ? carton final (crédits, sources, lien vers le
   site) ? Pas de logo officiel Rubin sans autorisation.
-- **D6 — Durée** : 42 s convient-il ? Quels passages allonger ou raccourcir ?
-- **D7 — Livrables** : MP4 1080p seul, ou aussi un GIF / MP4 court (6 – 8 s, quel passage ?).
+- **D6 — Durée** : 44 s convient-il ? Quels passages allonger ou raccourcir ?
+- **D7 — Extrait court** : en plus de la vidéo complète, un extrait de 6 – 8 s en boucle (WebP animé
+  ou vidéo AV1 en boucle) pour les réseaux ou la page d'accueil ? Quel passage ?
