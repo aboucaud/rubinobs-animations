@@ -15,6 +15,9 @@ rendu (brouillon 3) correspond à la version 1.
 - Textes : en haut au centre, un titre seul (plus de ligne de sous-titre).
 - Filtres : l'échange se fait de g vers r ; la lumière de la fin est dans la bande r.
 - Plan 1 : vue de face du filtre (l'angle par défaut de la page « filter exchange »), plus de profil.
+- Plan 2 : on garde l'angle de face et on recule seulement pendant l'arrivée du cryostat (par
+  l'arrière), de l'obturateur (par le côté, derrière le filtre r) et des lentilles (par la droite) ;
+  la rotation vers le profil ne commence qu'avec l'arrivée du corps, du tronc et de l'hexapode.
 - Plans 5 à 7 refaits : on voit la lumière se réfléchir sur M1, M2 puis M3 en vue large ; la
   plongée ne commence qu'une fois la lumière repartie de M3. Elle se fait en suivant les rayons
   vers la caméra, pendant qu'ils ralentissent fortement, jusqu'à leur arrivée sur le plan focal.
@@ -70,25 +73,43 @@ rapprochement.
 
 ## Plan 2 — La caméra se construit autour (9,2 → 18 s)
 
-**Transition** : de 9 à 10,5 s, la caméra tourne autour du changeur pour passer de la vue de
-face à la vue de côté (axe optique dans la largeur de l'image), afin que les pièces arrivent
-par les côtés et utilisent toute la largeur.
+Deux temps : d'abord on garde l'angle de face du plan 1 et on recule seulement ; ensuite la vue
+tourne vers le profil pendant que les grosses pièces de l'arrière arrivent.
 
-**Action** : les pièces glissent le long de l'axe jusqu'à leur place, de l'intérieur vers
-l'extérieur :
+### 2a — Même angle, zoom arrière (9,2 → 13,2 s)
+
+**Caméra** : **aucun changement d'angle**. On garde exactement la vue de face du plan 1 et on
+recule simplement le long de la même ligne de visée (zoom arrière d'environ 3 m à 5 m), pour
+voir les pièces se mettre en place autour du changeur.
+
+**Action** :
+
+| Film | Pièce | Comment elle arrive |
+|---|---|---|
+| 9,4 – 11,0 s | Cryostat et plan focal | **par l'arrière**, le long de l'axe : il sort de derrière le changeur et s'insère en son centre |
+| 10,4 – 12,0 s | Obturateur | **par le côté** (latéralement, perpendiculairement à l'axe), depuis la gauche de l'image, et vient se placer **derrière le filtre r** |
+| 11,4 – 13,2 s | Lentilles L1 et L2 (avec leur support) | **par la droite** de l'image, latéralement, et se placent devant le changeur |
+
+> À VÉRIFIER (mon interprétation) : je fais arriver l'obturateur et les lentilles en glissant
+> **dans le plan de l'image** (de gauche et de droite), et non le long de l'axe, qui dans cette vue
+> va vers le fond de l'image. Pour l'obturateur, je choisis la gauche pour qu'il ne croise pas les
+> lentilles qui viennent de la droite.
+
+### 2b — Rotation vers le profil (13,2 → 18 s)
+
+**Caméra** : la vue tourne autour de la caméra, de la vue de face vers la vue de profil (axe
+optique dans la largeur de l'image, lentilles à droite), de 13,2 à 15 s, en reculant encore un
+peu pour garder toute la caméra dans le cadre (~6,5 m). Puis plan stable sur la caméra complète
+à 17,6 s.
+
+**Action** : les pièces de l'arrière arrivent le long de l'axe, donc par la gauche de l'image
+une fois de profil :
 
 | Film | Pièce | Arrive par |
 |---|---|---|
-| 9,4 – 11,0 s | Cryostat et plan focal | la gauche (arrière), 1,3 m |
-| 10,4 – 12,0 s | Obturateur | la droite (avant), 0,9 m |
-| 11,4 – 13,2 s | Lentilles L1 et L2 | la droite, 1,4 m |
-| 12,8 – 14,8 s | Corps de la caméra | la gauche, 2,2 m |
-| 14,4 – 16,2 s | Tronc (électronique, froid, vide) | la gauche, 1,8 m |
-| 15,6 – 17,4 s | Hexapode et rotateur | la gauche, 1,8 m |
-
-**Caméra** : recule progressivement (jusqu'à ~6,5 m) pour garder dans le cadre les pièces qui
-arrivent : d'abord centrée sur l'avant (obturateur, lentilles), puis sur l'arrière (corps,
-tronc, hexapode), puis sur la caméra complète à 17,6 s.
+| 13,6 – 15,4 s | Corps de la caméra | l'arrière (la gauche), 2,2 m |
+| 15,0 – 16,6 s | Tronc (électronique, froid, vide) | l'arrière, 1,8 m |
+| 16,0 – 17,6 s | Hexapode et rotateur | l'arrière, 1,8 m |
 
 **Titre (9,2 – 20 s)** : *The camera is built around it*
 
