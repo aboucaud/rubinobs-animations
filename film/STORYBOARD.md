@@ -16,7 +16,8 @@ rendu (brouillon 3) correspond à la version 1.
 - Filtres : l'échange se fait de g vers r ; la lumière de la fin est dans la bande r.
 - Plan 1 : vue de face du filtre (l'angle par défaut de la page « filter exchange »), plus de profil.
 - Plan 2 : on garde l'angle de face et on recule seulement pendant l'arrivée du cryostat (par
-  l'arrière), de l'obturateur (par le côté, derrière le filtre r) et des lentilles (par la droite) ;
+  l'arrière), de l'obturateur (perpendiculairement à l'axe, depuis la gauche, derrière le filtre r)
+  et des lentilles (le long de l'axe, par l'avant) ;
   la rotation vers le profil ne commence qu'avec l'arrivée du corps, du tronc et de l'hexapode.
 - Plans 5 à 7 refaits : on voit la lumière se réfléchir sur M1, M2 puis M3 en vue large ; la
   plongée ne commence qu'une fois la lumière repartie de M3. Elle se fait en suivant les rayons
@@ -87,13 +88,11 @@ voir les pièces se mettre en place autour du changeur.
 | Film | Pièce | Comment elle arrive |
 |---|---|---|
 | 9,4 – 11,0 s | Cryostat et plan focal | **par l'arrière**, le long de l'axe : il sort de derrière le changeur et s'insère en son centre |
-| 10,4 – 12,0 s | Obturateur | **par le côté** (latéralement, perpendiculairement à l'axe), depuis la gauche de l'image, et vient se placer **derrière le filtre r** |
-| 11,4 – 13,2 s | Lentilles L1 et L2 (avec leur support) | **par la droite** de l'image, latéralement, et se placent devant le changeur |
+| 10,4 – 12,0 s | Obturateur | **perpendiculairement à l'axe optique**, depuis la gauche de l'image, et vient se placer **derrière le filtre r** |
+| 11,4 – 13,2 s | Lentilles L1 et L2 (avec leur support) | **le long de l'axe optique**, par l'avant (depuis notre côté, vers le fond de l'image), et se placent devant le changeur |
 
-> À VÉRIFIER (mon interprétation) : je fais arriver l'obturateur et les lentilles en glissant
-> **dans le plan de l'image** (de gauche et de droite), et non le long de l'axe, qui dans cette vue
-> va vers le fond de l'image. Pour l'obturateur, je choisis la gauche pour qu'il ne croise pas les
-> lentilles qui viennent de la droite.
+Comme toutes les pièces de la caméra (cryostat, lentilles, corps, tronc, hexapode), les lentilles
+arrivent le long de l'axe optique ; seul l'obturateur arrive perpendiculairement à l'axe.
 
 ### 2b — Rotation vers le profil (13,2 → 18 s)
 

@@ -144,15 +144,16 @@ const CAPTIONS: [number, number, string][] = [
   [34.5, 44, '…then three lenses and a filter, down to the 3.2-gigapixel focal plane'],
 ];
 
-// Scene 2: each part slides in along the optical axis from `dz` metres away (OCS z: + = towards
-// the back of the camera, up here), in this order, from the inside out.
-const ASSEMBLY: { part: string; dz: number; t0: number; t1: number }[] = [
+// Plan 2: each part slides in from `dz` metres away along the optical axis (OCS z: + = towards the
+// back of the camera) or, for the shutter, from `dx` metres away across it (OCS +x: the left of the
+// image in the front view), in this order, from the inside out (storyboard v2).
+const ASSEMBLY: { part: string; dz: number; dx?: number; t0: number; t1: number }[] = [
   { part: 'cryostat', dz: 1.3, t0: 9.4, t1: 11.0 },
-  { part: 'shutter', dz: -0.9, t0: 10.4, t1: 12.0 },
+  { part: 'shutter', dz: 0, dx: 1.7, t0: 10.4, t1: 12.0 },
   { part: 'l1l2', dz: -1.4, t0: 11.4, t1: 13.2 },
-  { part: 'body', dz: 2.2, t0: 12.8, t1: 14.8 },
-  { part: 'trunk', dz: 1.8, t0: 14.4, t1: 16.2 },
-  { part: 'hexapod', dz: 1.8, t0: 15.6, t1: 17.4 },
+  { part: 'body', dz: 2.2, t0: 13.6, t1: 15.4 },
+  { part: 'trunk', dz: 1.8, t0: 15.0, t1: 16.6 },
+  { part: 'hexapod', dz: 1.8, t0: 16.0, t1: 17.6 },
 ];
 
 // camera path: keyframes in the camera model's frame ('cam', it moves and turns with it), in a frame
@@ -164,11 +165,13 @@ const OPENING: Key[] = [
   // plan 1: front view of the filter, as the default view of the filter-exchange page
   // (in the camera's own frame: ocs(1.55, 1.15, 2.05) looking at ocs(0, 0.08, 4.7)), slowly closer
   { t: 0, f: 'cam', pos: [1.78, 1.65, -1.31], tgt: [0, 4.7, -0.08] },
-  { t: 9, f: 'cam', pos: [1.55, 2.05, -1.15], tgt: [0, 4.7, -0.08] },
-  // plan 2: turn round to the side view, the camera's axis along the width of the frame
-  { t: 10.5, f: 'mid', pos: [3.6, 0.9, 0.2], tgt: [0, 0.05, -0.45] },
-  { t: 11.8, f: 'mid', pos: [5.6, 1.0, -1.4], tgt: [0, 0, -0.9] },
-  { t: 14.6, f: 'mid', pos: [6.4, 1.3, 0.5], tgt: [0, 0, 0.8] },
+  { t: 9.4, f: 'cam', pos: [1.55, 2.05, -1.15], tgt: [0, 4.7, -0.08] },
+  // plan 2a: same angle, dolly back along the same line of sight (×1.6) while the cryostat,
+  // the shutter and the lenses come in
+  { t: 13.2, f: 'cam', pos: [2.48, 0.46, -1.70], tgt: [0, 4.7, -0.08] },
+  // plan 2b: turn round to the profile (the camera's axis along the width of the frame) for the
+  // body, the utility trunk and the hexapod
+  { t: 15.2, f: 'mid', pos: [6.2, 1.3, 0.3], tgt: [0, 0, 0.6] },
   { t: 17.6, f: 'mid', pos: [5.4, 1.2, -0.4], tgt: [0, 0, 0] },
   { t: 20.3, f: 'mid', pos: [4.8, 1.6, -3.4], tgt: [0, 0.2, 0] }, // upright again
 ];
@@ -260,7 +263,8 @@ function render(t: number) {
   const p = cam.parts;
   for (const a of ASSEMBLY) {
     p[a.part].visible = t >= a.t0;
-    p[a.part].position.copy(ocs(0, 0, a.dz * (1 - ramp(t, a.t0, a.t1))));
+    const away = 1 - ramp(t, a.t0, a.t1);
+    p[a.part].position.copy(ocs((a.dx ?? 0) * away, 0, a.dz * away));
   }
   p.l1l2.visible &&= t < 37.2; // lenses and filter hidden for the final look at the focal plane
   p.filters.visible = t < 37.2;
