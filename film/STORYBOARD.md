@@ -6,8 +6,21 @@ Document de travail : c'est la référence du film. On le corrige ici d'abord ; 
 **Comment l'annoter** : modifie directement le texte, ou ajoute des lignes `> À CHANGER : …`
 sous le plan concerné. Les temps sont en secondes de film.
 
-État : **version 2 du storyboard**, avec tes corrections. Elle n'est pas encore codée : le dernier
-rendu (brouillon 3) correspond à la version 1.
+État : **version 3 du storyboard** = version 2 validée plan par plan, plus les améliorations
+proposées après les brouillons des plans (voir ci-dessous). Télescope : forme de la PR #12
+(anneaux d'élévation en demi-anneaux). Brouillon complet correspondant : brouillon 4.
+
+### Changements depuis la version 2
+
+- Plan 4 (D1 réglée) : la coupe du télescope s'ouvre progressivement pendant la descente (balayage
+  de ~1,2 s), pour voir la caméra traverser le haut du télescope au lieu de la perdre dans le tube
+  central ; elle se referme une fois la caméra en place, avant la coupe habituelle du plan 5.
+- Plan 5 : vue large un peu plus reculée (~25 m au lieu de 21), pour que le titre soit sur le ciel
+  noir et que M2 soit bien dégagé.
+- Plan 6 : la structure du télescope (tube, anneaux, araignée…) s'efface en fondu au début de la
+  plongée ; il ne reste que les miroirs et la caméra, pour qu'aucun élément ne passe devant les rayons.
+- Plan 7 (D2 réglée) : lentilles et filtre s'effacent en fondu (0,5 s) au lieu de disparaître d'un coup.
+- Tout le film (D3 réglée) : mouvement de caméra lissé, sans à-coups aux points de passage.
 
 ### Changements depuis la version 1
 
@@ -136,8 +149,9 @@ tranche), puis s'élève et recule vers une vue d'ensemble de trois-quarts avant
 
 **Titre (20 – 28 s)** : *LSSTCam takes its place in the Simonyi telescope*
 
-**Défaut connu** : pendant la descente, la caméra traverse le tube opaque central du haut du
-télescope et disparaît ~1,5 s (vers 24 – 26 s). → voir décision D1.
+**Coupe pendant la descente** : de 22,8 à 24 s, la moitié du télescope tournée vers nous s'efface
+par un balayage, pour qu'on voie la caméra traverser le haut du télescope et se mettre en place ;
+de 26 à 27,3 s, le télescope se referme.
 
 ---
 
@@ -152,7 +166,7 @@ télescope et disparaît ~1,5 s (vers 24 – 26 s). → voir décision D1.
 - 32,8 s : il se réfléchit sur **M2** (en haut) et redescend ;
 - 33,9 s : il se réfléchit sur **M3** (au centre de M1) et remonte vers la caméra.
 
-**Caméra** : vue large de face du télescope en coupe (à ~21 m, à hauteur du tube), **fixe
+**Caméra** : vue large de face du télescope en coupe (à ~25 m, à hauteur du tube), **fixe
 pendant tout le trajet M1 → M2 → M3**, pour que les trois réflexions se lisent bien.
 
 **Titre (28 – 34,5 s)** : *Starlight bounces off three mirrors: M1, M2, M3*
@@ -166,8 +180,11 @@ elle **freine fortement** (de 5,7 à ~0,3 m/s entre 34,0 et 34,6 s), le temps de
 
 **Caméra** : la plongée commence ici. La caméra entre dans le tube ouvert par la coupe, rejoint
 l'axe juste au-dessus de M3, puis **remonte le long du faisceau en suivant les rayons**, jusque
-sous L1. (Ce trajet passe sous la structure du haut du télescope : il règle le défaut D2 de la
-version 1.)
+sous L1.
+
+**Structure** : de 34,8 à 35,8 s, la structure du télescope (tube, anneaux, piliers, araignée)
+s'efface en fondu. Il ne reste que les miroirs et la caméra, comme dans le mode « optique seule »
+de la page télescope : rien ne passe devant les rayons pendant la plongée.
 
 **Titre (34,5 – 44 s)** : *…then three lenses and a filter, down to the 3.2-gigapixel focal plane*
 
@@ -180,6 +197,7 @@ version 1.)
 - 40,2 s : L2 ;
 - 41,5 s : le filtre r ;
 - 41,7 s : L3 ;
+- 41,5 – 42 s : lentilles et filtre s'effacent en fondu ;
 - 42,0 s : elle touche le plan focal (189 capteurs) ; un point lumineux s'allume ;
 - 42 – 44 s : le faisceau continue de pulser ; plan fixe sur le point lumineux.
 
@@ -190,19 +208,14 @@ de la page télescope), puis plan quasi fixe jusqu'à la fin.
 
 ---
 
-## Décisions ouvertes
+## Décisions
 
-- **D1 — Insertion de la caméra** : (a) rendre transparent ou couper le tube central pendant la
-  descente ; (b) garder tel quel ; (c) reproduire la vraie procédure d'installation (laquelle ?).
-- **D2 — Lentilles et filtre au plan 7** : dans la version 1, ils étaient masqués à la fin pour bien
-  voir les capteurs. Maintenant que la lumière les traverse lentement à l'écran, je propose de les
-  **garder visibles** pendant que la lumière passe, puis de les estomper juste avant qu'elle touche
-  le plan focal (~41,5 s). Autre option : les garder jusqu'au bout.
-- **D3 — Fluidité** : lisser le mouvement de caméra (supprimer les à-coups aux changements de
-  direction). Je le ferai dans tous les cas, sauf avis contraire.
-- **D4 — Titres** : textes ci-dessus à valider. Une version française en plus ?
+- **D1 — Insertion de la caméra** : réglée en v3 (coupe en balayage pendant la descente).
+  La vraie procédure d'installation reste à reproduire si tu le souhaites.
+- **D2 — Lentilles et filtre au plan 7** : réglée en v3 (visibles pendant la traversée, puis fondu).
+- **D3 — Fluidité** : réglée en v3 (trajectoire lissée).
+- **D4 — Titres** : textes à valider. Une version française en plus ?
 - **D5 — Début et fin** : carton titre au début ? carton final (crédits, sources, lien vers le
   site) ? Pas de logo officiel Rubin sans autorisation.
-- **D6 — Durée** : 44 s convient-il ? Quels passages allonger ou raccourcir ?
-- **D7 — Extrait court** : en plus de la vidéo complète, un extrait de 6 – 8 s en boucle (WebP animé
-  ou vidéo AV1 en boucle) pour les réseaux ou la page d'accueil ? Quel passage ?
+- **D6 — Durée** : 44 s convient-il ?
+- **D7 — Extrait court** : en plus de la vidéo complète, un extrait de 6 – 8 s en boucle ? Quel passage ?

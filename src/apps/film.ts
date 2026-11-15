@@ -191,8 +191,8 @@ const PATH: Key[] = [
   { t: 22.5, f: 'cam', pos: [3.0, 7.0, -9.0], tgt: [0, 5.0, 0] },
   { t: 27.5, f: 'ota', pos: [4.0, 12.0, -24.0], tgt: [0, 5.0, 0] },
   // plan 5: wide front view of the telescope in cutaway, still while the light goes M1 → M2 → M3
-  { t: 29.5, f: 'ota', pos: [1.5, 6.0, -21.0], tgt: [0, 4.2, 0] },
-  { t: 34.3, f: 'ota', pos: [1.5, 6.0, -21.0], tgt: [0, 4.2, 0] },
+  { t: 29.5, f: 'ota', pos: [1.8, 6.6, -25.0], tgt: [0, 4.5, 0] },
+  { t: 34.3, f: 'ota', pos: [1.8, 6.6, -25.0], tgt: [0, 4.5, 0] },
   // plan 6: into the open tube, onto the axis just above M3, then up the beam with the rays
   { t: 36.5, f: 'ota', pos: [1.0, 1.0, -2.2], tgt: [0, 3.2, 0] },
   { t: 38.5, f: 'ota', pos: [0.6, 2.6, -1.1], tgt: [0, 4.0, 0] },
@@ -277,6 +277,72 @@ function playFES(real: number) {
   }
 }
 
+// ---------------------------------------------------------------- film-only material states
+// Fades and the cut during the descent need per-mesh control of opacity and clipping. The film
+// gives the meshes concerned their own copies of their materials, so the shared materials (and the
+// other pages) are untouched. Only merged/whole meshes are re-materialed, never baked originals.
+type Look = { mesh: THREE.Mesh; mat: THREE.Material & { color?: THREE.Color; opacity: number }; opacity: number; color?: THREE.Color; clip: THREE.Plane[] | null; transparent: boolean; depthWrite: boolean };
+function ownLooks(root: THREE.Object3D): Look[] {
+  const out: Look[] = [];
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh || Array.isArray(m.material)) return;
+    const mat = m.material.clone() as Look['mat'];
+    m.material = mat;
+    out.push({ mesh: m, mat, opacity: mat.opacity, color: mat.color?.clone(), clip: mat.clippingPlanes, transparent: mat.transparent, depthWrite: mat.depthWrite });
+  });
+  return out;
+}
+const WHITE = new THREE.Color(1, 1, 1);
+/** alpha 1 = as built, 0 = gone. Multiply-blended glass fades by turning white. */
+function fade(looks: Look[], alpha: number) {
+  for (const l of looks) {
+    const on = alpha < 0.999;
+    const transparent = on || l.transparent;
+    if (l.mat.transparent !== transparent) {
+      l.mat.transparent = transparent;
+      l.mat.needsUpdate = true;
+    }
+    l.mat.depthWrite = on ? false : l.depthWrite;
+    l.mat.opacity = l.opacity * (on ? alpha : 1);
+    if (l.color && l.mat.color && l.mat.blending === THREE.MultiplyBlending) l.mat.color.lerpColors(l.color, WHITE, on ? 1 - alpha : 0);
+  }
+}
+/** make every mesh of `looks` cut by the cut plane (on), or restore its own clipping (off) */
+function cuttable(looks: Look[], on: boolean) {
+  for (const l of looks) {
+    const want = on ? [cutPlane] : l.clip;
+    if (l.mat.clippingPlanes !== want) {
+      l.mat.clippingPlanes = want;
+      l.mat.needsUpdate = true;
+    }
+  }
+}
+const structureLooks = ownLooks(tel.groups.structure);
+const glassLooks = [...ownLooks(cam.parts.l1l2), ...ownLooks(cam.parts.filters)];
+
+/** monotone cubic through (x_i, y_i) (Fritsch–Carlson): smooth, never overshoots */
+function monotone(xs: number[], ys: number[]) {
+  const n = xs.length;
+  const d = xs.slice(0, -1).map((_, i) => (ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]));
+  const m = xs.map((_, i) => (i === 0 ? d[0] : i === n - 1 ? d[n - 2] : d[i - 1] * d[i] <= 0 ? 0 : (2 * d[i - 1] * d[i]) / (d[i - 1] + d[i])));
+  return (x: number) => {
+    if (x <= xs[0]) return ys[0];
+    if (x >= xs[n - 1]) return ys[n - 1];
+    let i = 0;
+    while (x > xs[i + 1]) i++;
+    const h = xs[i + 1] - xs[i];
+    const u = (x - xs[i]) / h;
+    return (2 * u ** 3 - 3 * u ** 2 + 1) * ys[i] + (u ** 3 - 2 * u ** 2 + u) * h * m[i] + (-2 * u ** 3 + 3 * u ** 2) * ys[i + 1] + (u ** 3 - u ** 2) * h * m[i + 1];
+  };
+}
+// film time → position along the camera path: smooth through the keyframes (no jolts), and still
+// where two consecutive keyframes are the same (holds)
+const pathParam = monotone(
+  PATH.map((k) => k.t),
+  PATH.map((_, i) => i),
+);
+
 // ---------------------------------------------------------------- one frame of the film
 const pW: THREE.Vector3[] = PATH.map(() => new THREE.Vector3());
 const qW: THREE.Vector3[] = PATH.map(() => new THREE.Vector3());
@@ -305,8 +371,10 @@ function render(t: number) {
     p[a.part].position.copy(ocs((a.dx ?? 0) * away, 0, a.dz * away));
   }
   // lenses and filter stay while the light crosses them, then go just before it lands (D2, proposal)
-  p.l1l2.visible &&= t < 41.5;
-  p.filters.visible = t < 41.5;
+  const glass = 1 - ramp(t, 41.5, 42.0);
+  fade(glassLooks, glass);
+  p.l1l2.visible &&= glass > 0.01;
+  p.filters.visible = glass > 0.01;
   // the camera lies horizontally (standby socket on top) until it turns upright before the descent
   const lift = LIFT * (1 - ramp(t, 20.6, 27));
   camGroup.rotation.x = (Math.PI / 2) * (1 - ramp(t, 18.2, 20.3));
@@ -321,7 +389,16 @@ function render(t: number) {
   stars.visible = sky > 0;
 
   // --- cutaway: through the telescope for the starlight
-  faceCutPlane(cutPlane, tel.ota, camera, t >= 28.5);
+  // plan 4: the half of the telescope facing us is wiped away while the camera goes in (the cut
+  // plane sweeps in from 12 m in front of the axis), then wiped back; plan 5: the usual cutaway
+  const descentCut = t >= 22.8 && t < 27.3;
+  cuttable(structureLooks, descentCut);
+  const wipe = 12 * (1 - ramp(t, 22.8, 24.0)) + 12 * ramp(t, 26.0, 27.3);
+  faceCutPlane(cutPlane, tel.ota, camera, descentCut || t >= 28.5, descentCut ? wipe : 0);
+  // plan 6: the structure fades out as the plunge starts; only the mirrors and the camera remain
+  const structure = 1 - ramp(t, 34.8, 35.8);
+  fade(structureLooks, structure);
+  tel.groups.structure.visible = structure > 0.01;
 
   // --- light
   const light = t >= LIGHT.start;
@@ -342,10 +419,7 @@ function render(t: number) {
     frame.localToWorld(pW[i].set(...k.pos));
     frame.localToWorld(qW[i].set(...k.tgt));
   });
-  let i = 0;
-  while (i < PATH.length - 2 && t >= PATH[i + 1].t) i++;
-  const f = clamp01((t - PATH[i].t) / (PATH[i + 1].t - PATH[i].t));
-  const s = (i + f) / (PATH.length - 1);
+  const s = pathParam(t) / (PATH.length - 1);
   camera.position.copy(pCurve.getPoint(s, tmp));
   camera.lookAt(qCurve.getPoint(s, tmp));
   backdrop.position.copy(camera.position);
