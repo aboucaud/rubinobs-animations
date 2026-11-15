@@ -15,15 +15,7 @@ import { buildHuman } from '../scene/human';
 import { FESStep } from '../scene/fes';
 import { createViewer, easeInOutCubic as ease, faceCutPlane, glowTexture } from './common';
 
-const QUERY = new URLSearchParams(location.search);
-const CAPTURE = QUERY.has('capture');
-/**
- * Two layouts of the opening, to choose from:
- *  h — the camera lies horizontally while the filter changer works and the camera is assembled (the
- *      parts arrive from the sides, using the width of the frame), then turns upright before the descent;
- *  v — the camera stays upright, and panels on both sides list the steps, the parts and key figures.
- */
-const LAYOUT: 'h' | 'v' = QUERY.get('layout') === 'v' ? 'v' : 'h';
+const CAPTURE = new URLSearchParams(location.search).has('capture');
 
 // ---------------------------------------------------------------- scene (as on the telescope page)
 const { renderer, scene, camera, controls, composer } = createViewer({
@@ -140,7 +132,7 @@ const LIFT = 18; // the camera is shown 18 m above its place in the telescope (o
 const FES_START = 0.8;
 const FES_SPEED = 10;
 const W = { wavefront: 29.5 };
-const CAM_CENTRE = 5.25; // OCS z of the middle of the camera: pivot when it turns upright (layout h)
+const CAM_CENTRE = 5.25; // OCS z of the middle of the camera: pivot when it turns upright
 
 const CAPTIONS: [number, number, string, string][] = [
   [0, 9.2, 'The filter changer of LSSTCam swaps the r filter for g', 'built by IN2P3/CNRS · 82 s in reality, shown 10× faster'],
@@ -163,28 +155,18 @@ const ASSEMBLY: { part: string; dz: number; t0: number; t1: number }[] = [
 // camera path: keyframes in the camera model's frame ('cam', it moves and turns with it), in a frame
 // that follows the middle of the camera without turning ('mid'), or in the telescope frame ('ota')
 type Key = { t: number; f: 'cam' | 'mid' | 'ota'; pos: [number, number, number]; tgt: [number, number, number] };
-const OPENING: Record<'h' | 'v', Key[]> = {
-  // camera horizontal, its axis along the width of the frame (L1 on the right, the standby socket on top)
-  h: [
-    { t: 0, f: 'mid', pos: [3.3, 0.7, -0.6], tgt: [0, 0.05, -0.45] },
-    { t: 8.8, f: 'mid', pos: [3.1, 0.8, 0.4], tgt: [0, 0.05, -0.45] },
-    { t: 11.8, f: 'mid', pos: [5.6, 1.0, -1.4], tgt: [0, 0, -0.9] },
-    { t: 14.6, f: 'mid', pos: [6.4, 1.3, 0.5], tgt: [0, 0, 0.8] },
-    { t: 17.6, f: 'mid', pos: [5.4, 1.2, -0.4], tgt: [0, 0, 0] },
-    { t: 20.3, f: 'mid', pos: [4.8, 1.6, -3.4], tgt: [0, 0.2, 0] }, // upright again
-  ],
-  // camera upright, framed in the middle third: the side panels take the rest
-  v: [
-    { t: 0, f: 'cam', pos: [4.4, 5.15, -0.95], tgt: [0, 4.95, -0.15] },
-    { t: 8.8, f: 'cam', pos: [4.1, 5.4, -2.1], tgt: [0, 5.0, -0.15] },
-    // first the parts arriving from below (shutter, lenses), then those from above (body, electronics, hexapod)
-    { t: 11.8, f: 'cam', pos: [5.6, 4.6, -3.4], tgt: [0, 4.3, 0] },
-    { t: 14.6, f: 'cam', pos: [8.0, 6.8, -5.2], tgt: [0, 5.9, 0] },
-    { t: 17.6, f: 'cam', pos: [6.6, 6.0, -4.6], tgt: [0, 5.4, 0] },
-  ],
-};
+// opening: the camera lies horizontally, its axis along the width of the frame (L1 on the right,
+// the standby socket on top), then turns upright about its middle before the descent
+const OPENING: Key[] = [
+  { t: 0, f: 'mid', pos: [3.3, 0.7, -0.6], tgt: [0, 0.05, -0.45] },
+  { t: 8.8, f: 'mid', pos: [3.1, 0.8, 0.4], tgt: [0, 0.05, -0.45] },
+  { t: 11.8, f: 'mid', pos: [5.6, 1.0, -1.4], tgt: [0, 0, -0.9] },
+  { t: 14.6, f: 'mid', pos: [6.4, 1.3, 0.5], tgt: [0, 0, 0.8] },
+  { t: 17.6, f: 'mid', pos: [5.4, 1.2, -0.4], tgt: [0, 0, 0] },
+  { t: 20.3, f: 'mid', pos: [4.8, 1.6, -3.4], tgt: [0, 0.2, 0] }, // upright again
+];
 const PATH: Key[] = [
-  ...OPENING[LAYOUT],
+  ...OPENING,
   // follow the descent from the front of the telescope, where the elevation rings are seen edge-on
   { t: 22.5, f: 'cam', pos: [3.0, 7.0, -9.0], tgt: [0, 5.0, 0] },
   { t: 27.5, f: 'ota', pos: [4.0, 12.0, -24.0], tgt: [0, 5.0, 0] },
@@ -247,44 +229,6 @@ function playFES(real: number) {
   }
 }
 
-// ---------------------------------------------------------------- side panels (layout v)
-const PARTS: { part: string; name: string; fact: string }[] = [
-  { part: 'cryostat', name: 'Cryostat & focal plane', fact: '189 CCDs, 3.2 gigapixels, kept at −100 °C in vacuum' },
-  { part: 'shutter', name: 'Shutter', fact: 'two stacks of blades, about 1 s per stroke' },
-  { part: 'l1l2', name: 'Lenses L1 & L2', fact: 'L1 is 1.57 m wide: the largest high-performance optical lens ever made' },
-  { part: 'body', name: 'Camera body', fact: '1.65 m wide; holds the lenses, shutter and filter changer' },
-  { part: 'trunk', name: 'Utility trunk', fact: 'refrigeration, vacuum pumps and readout electronics' },
-  { part: 'hexapod', name: 'Hexapod & rotator', fact: 'keeps the 3 t camera in focus to the micrometre' },
-];
-const left = document.getElementById('left')!;
-const right = document.getElementById('right')!;
-let sideKey = '';
-function updateSides(t: number) {
-  const fade = Math.min(clamp01(t / 0.6), clamp01((20 - t) / 0.6));
-  left.style.opacity = right.style.opacity = String(fade);
-  let l = '';
-  let r = '';
-  if (t < 9.2) {
-    const real = Math.max(0, (t - FES_START) * FES_SPEED);
-    const total = stepStart.length ? stepStart[stepStart.length - 1] + steps[steps.length - 1].real : 1;
-    l = `<h3>Filter exchange</h3><ol>${steps.map((st, i) => `<li class="${i < stepsDone ? 'done' : i === stepsDone ? 'now' : ''}">${st.label}</li>`).join('')}</ol><p class="k">real time ${Math.min(real, total).toFixed(0)} / ${total.toFixed(0)} s</p>`;
-    r = `<h3>Filter changer</h3><p><b>6</b> filters, u g r i z y</p><p><b>5</b> in the carousel, 1 in the loader</p><p><b>75 cm</b> wide, 25–38 kg each</p><p class="k">built by IN2P3/CNRS</p>`;
-  } else {
-    const cur = [...ASSEMBLY].reverse().find((a) => t >= a.t0);
-    l = `<h3>Building the camera</h3><ol>${PARTS.map((p) => {
-      const a = ASSEMBLY.find((x) => x.part === p.part)!;
-      return `<li class="${t >= a.t1 ? 'done' : t >= a.t0 ? 'now' : ''}">${p.name}</li>`;
-    }).join('')}</ol>`;
-    const p = PARTS.find((x) => x.part === cur?.part);
-    r = t >= 17.6 ? `<h3>LSSTCam</h3><p><b>3.2</b> gigapixels</p><p><b>1.65 m</b> × 3.7 m</p><p><b>3</b> tonnes</p>` : p ? `<h3>${p.name}</h3><p>${p.fact}</p>` : '';
-  }
-  const k = l + r;
-  if (k === sideKey) return;
-  sideKey = k;
-  left.innerHTML = l;
-  right.innerHTML = r;
-}
-
 // ---------------------------------------------------------------- one frame of the film
 const pW: THREE.Vector3[] = PATH.map(() => new THREE.Vector3());
 const qW: THREE.Vector3[] = PATH.map(() => new THREE.Vector3());
@@ -313,9 +257,9 @@ function render(t: number) {
   }
   p.l1l2.visible &&= t < 37.2; // lenses and filter hidden for the final look at the focal plane
   p.filters.visible = t < 37.2;
-  // layout h: the camera lies horizontally (standby socket on top) until it turns upright before the descent
+  // the camera lies horizontally (standby socket on top) until it turns upright before the descent
   const lift = LIFT * (1 - ramp(t, 20.6, 27));
-  camGroup.rotation.x = LAYOUT === 'h' ? (Math.PI / 2) * (1 - ramp(t, 18.2, 20.3)) : 0;
+  camGroup.rotation.x = (Math.PI / 2) * (1 - ramp(t, 18.2, 20.3));
   pivot.set(0, CAM_CENTRE, 0);
   camGroup.position.set(0, lift, 0).add(pivot).sub(pivot.applyEuler(camGroup.rotation));
   mid.position.set(0, lift + CAM_CENTRE, 0);
@@ -368,7 +312,6 @@ function render(t: number) {
   }
   caption.style.opacity = c ? String(Math.min(clamp01((t - c[0]) / 0.5), clamp01((c[1] - t) / 0.5))) : '0';
   clockEl.textContent = CAPTURE ? '' : `${t.toFixed(1)} s`;
-  if (LAYOUT === 'v') updateSides(t);
 
   composer.render();
 }

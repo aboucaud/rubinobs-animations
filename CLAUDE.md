@@ -103,10 +103,9 @@ One scene (the telescope, with LSSTCam at its true place) driven by a single fil
 rendered in any order except for the filter exchange, which is replayed forward (rewinding resets it).
 The storyboard is the data at the top of `film.ts`: `CAPTIONS`, `PATH` (camera keyframes, in the
 camera model's frame `'cam'`, which follows it while it moves, or the telescope frame `'ota'`) and the
-time ramps in `render`. Two layouts of the opening, chosen in the URL (`film/?layout=h`, default, or
-`layout=v`; `tools/film.cjs … '' layout=v`): `h` lays the camera horizontally while it is assembled and
-turns it upright before the descent; `v` keeps it upright with side panels (steps, parts, figures).
-The light slows down inside the camera (`SLOW`, `lightHead`) so its arrival on the CCDs is seen in the
+time ramps in `render`. The camera lies horizontally while it is assembled and turns upright before
+the descent (an upright variant with side panels was tried and rejected). **The storyboard is agreed in
+`film/STORYBOARD.md` first, with the user; the code then follows it.** The light slows down inside the camera (`SLOW`, `lightHead`) so its arrival on the CCDs is seen in the
 close-up. The film reuses the scene builders, so model changes show up in it for free;
 it re-applies its part visibility after `cam.update()` (see the pitfall above).
 

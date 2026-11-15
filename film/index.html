@@ -9,26 +9,11 @@
       font: 600 clamp(12px, 2.6vh, 26px)/1.35 system-ui, sans-serif; color: #f1f4f8; text-shadow: 0 1px 6px #000, 0 0 2px #000;
       transition: opacity .4s; pointer-events: none; }
     #caption small { display: block; font-weight: 400; font-size: .72em; opacity: .8; margin-top: .2em; }
-    .side { position: fixed; top: 50%; transform: translateY(-58%); width: 24vw; font: clamp(10px, 2.1vh, 21px)/1.35 system-ui, sans-serif;
-      color: #eef1f5; text-shadow: 0 1px 3px rgba(0,0,0,.6); pointer-events: none; opacity: 0; }
-    #left { left: 3vw; } #right { right: 3vw; text-align: right; }
-    .side h3 { margin: 0 0 .5em; font-size: 1.15em; letter-spacing: .04em; text-transform: uppercase; color: #fff; }
-    .side ol { margin: 0; padding: 0; list-style: none; }
-    .side li { padding: .18em 0; opacity: .38; transition: opacity .3s; }
-    .side li.done { opacity: .75; }
-    .side li.done::before { content: '✓ '; }
-    .side li.now { opacity: 1; font-weight: 700; color: #ffd37a; }
-    .side li.now::before { content: '▸ '; }
-    .side p { margin: .25em 0; }
-    .side p b { font-size: 1.35em; }
-    .side .k { opacity: .7; font-size: .85em; }
     #clock { position: fixed; right: 12px; top: 10px; font: 11px monospace; opacity: .5; }
   </style>
 </head>
 <body>
   <canvas id="c"></canvas>
-  <div id="left" class="side"></div>
-  <div id="right" class="side"></div>
   <div id="caption"></div>
   <div id="clock"></div>
   <script type="module" src="/src/apps/film.ts"></script>
