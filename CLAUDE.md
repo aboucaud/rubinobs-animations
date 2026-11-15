@@ -108,6 +108,9 @@ the descent (an upright variant with side panels was tried and rejected). **The 
 `film/STORYBOARD.md` first, with the user; the code then follows it.** The light slows down inside the camera (`SLOW`, `lightHead`) so its arrival on the CCDs is seen in the
 close-up. The film reuses the scene builders, so model changes show up in it for free;
 it re-applies its part visibility after `cam.update()` (see the pitfall above).
+Final videos are built in two stages (`tools/film.cjs`): `master` renders the film once, without text
+(`film/?notext`), in resumable 4 s segments; `titles` + `compose` then add the titles with ffmpeg, so
+title or language changes cost minutes, not a new 3D render. Only scene changes need a new `master`.
 
 ## Tools
 

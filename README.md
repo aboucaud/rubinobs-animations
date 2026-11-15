@@ -33,7 +33,7 @@ Tools (`tools/`):
 | `export_prescription.py` | regenerates `src/data/prescription.json` from batoid (`pip install batoid`) |
 | `filter_colours.py` | regenerates `src/data/filter_colours.json` from the lsst/throughputs filter curves (downloaded on first use into `tools/throughputs/`, not versioned) |
 | `shot.cjs` | screenshot of a page with software WebGL, against `npm run preview`: `node tools/shot.cjs telescope/ name "__rubin.goView('Focal plane')"` → `shots/name.png`; add `"" 4000 phone` or `phone-land` for a phone in portrait or landscape |
-| `film.cjs` | renders the `film/` page frame by frame and encodes it with ffmpeg, against `npm run preview`: `node tools/film.cjs 640x360 15 shots/film-draft.mp4` (draft) or `1920x1080 30 shots/film.mp4` |
+| `film.cjs` | renders the `film/` page, against `npm run preview`: `draft` (quick preview with titles), `master` (the long 1080p render, without text, resumable), `titles` (each title as a transparent image) and `compose` (master + titles → `shots/film.webm` AV1 and `shots/film.mp4` H.264). Changing a title only needs `titles` + `compose`. |
 
 ## Pages
 

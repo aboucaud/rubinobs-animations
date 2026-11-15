@@ -15,7 +15,12 @@ import { buildHuman } from '../scene/human';
 import { FESStep } from '../scene/fes';
 import { createViewer, easeInOutCubic as ease, faceCutPlane, glowTexture } from './common';
 
-const CAPTURE = new URLSearchParams(location.search).has('capture');
+const QUERY = new URLSearchParams(location.search);
+const CAPTURE = QUERY.has('capture');
+// ?notext: the film without its titles (the final video gets them composited afterwards, so a
+// title change never needs a new 3D render); ?title=i: only title i, on a transparent page
+const NOTEXT = QUERY.has('notext');
+const TITLE = QUERY.get('title');
 
 // ---------------------------------------------------------------- scene (as on the telescope page)
 const { renderer, scene, camera, controls, composer } = createViewer({
@@ -443,14 +448,21 @@ function render(t: number) {
     captionKey = k;
     caption.textContent = c ? c[2] : '';
   }
-  caption.style.opacity = c ? String(Math.min(clamp01((t - c[0]) / 0.5), clamp01((c[1] - t) / 0.5))) : '0';
+  caption.style.opacity = c && !NOTEXT ? String(Math.min(clamp01((t - c[0]) / 0.5), clamp01((c[1] - t) / 0.5))) : '0';
   clockEl.textContent = CAPTURE ? '' : `${t.toFixed(1)} s`;
 
   composer.render();
 }
 
 resetFES();
-if (CAPTURE) {
+if (TITLE !== null) {
+  // one title alone on a transparent page, for tools/film.cjs to composite over the clean video
+  for (const el of [document.documentElement, document.body]) el.style.background = 'transparent';
+  (document.getElementById('c') as HTMLCanvasElement).style.display = 'none';
+  caption.textContent = CAPTIONS[+TITLE]?.[2] ?? '';
+  caption.style.transition = 'none';
+  caption.style.opacity = '1';
+} else if (CAPTURE) {
   render(0);
 } else {
   const t0 = performance.now();
@@ -460,4 +472,4 @@ if (CAPTURE) {
   };
   loop();
 }
-(window as any).__film = { render, duration: DURATION, renderer, camera, PATH_TO, lightHead, ready: true };
+(window as any).__film = { render, duration: DURATION, captions: CAPTIONS, renderer, camera, PATH_TO, lightHead, ready: true };
