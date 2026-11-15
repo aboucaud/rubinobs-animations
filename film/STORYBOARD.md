@@ -232,3 +232,15 @@ de la page télescope), puis plan quasi fixe jusqu'à la fin.
   site) ? Pas de logo officiel Rubin sans autorisation.
 - **D6 — Durée** : 44 s convient-il ?
 - **D7 — Extrait court** : en plus de la vidéo complète, un extrait de 6 – 8 s en boucle ? Quel passage ?
+- **D8 — Diffusion sur le site** : où montrer la vidéo, et comment héberger les fichiers ?
+  - Emplacement : (a) une carte de plus sur la page d'accueil, qui mène à la page `film/` ;
+    (b) la vidéo en tête de la page d'accueil, en boucle et sans son, au-dessus des cartes ;
+    (c) les deux. La page `film/` jouerait alors la vidéo (WebM AV1, MP4 en secours, image
+    d'attente), au lieu du rendu 3D en direct, trop lourd sur un téléphone. Elle garderait un
+    lien vers la version 3D en direct.
+  - Hébergement : les fichiers dans `public/` (servis par GitHub Pages, rien de plus à faire,
+    mais chaque nouvelle version ajoute ~12 Mo à l'historique git). Alternatives écartées : Git LFS
+    (GitHub Pages ne sert pas les fichiers LFS), pièce jointe d'une release GitHub (servie en
+    téléchargement : lecture dans la page non garantie).
+  - Proposition : (c), avec seulement le WebM AV1 et une image d'attente sur l'accueil
+    (l'extrait court de D7 s'il est retenu, sinon le film complet) ; le MP4 en secours sur la page `film/`.
