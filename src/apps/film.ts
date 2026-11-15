@@ -92,8 +92,9 @@ const floor = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 0.3, 96), MAT.fl
 floor.position.y = -0.75;
 scene.add(floor);
 
-// ---------------------------------------------------------------- light: one star in the g band (the filter put in)
-const BAND = 'g' as const;
+// ---------------------------------------------------------------- light: one star in the r band (the filter put in)
+const START_BAND = 'g' as const; // in the beam at the start; the exchange puts BAND in
+const BAND = 'r' as const;
 const rays = new RayBundle();
 tel.ota.add(rays.object);
 let landing = { x: 0, y: 0 };
@@ -134,11 +135,13 @@ const FES_SPEED = 10;
 const W = { wavefront: 29.5 };
 const CAM_CENTRE = 5.25; // OCS z of the middle of the camera: pivot when it turns upright
 
-const CAPTIONS: [number, number, string, string][] = [
-  [0, 9.2, 'The filter changer of LSSTCam swaps the r filter for g', 'built by IN2P3/CNRS · 82 s in reality, shown 10× faster'],
-  [9.2, 20, 'The camera is built around it', 'cryostat and focal plane · shutter · lenses L1 and L2 · body · electronics and hexapod'],
-  [20, 28, 'LSSTCam takes its place at the heart of the Simonyi telescope', '3.2 gigapixels · 1.65 m wide · 3 tonnes · schematic installation'],
-  [28, 42, 'Starlight: three mirrors, three lenses, one filter', 'M1 → M2 → M3 → L1 · L2 · filter g · L3 → focal plane'],
+// titles, shown alone at the top of the frame (storyboard v2)
+const CAPTIONS: [number, number, string][] = [
+  [0, 9.2, 'The filter changer swaps the g filter for r (10× faster than reality)'],
+  [9.2, 20, 'The camera is built around it'],
+  [20, 28, 'LSSTCam takes its place in the Simonyi telescope'],
+  [28, 34.5, 'Starlight bounces off three mirrors: M1, M2, M3'],
+  [34.5, 44, '…then three lenses and a filter, down to the 3.2-gigapixel focal plane'],
 ];
 
 // Scene 2: each part slides in along the optical axis from `dz` metres away (OCS z: + = towards
@@ -158,8 +161,12 @@ type Key = { t: number; f: 'cam' | 'mid' | 'ota'; pos: [number, number, number];
 // opening: the camera lies horizontally, its axis along the width of the frame (L1 on the right,
 // the standby socket on top), then turns upright about its middle before the descent
 const OPENING: Key[] = [
-  { t: 0, f: 'mid', pos: [3.3, 0.7, -0.6], tgt: [0, 0.05, -0.45] },
-  { t: 8.8, f: 'mid', pos: [3.1, 0.8, 0.4], tgt: [0, 0.05, -0.45] },
+  // plan 1: front view of the filter, as the default view of the filter-exchange page
+  // (in the camera's own frame: ocs(1.55, 1.15, 2.05) looking at ocs(0, 0.08, 4.7)), slowly closer
+  { t: 0, f: 'cam', pos: [1.78, 1.65, -1.31], tgt: [0, 4.7, -0.08] },
+  { t: 9, f: 'cam', pos: [1.55, 2.05, -1.15], tgt: [0, 4.7, -0.08] },
+  // plan 2: turn round to the side view, the camera's axis along the width of the frame
+  { t: 10.5, f: 'mid', pos: [3.6, 0.9, 0.2], tgt: [0, 0.05, -0.45] },
   { t: 11.8, f: 'mid', pos: [5.6, 1.0, -1.4], tgt: [0, 0, -0.9] },
   { t: 14.6, f: 'mid', pos: [6.4, 1.3, 0.5], tgt: [0, 0, 0.8] },
   { t: 17.6, f: 'mid', pos: [5.4, 1.2, -0.4], tgt: [0, 0, 0] },
@@ -203,7 +210,7 @@ let fesClock = -1;
 function resetFES() {
   cam.state.shutterA = 1;
   cam.state.shutterB = 0;
-  cam.instantBeam('r');
+  cam.instantBeam(START_BAND);
   steps = cam.fes.stepsTo(BAND);
   stepStart = [];
   let s = 0;
@@ -308,7 +315,7 @@ function render(t: number) {
   const k = c ? c[2] : '';
   if (k !== captionKey) {
     captionKey = k;
-    caption.innerHTML = c ? `${c[2]}<small>${c[3]}</small>` : '';
+    caption.textContent = c ? c[2] : '';
   }
   caption.style.opacity = c ? String(Math.min(clamp01((t - c[0]) / 0.5), clamp01((c[1] - t) / 0.5))) : '0';
   clockEl.textContent = CAPTURE ? '' : `${t.toFixed(1)} s`;
