@@ -243,7 +243,9 @@ de la page télescope), puis plan quasi fixe jusqu'à la fin.
 - **D8 — Diffusion sur le site** : réglée, option (c). Un extrait court en boucle (voir D7) en tête
   de la page d'accueil, plus une carte vers la page `film/`. Celle-ci joue le film complet en vidéo
   (WebM AV1, MP4 en secours, image d'attente), avec un lien vers la version 3D en direct. Les
-  fichiers vont dans `public/`, servis par GitHub Pages.
+  vidéos sont hébergées hors du dépôt (pour ne pas alourdir l'historique git) ; la page n'en
+  connaît que les adresses, réunies en un seul endroit. Les images d'attente (~100 Ko) restent
+  dans `public/`.
 - **D8a — Place sur l'accueil** : réglée. Bandeau large sous le texte d'introduction, au-dessus des
   cartes ; carte « The film » en première position.
 - **D8b — Comportement** : réglée. Lecture automatique, sans son, en boucle ; image fixe seule si
