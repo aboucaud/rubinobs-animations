@@ -23,3 +23,19 @@ a.card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,.22);
 .card.soon { opacity: .72; }
 footer { margin-top: 48px; font-size: 13px; color: #7f8ba3; }
 footer a { color: #a9c1ff; }
+
+/* home-page loop of the film (storyboard D7/D8): muted, looping, poster only with reduced motion */
+.teaser { position: relative; display: block; margin: 0 0 28px; border-radius: 16px; overflow: hidden; aspect-ratio: 16 / 9;
+  background: #000; border: 1px solid rgba(255,255,255,.08); }
+.teaser video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.teaser-label { position: absolute; right: 14px; bottom: 12px; padding: 6px 12px; border-radius: 999px; font-size: 14px; font-weight: 600;
+  color: #fff; background: rgba(5,7,13,.6); backdrop-filter: blur(4px); transition: background .2s; }
+.teaser:hover .teaser-label { background: rgba(40,70,140,.75); }
+.tag.video { background: rgba(140,170,255,.16); color: #a9c1ff; }
+
+/* film page */
+.back { margin: 0 0 18px; font-size: 14px; }
+.back a, .film-links a { color: #a9c1ff; }
+.film { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 12px; }
+.film-links { margin: 14px 0 0; font-size: 15px; color: #8f9bb3; }
+.film-links span { margin-left: 6px; }

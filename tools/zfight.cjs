@@ -16,7 +16,7 @@ if (!times.length) times.push(6, 18, 30);
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const p = await b.newPage({ viewport: { width: 640, height: 360 } });
   p.on('pageerror', (e) => console.error('page error:', e.message));
-  await p.goto('http://localhost:5173/film/?capture&notext');
+  await p.goto('http://localhost:5173/film/3d/?capture&notext');
   await p.waitForFunction(() => window.__film && window.__film.ready, null, { timeout: 300000 });
   for (const t of times) {
     const res = await p.evaluate((t) => {
