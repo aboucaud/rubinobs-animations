@@ -4,15 +4,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Rubin Observatory — interactive animations</title>
-  <meta name="description" content="Interactive, physically accurate animations of the Vera C. Rubin Observatory, the Simonyi Survey Telescope and the LSST Camera." />
+  <meta name="description" content="Interactive, physically accurate animations of the NSF–DOE Vera C. Rubin Observatory, the Simonyi Survey Telescope and the LSST Camera." />
   <link rel="stylesheet" href="/src/landing.css" />
 </head>
 <body>
   <main>
     <header class="hero">
-      <p class="kicker">Vera C. Rubin Observatory · Cerro Pachón, Chile</p>
+      <p class="kicker">NSF–DOE Vera C. Rubin Observatory · Cerro Pachón, Chile</p>
       <h1>Follow the light</h1>
       <p class="lede">Interactive 3D animations of the Simonyi Survey Telescope and the LSST Camera. Every ray you see is computed live from the telescope's real optical design, from the night sky down to the 3.2-gigapixel camera.</p>
+      <p class="actions">
+        <a class="button primary" href="./film/index.html">Watch the film · 47 s</a>
+        <a class="button" href="#explore">Explore in 3D ↓</a>
+      </p>
     </header>
 
     <a class="teaser" href="./film/index.html">
@@ -20,59 +24,48 @@
       <span class="teaser-label">Watch the film · 47 s →</span>
     </a>
 
-    <section class="grid">
-      <a class="card" href="./film/index.html">
-        <div class="thumb" style="background-image:url('./thumbs/film.jpg')"></div>
-        <div class="body">
-          <span class="tag video">Film</span>
-          <h2>From the filter to the stars</h2>
-          <p>A 47-second film: a filter change, the camera built around it and installed on the telescope, then starlight followed all the way down to the focal plane.</p>
-        </div>
-      </a>
-      <a class="card" href="./telescope/index.html">
-        <div class="thumb" style="background-image:url('./thumbs/telescope.jpg')"></div>
-        <div class="body">
-          <span class="tag live">Live</span>
-          <h2>The Simonyi Survey Telescope</h2>
-          <p>Starlight bounces off three mirrors and crosses three lenses before landing on a single CCD. Choose a filter, move the star across the 3.5° field and watch where its light ends up.</p>
-        </div>
-      </a>
-      <a class="card" href="./camera/index.html">
-        <div class="thumb" style="background-image:url('./thumbs/camera.jpg')"></div>
-        <div class="body">
-          <span class="tag live">Live</span>
-          <h2>Inside the LSST Camera</h2>
-          <p>Take apart the largest astronomical camera ever built. Swap filters with the carousel and autochanger, open the shutter, and watch a 30-second exposure build up and read out.</p>
-        </div>
-      </a>
-      <a class="card" href="./filters/index.html">
-        <div class="thumb" style="background-image:url('./thumbs/filters.jpg')"></div>
-        <div class="body">
-          <span class="tag live">Live</span>
-          <h2>The filter exchange system</h2>
-          <p>Five 75 cm filters, a carousel and an autochanger squeezed inside the camera. Watch a complete filter change step by step, with the real timings of the system built by IN2P3/CNRS.</p>
-        </div>
-      </a>
-      <a class="card" href="./observatory/index.html">
-        <div class="thumb" style="background-image:url('./thumbs/observatory.jpg')"></div>
-        <div class="body">
-          <span class="tag live">Live</span>
-          <h2>The observatory &amp; the dome</h2>
-          <p>The summit of Cerro Pachón from day to night. Open the 30 m dome, then start the survey: the telescope hops from field to field while the slower dome turns to keep up.</p>
-        </div>
-      </a>
-      <div class="card soon">
-        <div class="thumb placeholder"><span>Coming soon</span></div>
-        <div class="body">
-          <span class="tag">Planned</span>
-          <h2>A night of the survey</h2>
-          <p>Slew, settle, expose, read out, repeat: about 1,000 images a night that map the whole southern sky every few nights.</p>
-        </div>
+    <section id="explore">
+      <h2 class="section-title">Follow the light, step by step</h2>
+      <p class="section-lede">From the summit of Cerro Pachón down to the sensors, in the order the light travels.</p>
+      <div class="grid">
+        <a class="card" href="./observatory/index.html">
+          <div class="thumb" style="background-image:url('./thumbs/observatory.jpg')"></div>
+          <div class="body">
+            <span class="step">1</span>
+            <h3>The observatory &amp; the dome</h3>
+            <p>The summit of Cerro Pachón from day to night. Open the 30 m dome, then start the survey: the telescope hops from field to field while the slower dome turns to keep up.</p>
+          </div>
+        </a>
+        <a class="card" href="./telescope/index.html">
+          <div class="thumb" style="background-image:url('./thumbs/telescope.jpg')"></div>
+          <div class="body">
+            <span class="step">2</span>
+            <h3>The Simonyi Survey Telescope</h3>
+            <p>Starlight bounces off three mirrors and crosses three lenses before landing on a single CCD. Choose a filter, move the star across the 3.5° field and watch where its light ends up.</p>
+          </div>
+        </a>
+        <a class="card" href="./camera/index.html">
+          <div class="thumb" style="background-image:url('./thumbs/camera.jpg')"></div>
+          <div class="body">
+            <span class="step">3</span>
+            <h3>Inside the LSST Camera</h3>
+            <p>Take apart the largest astronomical camera ever built. Swap filters with the carousel and autochanger, open the shutter, and watch a 30-second exposure build up and read out.</p>
+          </div>
+        </a>
+        <a class="card" href="./filters/index.html">
+          <div class="thumb" style="background-image:url('./thumbs/filters.jpg')"></div>
+          <div class="body">
+            <span class="step">4</span>
+            <h3>The filter exchange system</h3>
+            <p>Five 75 cm filters, a carousel and an autochanger squeezed inside the camera. Watch a complete filter change step by step, with the real timings of the system built by IN2P3/CNRS.</p>
+          </div>
+        </a>
       </div>
+      <p class="next"><b>Next:</b> a night of the survey. Slew, settle, expose, read out, repeat: about 1,000 images a night that map the whole southern sky every few nights.</p>
     </section>
 
     <footer>
-      <p>Optical design from the Rubin <a href="https://github.com/jmeyers314/batoid">batoid</a> models; focal-plane layout from <a href="https://github.com/lsst/obs_lsst">obs_lsst</a>. Mechanical parts marked as schematic are approximations. Not an official Rubin Observatory product.</p>
+      <p>Optical design from the Rubin <a href="https://github.com/jmeyers314/batoid">batoid</a> models; focal-plane layout from <a href="https://github.com/lsst/obs_lsst">obs_lsst</a>. Work in progress: mechanical parts marked as schematic are approximations. Not an official Rubin Observatory product.</p>
       <p><a href="https://github.com/aboucaud/rubinobs-animations">Source on GitHub</a></p>
     </footer>
   </main>

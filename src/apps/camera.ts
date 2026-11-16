@@ -273,7 +273,7 @@ function goView(name: string) {
   gui.controllersRecursive().forEach((c) => c.updateDisplay());
 }
 
-const gui = createGui('LSSTCam');
+const gui = createGui('LSST Camera');
 addChips(gui, 'Views', Object.keys(VIEWS), goView);
 const fo = gui.addFolder('Display');
 fo.add(state, 'cutaway').name('Cutaway');
