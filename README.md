@@ -7,7 +7,7 @@ Interactive, physically accurate outreach animations of the Vera C. Rubin Observ
 ## Stack
 
 - [Three.js](https://threejs.org) (WebGL 2) + TypeScript, built with [Vite](https://vitejs.dev) into a static site
-- lil-gui controls, bloom post-processing for the light rays
+- lil-gui controls; no glow or bloom effect (project rule): stars and light spots are flat, sharp discs
 
 ## Physics
 

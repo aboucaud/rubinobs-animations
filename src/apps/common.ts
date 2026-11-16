@@ -1,11 +1,10 @@
 // Boilerplate shared by every animation page: renderer, scene, camera, orbit controls,
-// post-processing, clickable 3D labels, camera fly-to tweens and the viewer-facing cutaway plane.
+// output pass (tone mapping, sRGB), clickable 3D labels, camera fly-to tweens and the viewer-facing cutaway plane.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import GUI from 'lil-gui';
 import '../style.css';
@@ -47,8 +46,6 @@ export interface ViewerOptions {
   background?: THREE.ColorRepresentation;
   /** studio-like reflections for metal and glass (RoomEnvironment), with this intensity */
   roomEnvironment?: number;
-  /** bloom: [strength, radius, threshold] */
-  bloom?: [number, number, number];
   logarithmicDepthBuffer?: boolean;
 }
 
@@ -80,8 +77,6 @@ export function createViewer(o: ViewerOptions) {
 
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = o.bloom ? new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), ...o.bloom) : null;
-  if (bloom) composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
   const onResize: (() => void)[] = [];
@@ -93,7 +88,7 @@ export function createViewer(o: ViewerOptions) {
     for (const f of onResize) f();
   });
 
-  return { canvas, renderer, scene, camera, controls, composer, bloom, onResize };
+  return { canvas, renderer, scene, camera, controls, composer, onResize };
 }
 
 // ---------------------------------------------------------------- labels
@@ -227,21 +222,18 @@ export function faceCutPlane(plane: THREE.Plane, root: THREE.Object3D, camera: T
   plane.constant = offset - plane.normal.dot(_o);
 }
 
-/** Radial glow sprite texture (shared). */
-let glow: THREE.Texture | null = null;
-export function glowTexture() {
-  if (glow) return glow;
+/** Flat, sharp-edged disc sprite texture (shared): stars and light spots, with no glow halo. */
+let dot: THREE.Texture | null = null;
+export function dotTexture() {
+  if (dot) return dot;
   const c = document.createElement('canvas');
-  c.width = c.height = 128;
+  c.width = c.height = 64;
   const g = c.getContext('2d')!;
-  const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  grd.addColorStop(0, 'rgba(255,255,255,1)');
-  grd.addColorStop(0.15, 'rgba(255,255,255,0.6)');
-  grd.addColorStop(0.5, 'rgba(255,255,255,0.08)');
-  grd.addColorStop(1, 'rgba(255,255,255,0)');
-  g.fillStyle = grd;
-  g.fillRect(0, 0, 128, 128);
-  glow = new THREE.CanvasTexture(c);
-  glow.colorSpace = THREE.SRGBColorSpace;
-  return glow;
+  g.fillStyle = '#fff';
+  g.beginPath();
+  g.arc(32, 32, 30, 0, Math.PI * 2);
+  g.fill();
+  dot = new THREE.CanvasTexture(c);
+  dot.colorSpace = THREE.SRGBColorSpace;
+  return dot;
 }
