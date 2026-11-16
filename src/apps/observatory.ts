@@ -323,7 +323,12 @@ const LABELS: L[] = [
   { title: 'Auxiliary Telescope', text: 'A 1.2 m telescope on its own hill. It takes spectra of bright stars all night to measure how much the atmosphere dims each colour.', pos: new THREE.Vector3(68.7, 4, -115.8), parent: obs.root },
   { title: 'Simonyi Survey Telescope', text: '8.4 m primary mirror, 350 t moving mass. It slews 3.5° and settles in about 5 s, then takes a 30 s exposure, around 1,000 times a night.', pos: new THREE.Vector3(0, 10, 0), parent: tel.ota },
 ];
-const updateLabels = createLabels(LABELS, camera, controls, { defaultParent: obs.root, short: false, visible: (_l, d, camD) => d < 1.7 * camD + 20 });
+const updateLabels = createLabels(LABELS, camera, controls, {
+  defaultParent: obs.root,
+  short: false,
+  rank: ['Simonyi Survey Telescope', 'Auxiliary Telescope', 'Service & operations building', 'Lower enclosure'],
+  visible: (_l, d, camD) => d < 1.7 * camD + 20,
+});
 
 // ---------------------------------------------------------------- HUD & bar
 const info = document.getElementById('info')!;

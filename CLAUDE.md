@@ -82,6 +82,12 @@ the filter during an exchange.)
 **Pitfall: labels only touch the DOM when their visibility changes** (`createLabels` in
 `common.ts`). Any per-element cached state must start consistent with the DOM (labels start hidden).
 
+**Labels never overlap** (`createLabels`): every frame they are placed in the page's `rank` order
+(ids, or titles for labels without an id; unlisted ones follow) and a label whose box would overlap
+one already placed is skipped; phones show at most 6. A new label should be added to its page's
+`rank` where it belongs in importance. Occlusion by raycasting was tried and rejected: 10–40 ms per
+ray against the merged meshes (it would need a BVH, e.g. three-mesh-bvh).
+
 **Measured effect** (software WebGL, so only draw calls and memory are meaningful):
 draw calls per frame telescope 1978 → 298, camera 1200 → 260, filters 1051 → 187,
 observatory 2564 → 658; peak JS heap during a dense ray-slider sweep 55.7 → ~24 MB.

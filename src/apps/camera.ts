@@ -189,6 +189,7 @@ function filterSteps(target: Band | null): Step[] {
 // ---------------------------------------------------------------- labels
 const updateLabels = createLabels(cam.labels, camera, controls, {
   defaultParent: cam.group,
+  rank: ['L1', 'L2', 'L3', 'filter', 'shutter', 'fp', 'body', 'cryostat', 'rafts', 'carousel', 'autochanger', 'hexapod', 'trunk', 'drive', 'rails', 'carrier', 'online'],
   visible: (l, dist, camD) => (l.parent ?? cam.group).visible && dist < 1.6 * camD + 0.4,
 });
 
