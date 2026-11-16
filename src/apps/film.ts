@@ -29,7 +29,7 @@ const END_CARD = {
   title: 'Vera C. Rubin Observatory',
   subtitle: 'Interactive animations of the Simonyi Survey Telescope and the LSST Camera',
   url: 'aboucaud.github.io/rubinobs-animations',
-  credit: 'Animation: Alexandre Boucaud', // small, at the bottom of the card
+  credit: 'Animation: Alexandre Boucaud (CNRS, IN2P3)', // small, at the bottom of the card
 };
 
 // ---------------------------------------------------------------- scene (as on the telescope page)
