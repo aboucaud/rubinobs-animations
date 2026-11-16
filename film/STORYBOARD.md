@@ -230,8 +230,8 @@ de la page télescope), puis plan quasi fixe jusqu'à la fin.
 - **D4 — Titres** : réglée. Anglais seulement pour l'instant (traduction plus tard, avec le site).
   Textes validés (`CAPTIONS` dans `film.ts`), police un peu plus grande (3,1 % de la hauteur) :
   1. The LSSTCam filter changer swaps the g filter for r (10× faster than reality)
-  2. It is well integrated into the biggest CCD camera in the world
-  3. LSSTCam is installed on the Simonyi telescope with its 8.4m main mirror
+  2. It sits inside the largest digital camera ever built for astronomy
+  3. LSSTCam is installed on the Simonyi telescope with its 8.4 m main mirror
   4. Let’s follow light coming from a star, bouncing off the three mirrors
   5. …then through the lenses and filter, down to the 3.2-gigapixel focal plane
 - **D5 — Début et fin** : réglée. Pas de carton au début. Carton final de 3 s (fondu enchaîné de

@@ -162,8 +162,8 @@ const CAM_CENTRE = 5.25; // OCS z of the middle of the camera: pivot when it tur
 // titles, shown alone at the top of the frame (storyboard v2)
 const CAPTIONS: [number, number, string][] = [
   [0, 9.2, 'The LSSTCam filter changer swaps the g filter for r (10× faster than reality)'],
-  [9.2, 20, 'It is well integrated into the biggest CCD camera in the world'],
-  [20, 28, 'LSSTCam is installed on the Simonyi telescope with its 8.4m main mirror'],
+  [9.2, 20, 'It sits inside the largest digital camera ever built for astronomy'],
+  [20, 28, 'LSSTCam is installed on the Simonyi telescope with its 8.4 m main mirror'],
   [28, 34.5, 'Let’s follow light coming from a star, bouncing off the three mirrors'],
   [34.5, 44, '…then through the lenses and filter, down to the 3.2-gigapixel focal plane'],
 ];
