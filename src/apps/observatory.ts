@@ -6,7 +6,7 @@ import { buildAzimuth, AXIS_HEIGHT } from '../scene/mount';
 import { RayBundle } from '../scene/rays';
 import { buildObservatory, SITE, domeCut, terrainHeight } from '../scene/observatory';
 import { buildHuman, HUMAN_MAT } from '../scene/human';
-import { CameraTween, createLabels, createViewer, createGui } from './common';
+import { CameraTween, createLabels, createViewer, createGui, addChips } from './common';
 
 const TIME_SCALE = 6; // animation runs 6× faster than reality during the survey
 
@@ -416,14 +416,13 @@ function goView(name: string) {
   gui.controllersRecursive().forEach((c) => c.updateDisplay());
 }
 const gui = createGui('Observatory');
-const fv = gui.addFolder('Views');
-for (const k of Object.keys(VIEWS)) fv.add({ [k]: () => goView(k) }, k);
+addChips(gui, 'Views', Object.keys(VIEWS), goView);
 const fd = gui.addFolder('Display');
-fd.add(state, 'cutaway').name('cut the dome open');
-fd.add(state, 'labels').name('labels');
+fd.add(state, 'cutaway').name('Cut the dome open');
+fd.add(state, 'labels').name('Labels');
 const fp = gui.addFolder('Pointing (when not surveying)');
-fp.add(state, 'manualEl', 15, 90, 0.5).name('elevation (°)');
-fp.add(state, 'manualAz', -270, 270, 1).name('azimuth (°)');
+fp.add(state, 'manualEl', 15, 90, 0.5).name('Elevation (°)');
+fp.add(state, 'manualAz', -270, 270, 1).name('Azimuth (°)');
 
 // ---------------------------------------------------------------- loop
 const clock = new THREE.Clock();

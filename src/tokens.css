@@ -1,0 +1,19 @@
+/* Shared design tokens (landing page and animation pages). One accent, Rubin teal, for every
+   control; the band colours (bands.ts) are kept for light and filters, where they carry meaning. */
+@import '@fontsource-variable/inter';
+
+:root {
+  color-scheme: dark;
+  --font: 'Inter Variable', system-ui, -apple-system, sans-serif;
+  --bg: #05070d;
+  --text: #e8ecf2;
+  --muted: #a9b4c6;
+  --panel: rgba(8, 12, 22, 0.8);
+  --border: rgba(255, 255, 255, 0.1);
+  --accent: #2e7f82; /* Rubin teal (PALETTE.rubinTeal): white text on it is 4.6:1 */
+  --accent-hi: #45a3a6;
+  --accent-text: #7fd0d3; /* teal for text and lines on dark panels */
+  --done: #3fb37f;
+  --radius: 10px;
+  --radius-sm: 8px;
+}

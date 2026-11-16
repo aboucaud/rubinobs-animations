@@ -8,7 +8,7 @@ import { RayBuilder, RayBundle, RayData, rayBytes, TraceCache } from '../scene/r
 import { ocs, ocsv } from '../scene/util';
 import { LAYOUT, ccdAt } from '../scene/focalplane';
 import { buildHuman } from '../scene/human';
-import { CameraTween, createLabels, createViewer, faceCutPlane, dotTexture, createGui } from './common';
+import { CameraTween, createLabels, createViewer, faceCutPlane, dotTexture, createGui, addChips } from './common';
 
 // ---------------------------------------------------------------- renderer & scene
 const { renderer, scene, camera, controls, composer, onResize } = createViewer({
@@ -294,24 +294,26 @@ function goView(name: string) {
 // ---------------------------------------------------------------- GUI
 const gui = createGui('Simonyi Telescope');
 const fLight = gui.addFolder('Light');
-fLight.add(state, 'rings', 3, 14, 1).name('ray density').onChange(requestRetrace);
-fLight.add(state, 'speed', 0.2, 8, 0.1).name('light speed (m/s)').onChange(updateInfo);
-fLight.add(state, 'continuous').name('continuous light');
-fLight.add(state, 'showPaths').name('show full paths');
-fLight.add({ fire: () => ((state.continuous = false), (head = 0), gui.controllersRecursive().forEach((c) => c.updateDisplay())) }, 'fire').name('▶ send one wavefront');
-const fView = gui.addFolder('View');
-for (const k of Object.keys(VIEWS)) fView.add({ [k]: () => goView(k) }, k);
-fView.add(state, 'cutaway').name('cutaway');
-fView.add(state, 'labels').name('labels');
-fView.add(state, 'mount').name('mount & structure');
+fLight.add(state, 'rings', 3, 14, 1).name('Ray density').onChange(requestRetrace);
+fLight.add(state, 'speed', 0.2, 8, 0.1).name('Light speed (m/s)').onChange(updateInfo);
+fLight.add(state, 'continuous').name('Continuous light');
+fLight.add(state, 'showPaths').name('Full light paths');
+fLight.add({ fire: () => ((state.continuous = false), (head = 0), gui.controllersRecursive().forEach((c) => c.updateDisplay())) }, 'fire').name('Send one wavefront');
+addChips(gui, 'Views', Object.keys(VIEWS), goView);
+const fView = gui.addFolder('Display');
+fView.add(state, 'cutaway').name('Cutaway');
+fView.add(state, 'labels').name('Labels');
+fView.add(state, 'mount').name('Mount & structure');
 const fPoint = gui.addFolder('Pointing');
 // preset pointings: the elevation slider glides to the target (ease in-out); dragging it cancels
 const POINTINGS: Record<string, number> = { Zenith: 90, '35° elevation': 35, Horizon: 0 };
 let slew: { from: number; to: number; t: number; dur: number } | null = null;
-fPoint.add(state, 'elevation', 0, 90, 0.5).name('elevation (°)').onChange(() => (slew = null));
-fPoint.add(state, 'azimuth', -270, 270, 1).name('azimuth (°)');
-for (const [name, el] of Object.entries(POINTINGS))
-  fPoint.add({ [name]: () => (slew = { from: state.elevation, to: el, t: 0, dur: 1 + Math.abs(el - state.elevation) / 30 }) }, name);
+fPoint.add(state, 'elevation', 0, 90, 0.5).name('Elevation (°)').onChange(() => (slew = null));
+fPoint.add(state, 'azimuth', -270, 270, 1).name('Azimuth (°)');
+addChips(fPoint, 'Presets', Object.keys(POINTINGS), (name) => {
+  const el = POINTINGS[name];
+  slew = { from: state.elevation, to: el, t: 0, dur: 1 + Math.abs(el - state.elevation) / 30 };
+});
 
 // ---------------------------------------------------------------- loop
 const clock = new THREE.Clock();

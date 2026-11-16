@@ -1,63 +1,86 @@
-html, body { margin: 0; height: 100%; overflow: hidden; background: #05070d; color: #e8ecf2;
-  font: 13px/1.4 "Inter", system-ui, -apple-system, sans-serif; }
+@import './tokens.css';
+
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+  font: 13px/1.4 var(--font); font-variant-numeric: tabular-nums; }
+/* a soft dark band at the top keeps the header readable over a bright scene (sunset sky, rays) */
+body::before { content: ""; position: fixed; inset: 0 0 auto 0; height: 120px; pointer-events: none; z-index: 1;
+  background: linear-gradient(rgba(5,7,13,.6), rgba(5,7,13,0)); }
 #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 header { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 14px; pointer-events: none; }
-header a.home { pointer-events: auto; color: #9fb4d8; text-decoration: none; font-size: 11px; display: inline-block; margin-bottom: 4px; }
+header a.home { pointer-events: auto; color: var(--accent-text); text-decoration: none; font-size: 12px; display: inline-block; margin-bottom: 4px; }
 header a.home:hover { color: #fff; }
 header h1 { margin: 0; font-size: 15px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
-header p { margin: 2px 0 0; font-size: 11px; opacity: .6; }
+header p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
 #info { position: fixed; left: 14px; top: calc(max(12px, env(safe-area-inset-top)) + 62px); max-width: 330px;
-  background: rgba(8,12,22,.72); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.08);
-  border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; font-size: 12px; }
+  background: var(--panel); backdrop-filter: blur(8px); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 12px; display: grid; gap: 4px; font-size: 12px; }
 #info .band { font-size: 22px; font-weight: 700; color: var(--c); display: flex; align-items: baseline; gap: 8px; }
-#info .band span { font-size: 11px; font-weight: 400; color: #c9d1dc; }
-#info .k { opacity: .65; font-size: 11px; }
+#info .band span { font-size: 12px; font-weight: 400; color: var(--muted); }
+#info .k { color: var(--muted); font-size: 12px; }
 #insetWrap { position: fixed; left: 14px; bottom: max(14px, env(safe-area-inset-bottom)); }
-#inset { width: 170px; height: 170px; display: block; cursor: crosshair; background: rgba(8,12,22,.72);
-  border-radius: 10px; border: 1px solid rgba(255,255,255,.08); }
-#insetWrap div { font-size: 10px; opacity: .6; margin-top: 4px; max-width: 170px; }
+#inset { width: 170px; height: 170px; display: block; cursor: crosshair; background: var(--panel);
+  border-radius: var(--radius); border: 1px solid var(--border); }
+#insetWrap div { font-size: 11px; color: var(--muted); margin-top: 4px; max-width: 170px; }
 #labels { position: fixed; inset: 0; pointer-events: none; }
 .label { position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; white-space: nowrap;
-  font: 600 11px/1 system-ui, sans-serif; color: #fff; background: rgba(10,16,30,.72);
+  font: 600 12px/1 var(--font); color: #fff; background: rgba(10,16,30,.78);
   border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 4px 8px; margin: -10px 0 0 8px; }
 .label::before { content: ""; position: absolute; left: -9px; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
 /* right part of the screen: the label opens to the left of its dot (set by createLabels) */
 .label.flip { translate: -100% 0; margin-left: -8px; }
 .label.flip::before { left: auto; right: -9px; }
 #tip { position: fixed; right: 14px; bottom: max(14px, env(safe-area-inset-bottom)); max-width: 320px; display: none;
-  background: rgba(8,12,22,.9); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 10px 12px; }
+  background: rgba(8,12,22,.92); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
 #tip.show { display: block; }
-#tip p { margin: 6px 0 0; opacity: .85; }
-.lil-gui.lil-root { top: max(10px, env(safe-area-inset-top)); right: 10px; }
+#tip p { margin: 6px 0 0; color: #d3dae5; }
+/* settings panel (lil-gui), themed to match the panels */
+.lil-gui { --font-family: var(--font); --font-size: 12px; --input-font-size: 12px; --padding: 6px; --widget-height: 24px;
+  --widget-border-radius: 6px; --background-color: rgba(8,12,22,.86); --title-background-color: rgba(4,7,14,.9);
+  --text-color: var(--text); --title-text-color: #fff; --widget-color: rgba(255,255,255,.08); --hover-color: rgba(255,255,255,.14);
+  --focus-color: rgba(255,255,255,.22); --number-color: var(--accent-text); }
+.lil-gui.lil-root { top: max(10px, env(safe-area-inset-top)); right: 10px; border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; backdrop-filter: blur(8px); }
+.lil-gui .lil-title { font-weight: 600; }
+.lil-gui input[type=checkbox] { accent-color: var(--accent); }
+/* views and presets as a row of chips (addChips in common.ts); the last one picked is teal */
+.lil-gui.chips > .lil-children { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; }
+.lil-gui.chips > .lil-children > .lil-controller { margin: 0; padding: 0; }
+.lil-gui.chips > .lil-children > .lil-controller button { width: auto; padding: 0 9px; white-space: nowrap; }
+.lil-gui.chips > .lil-children > .lil-controller.on button { background: var(--accent); }
 /* panels stay above the 3D labels */
 #labels { z-index: 1; }
 header, #info, #steps, #bar, #insetWrap { z-index: 2; }
 #tip { z-index: 3; }
-#info .seq { margin-top: 4px; padding: 6px 8px; border-radius: 8px; background: rgba(90,180,255,.1); border: 1px solid rgba(90,180,255,.25); }
-#info .clock { font-variant-numeric: tabular-nums; opacity: .75; font-size: 11px; margin-top: 2px; }
+#info .seq { margin-top: 4px; padding: 6px 8px; border-radius: var(--radius-sm); background: rgba(46,127,130,.18); border: 1px solid rgba(127,208,211,.3); }
+#info .clock { color: var(--muted); font-size: 12px; margin-top: 2px; }
 #bar { position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content; bottom: max(14px, env(safe-area-inset-bottom));
   display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; max-width: calc(100vw - 28px);
-  background: rgba(8,12,22,.78); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 8px 10px; }
-#bar button { font: 600 13px system-ui, sans-serif; color: #fff; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.18);
-  border-radius: 8px; padding: 7px 11px; cursor: pointer; }
-#bar button[data-band] { color: var(--c); min-width: 34px; }
-#bar button.active { background: color-mix(in srgb, var(--c) 25%, transparent); border-color: var(--c); color: #fff; }
-#bar button.primary { background: #2a6df0; border-color: #4d86ff; }
-#bar button:disabled { opacity: .35; cursor: default; }
-#bar .sep { font-size: 11px; opacity: .6; margin-left: 6px; }
-#bar .slider { font-size: 11px; opacity: .85; display: flex; align-items: center; gap: 6px; margin-left: 6px; }
+  background: var(--panel); backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; }
+#bar button { --c: #c9d1dc; font: 600 13px var(--font); color: #fff; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.18);
+  border-radius: var(--radius-sm); padding: 7px 11px; cursor: pointer; }
+#bar button:hover:not(:disabled) { background: rgba(255,255,255,.12); }
+#bar button.primary { background: var(--accent); border-color: var(--accent-hi); }
+#bar button.primary:hover:not(:disabled) { background: var(--accent-hi); }
+/* filter buttons, three states: available (band-coloured letter and outline), in the beam (filled
+   with the band colour, never dimmed), not possible now (dashed and muted) */
+#bar button[data-band] { color: var(--c); min-width: 34px; border-color: color-mix(in srgb, var(--c) 50%, transparent); }
+#bar button.active, #bar button.active:disabled { background: var(--c); border-color: var(--c); color: #0a0e18; opacity: 1; }
+#bar button:disabled { opacity: .4; cursor: default; border-style: dashed; }
+#bar .sep { font-size: 12px; color: var(--muted); margin-left: 6px; }
+#bar .slider { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-left: 6px; }
+#bar input[type=range] { accent-color: var(--accent-hi); }
 #bar input[type=range] { width: 110px; }
 #steps { position: fixed; left: 14px; top: calc(max(12px, env(safe-area-inset-top)) + 190px); width: 300px; max-height: calc(100vh - 330px); overflow: auto;
-  background: rgba(8,12,22,.72); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 8px 10px; font-size: 12px; }
+  background: var(--panel); backdrop-filter: blur(8px); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; font-size: 12px; }
 #steps:empty { display: none; }
 #steps .step { padding: 5px 0 5px 10px; border-left: 2px solid rgba(255,255,255,.12); opacity: .55; }
 #steps .step .t { float: right; opacity: .7; font-variant-numeric: tabular-nums; }
-#steps .step.done { opacity: .8; border-left-color: #3fb37f; }
-#steps .step.now { opacity: 1; border-left-color: #5aa8ff; }
-#steps .step p { margin: 4px 0 0; opacity: .85; font-size: 11.5px; line-height: 1.4; }
+#steps .step.done { opacity: .8; border-left-color: var(--done); }
+#steps .step.now { opacity: 1; border-left-color: var(--accent-text); }
+#steps .step p { margin: 4px 0 0; color: #d3dae5; font-size: 12px; line-height: 1.4; }
 #info .bar { height: 4px; background: rgba(255,255,255,.12); border-radius: 2px; margin-top: 5px; overflow: hidden; }
-#info .bar i { display: block; height: 100%; background: #5aa8ff; }
-#bar select { background: rgba(255,255,255,.08); color: #fff; border: 1px solid rgba(255,255,255,.2); border-radius: 6px; padding: 4px; }
+#info .bar i { display: block; height: 100%; background: var(--accent-text); }
+#bar select { background: rgba(255,255,255,.08); color: #fff; font: 13px var(--font); border: 1px solid rgba(255,255,255,.2); border-radius: 6px; padding: 4px; }
 
 /* ---------------------------------------------------------------- phones
    body.phone is set by initPhoneLayout (common.ts) for narrow (portrait) or short (landscape)
@@ -72,13 +95,13 @@ body.phone .lil-gui.lil-root.lil-closed { width: auto; }
 body.phone #info { top: calc(max(12px, env(safe-area-inset-top)) + 42px); max-width: min(330px, calc(100vw - 28px));
   font-size: 11px; padding: 6px 10px; cursor: pointer; }
 body.phone #info .band { font-size: 17px; }
-body.phone #info .band::after { content: "▸ more"; margin-left: auto; padding-left: 8px; font-size: 10px; font-weight: 400; color: #c9d1dc; opacity: .7; }
+body.phone #info .band::after { content: "▸ more"; margin-left: auto; padding-left: 8px; font-size: 11px; font-weight: 400; color: var(--muted); }
 body.phone #info.open .band::after { content: "▾ less"; }
 body.phone #info:not(.open) > :not(.band):not(.key) { display: none; }
 body.phone #inset { width: 120px; height: 120px; }
 body.phone #insetWrap div { max-width: 120px; }
 body.phone #bar { gap: 4px; padding: 6px; }
-body.phone #bar button { padding: 6px 8px; font-size: 12px; }
+body.phone #bar button { padding: 6px 8px; font-size: 12px; min-height: 36px; }
 body.phone #bar .sep { display: none; }
 body.phone #bar input[type=range] { width: 80px; }
 /* panels that sit just above the bottom bar (--bar-h is kept up to date by initPhoneLayout) */
@@ -87,7 +110,7 @@ body.phone #steps { left: 14px; right: 14px; width: auto; max-height: 22vh; }
 body.phone #steps .step:not(.now) { display: none; }
 body.phone #steps:not(:has(.now, .k)) { display: none; }
 body.phone #tip { max-width: min(320px, calc(100vw - 28px)); }
-body.phone .label { font-size: 10px; padding: 3px 6px; }
+body.phone .label { font-size: 11px; padding: 3px 6px; }
 @media (orientation: landscape) {
   /* landscape phone: one row of buttons that scrolls sideways */
   body.phone #bar { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; }
