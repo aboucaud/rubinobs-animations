@@ -346,7 +346,7 @@ export function buildTelescope(rubin: Rubin): Telescope {
   groups.filter = camModel.parts.filters;
   groups.carousel = camModel.parts.carousel;
   groups.focalPlane = camModel.parts.focalPlane;
-  L('camera', 'LSSTCam', 'The largest digital camera ever built for astronomy: 3.2 gigapixels, 1.65 m wide, 3.7 m long, 3 t. It hangs upside-down in the middle of the telescope, through the hole in M2.', ocs(0.8, 0, 6.2));
+  L('camera', 'LSST Camera', 'The largest digital camera ever built for astronomy: 3.2 gigapixels, 1.65 m wide, 3.7 m long, 3 t. It hangs upside-down in the middle of the telescope, through the hole in M2.', ocs(0.8, 0, 6.2));
   L('fp', 'Focal plane', '189 science CCDs in 21 rafts + 4 corner rafts for guiding and wavefront sensing. 64 cm across, flat to < 10 µm, kept at −100 °C.', ocs(-0.3, 0, zDet));
 
   return { ota, labels, filter, setBand: buildFilter, groups, cam: camModel };

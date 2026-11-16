@@ -195,6 +195,9 @@ const updateLabels = createLabels(tel.labels, camera, controls, {
 
 // ---------------------------------------------------------------- info panel & focal-plane inset
 const info = document.getElementById('info')!;
+/** metres → millimetres with one decimal, never "-0.0" */
+const mm = (m: number) => (Math.abs(m) < 5e-5 ? '0.0' : (m * 1e3).toFixed(1));
+
 function updateInfo() {
   const b = BAND_INFO[BAND];
   const ccd = ccdAt(landing.x, landing.y);
@@ -208,7 +211,7 @@ function updateInfo() {
   info.innerHTML = `
     <div class="band" style="--c:${BAND_HEX[BAND]}">${BAND}<span>${b.range} · ${b.note}${b.falseColour ? ' (false colour)' : ''}</span></div>
     <div>Star at <b>${state.fieldAngle.toFixed(2)}°</b> from the centre of the field</div>
-    <div>Lands at <b>${(landing.x * 1e3).toFixed(1)}, ${(landing.y * 1e3).toFixed(1)} mm</b> (r = ${(r * 1e3).toFixed(1)} mm)</div>
+    <div>Lands at <b>${mm(landing.x)}, ${mm(landing.y)} mm</b> (r = ${mm(r)} mm)</div>
     <div>Sensor: <b>${ccd ? `${ccd.raft} ${ccd.ccd}` : 'gap between CCDs'}</b></div>
     <div>Rays reaching detector: <b>${landing.ok}/${landing.total}</b>${blockedTxt ? ` <span class="k">blocked: ${blockedTxt}</span>` : ''}</div>
     <div class="k">Light needs ≈ ${travelNs} ns from the top of the telescope to the CCDs. Here it is slowed ≈ ${(299792458 / state.speed / 1e6).toFixed(0)} million ×.</div>`;
