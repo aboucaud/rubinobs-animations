@@ -9,6 +9,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto 0; height: 120px; p
 header { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 14px; pointer-events: none; }
 header a.home { pointer-events: auto; color: var(--accent-text); text-decoration: none; font-size: 12px; display: inline-block; margin-bottom: 4px; }
 header a.home:hover { color: #fff; }
+/* presentation mode button (initPresentation), next to the home link */
+#present { pointer-events: auto; margin-left: 12px; padding: 0; border: 0; background: none; cursor: pointer;
+  font: 12px var(--font); color: var(--accent-text); }
+#present:hover { color: #fff; }
+body.phone #present { display: none; }
 header h1 { margin: 0; font-size: 15px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
 header p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
 #info { position: fixed; left: 14px; top: calc(max(12px, env(safe-area-inset-top)) + 62px); max-width: 330px;
@@ -100,6 +105,14 @@ header, #info, #steps, #bar, #insetWrap, #hint { z-index: 2; }
 #info .bar { height: 4px; background: rgba(255,255,255,.12); border-radius: 2px; margin-top: 5px; overflow: hidden; }
 #info .bar i { display: block; height: 100%; background: var(--accent-text); }
 #bar select { background: rgba(255,255,255,.08); color: #fff; font: 13px var(--font); border: 1px solid rgba(255,255,255,.2); border-radius: 6px; padding: 4px; }
+
+/* ---------------------------------------------------------------- presentation mode
+   For a projector or a stand screen (initPresentation in common.ts): panels 1.4× larger, readable
+   from a few metres, and no settings menu (keys and the views tour replace it). */
+body.present .lil-gui.lil-root { display: none; }
+body.present :is(header, #info, #bar, #steps, #insetWrap, #tip, #hint) { zoom: 1.4; }
+body.present .label { font-size: 16px; padding: 6px 11px; }
+body.present .label::before { top: 11px; }
 
 /* ---------------------------------------------------------------- phones
    body.phone is set by initPhoneLayout (common.ts) for narrow (portrait) or short (landscape)

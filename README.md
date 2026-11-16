@@ -9,6 +9,7 @@ Interactive, physically accurate outreach animations of the Vera C. Rubin Observ
 - [Three.js](https://threejs.org) (WebGL 2) + TypeScript, built with [Vite](https://vitejs.dev) into a static site
 - lil-gui controls; no glow or bloom effect (project rule): stars and light spots are flat, sharp discs
 
+
 ## Physics
 
 Light paths come from a sequential ray tracer (`src/optics/`) driven by the Rubin optical prescription from [batoid](https://github.com/jmeyers314/batoid) (`LSST_{u,g,r,i,z,y}.yaml`). It handles conic and aspheric mirrors, refraction in fused silica (Sellmeier index), and the batoid LTS-213 baffle and spider obscurations. `tools/validate.ts` checks it against batoid reference traces: every test ray lands at the same position (0.000 nm error), the same rays are vignetted, and centroids agree in all six bands.
@@ -51,6 +52,14 @@ Tools (`tools/`):
 Project notes for contributors and Claude Code (conventions, the two rules to keep the optimisations working): `CLAUDE.md`.
 
 Shared modules: `src/optics/` (ray tracer), `src/scene/` (telescope, camera, filter exchanger, focal plane, observatory, rays, materials, band colours) and `src/apps/common.ts` (renderer, labels, camera tweens, cutaway plane).
+
+## Presentation mode (demonstrations)
+
+Add `?present` to a page's address (or click **⛶ Present**, or press **P**): larger panels readable from a
+few metres, no settings menu, full screen when started from the button or the key, and after 90 s without
+input the page tours its preset views until someone touches the screen. Keys, in both modes:
+**u g r i z y** choose a filter, **Space** starts the page's main action, **← →** change view,
+**F** full screen, **Esc** leaves the presentation mode.
 
 ## Performance
 

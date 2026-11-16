@@ -47,7 +47,104 @@ export function addChips(gui: GUI, title: string, names: string[], pick: (name: 
     ctrls.forEach((c, i) => c.domElement.classList.toggle('on', names[i] === k));
     pick(k);
   }
+  // the first chip set of a page (its views) is what the arrow keys and the presentation tour step through
+  if (!views) views = { names, mark, i: -1 };
   return f;
+}
+let views: { names: string[]; mark: (k: string) => void; i: number } | null = null;
+function stepView(d: number) {
+  if (!views) return;
+  const n = views.names.length;
+  views.i = (views.i + d + n) % n;
+  views.mark(views.names[views.i]);
+}
+
+/** Presentation tour: after this long without input, the views play in turn. */
+const IDLE_S = 90;
+const TOUR_STEP_S = 15;
+
+/**
+ * Presentation mode, for demonstrations on a projector or a stand screen (`?present`, the header
+ * button or P): larger panels, no settings menu, and after IDLE_S without input a tour of the
+ * views. Keys work in both modes: u g r i z y filters, Space the main action, ← → views,
+ * F full screen, P presentation, Esc leaves it.
+ */
+function initPresentation() {
+  const body = document.body;
+  const btn = document.createElement('button');
+  btn.id = 'present';
+  document.querySelector('header a.home')?.after(btn);
+  const hint = document.getElementById('hint');
+  let last = performance.now();
+  let touring = false;
+  let nextStep = 0;
+
+  function set(on: boolean) {
+    body.classList.toggle('present', on);
+    btn.textContent = on ? '✕ Exit presentation' : '⛶ Present';
+    stopTour();
+    // panel and label sizes change: let the layout code measure again
+    dispatchEvent(new Event('resize'));
+  }
+  function fullscreen(on: boolean) {
+    if (on && !document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+    if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  }
+  function stopTour() {
+    if (touring && hint) hint.classList.add('gone');
+    touring = false;
+  }
+  const click = (sel: string) => {
+    const b = document.querySelector<HTMLButtonElement>(sel);
+    if (b && !b.disabled) b.click();
+  };
+
+  btn.onclick = () => {
+    const on = !body.classList.contains('present');
+    set(on);
+    fullscreen(on);
+  };
+  set(new URLSearchParams(location.search).has('present'));
+
+  const input = () => {
+    last = performance.now();
+    if (touring) stopTour();
+  };
+  addEventListener('pointerdown', input);
+  addEventListener('wheel', input, { passive: true });
+  addEventListener('keydown', (e) => {
+    input();
+    if (e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement).closest('input, select, textarea')) return;
+    const k = e.key;
+    if ('ugrizy'.includes(k) && k.length === 1) click(`#bar button[data-band="${k}"]`);
+    else if (k === ' ') click('#bar button.primary');
+    else if (k === 'ArrowRight') stepView(1);
+    else if (k === 'ArrowLeft') stepView(-1);
+    else if (k === 'f') fullscreen(!document.fullscreenElement);
+    else if (k === 'p') btn.click();
+    else if (k === 'Escape' && body.classList.contains('present')) set(false);
+    else return;
+    e.preventDefault();
+  });
+
+  // the tour: only in presentation mode, only when nobody has touched anything for a while
+  setInterval(() => {
+    if (!body.classList.contains('present') || !views) return;
+    const now = performance.now();
+    if (!touring && now - last > IDLE_S * 1000) {
+      touring = true;
+      nextStep = now;
+      if (hint) {
+        hint.textContent = 'Touch the screen to explore';
+        hint.hidden = false;
+        hint.classList.remove('gone');
+      }
+    }
+    if (touring && now >= nextStep) {
+      stepView(1);
+      nextStep = now + TOUR_STEP_S * 1000;
+    }
+  }, 1000);
 }
 
 export interface ViewerOptions {
@@ -110,6 +207,7 @@ export function createViewer(o: ViewerOptions) {
       }),
     );
   showHint(canvas);
+  initPresentation();
 
   return { canvas, renderer, scene, camera, controls, composer, onResize };
 }
