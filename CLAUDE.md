@@ -49,6 +49,11 @@ Every page must stay usable on a phone in portrait and landscape: no panel may c
   The four animation pages also have `#loading` (their thumbnail under a veil, removed by `createViewer` after
   the first frame) and `#hint` (first-visit help, until the first drag or scroll; `localStorage` key `hint-seen`).
   `film/3d/` has neither: it is the page the film is rendered from.
+- Presentation mode (`initPresentation`, called by `createViewer`): `?present`, the header's "Present" button
+  (hidden on phones) or P. Panels ×1.4 (CSS `zoom`), larger labels, no settings menu; after 90 s without input
+  the page tours its views (the first `addChips` set) every 15 s. Keys on every page: u g r i z y click the
+  `#bar` band buttons, Space the `#bar` `.primary` button, ← → views, F full screen, Esc leaves. A new page
+  gets all of it by using `createViewer`, `addChips` for its views and those `#bar` conventions.
 - `src/scene/human.ts` — `buildHuman(pos, lookAt, height)`: one-mesh standing figure (1.75 m reference)
   used for scale on the telescope, camera and observatory pages. Place figures where they do not hide
   the subject in the preset views, and outside any volume swept by a moving part.
