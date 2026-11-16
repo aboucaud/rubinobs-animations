@@ -227,8 +227,13 @@ de la page télescope), puis plan quasi fixe jusqu'à la fin.
   La vraie procédure d'installation reste à reproduire si tu le souhaites.
 - **D2 — Lentilles et filtre au plan 7** : réglée en v3 (visibles pendant la traversée, puis fondu).
 - **D3 — Fluidité** : réglée en v3 (trajectoire lissée).
-- **D4 — Titres** : anglais seulement pour l'instant (traduction plus tard, avec le site). Textes en
-  cours de validation, un par un.
+- **D4 — Titres** : réglée. Anglais seulement pour l'instant (traduction plus tard, avec le site).
+  Textes validés (`CAPTIONS` dans `film.ts`), police un peu plus grande (3,1 % de la hauteur) :
+  1. The LSSTCam filter changer swaps the g filter for r (10× faster than reality)
+  2. It is well integrated into the biggest CCD camera in the world
+  3. LSSTCam is installed on the Simonyi telescope with its 8.4m main mirror
+  4. Let’s follow light coming from a star, bouncing off the three mirrors
+  5. …then through the lenses and filter, down to the 3.2-gigapixel focal plane
 - **D5 — Début et fin** : réglée. Pas de carton au début. Carton final de 3 s (fondu enchaîné de
   0,5 s) : « Vera C. Rubin Observatory », une ligne de description et l'adresse du site
   (`END_CARD` dans `film.ts`). Logo Rubin seulement si la vidéo est approuvée. Film : 47 s au total.
