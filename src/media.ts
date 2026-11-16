@@ -2,13 +2,13 @@
 // (storyboard D8: they would add ~40 MB to the git history at every new render), so the site only
 // knows their addresses, all of them here. The posters are small and ship with the site.
 //
-// PLACEHOLDERS: replace VIDEO_BASE by the real address once the files are online. The host must
-// serve them over HTTPS, with the right Content-Type (video/webm, video/mp4), HTTP range requests
-// and no forced download (Content-Disposition: attachment). Until then the posters are shown.
+// The host must serve them over HTTPS, with the right Content-Type (video/webm, video/mp4), HTTP
+// range requests and no forced download (Content-Disposition: attachment); if a file is missing,
+// the poster stays. After a new render, upload the files there under the same names.
 import loopPoster from './media/film-loop.jpg';
 import filmPoster from './media/film-poster.jpg';
 
-const VIDEO_BASE = 'https://videos.example.org/rubinobs-animations/'; // TODO: real host
+const VIDEO_BASE = 'https://me.lsst.eu/aboucaud/videos/';
 
 export interface Video {
   /** AV1 in WebM: small, played by current browsers */
