@@ -6,7 +6,7 @@ import baffles from '../data/baffles.json';
 import { Rubin, SPIDER } from '../optics/trace';
 import { MAT } from './materials';
 import { annulusMesh, beam, box, lathe, ocs, sagProfile, tube, cylinderBetween } from './util';
-import { buildLSSTCam } from './lsstcam';
+import { buildLSSTCam, LSSTCam } from './lsstcam';
 import { perforatedAlpha } from './textures';
 import { mergeStatic } from './optimize';
 
@@ -27,6 +27,8 @@ export interface Telescope {
   filter: THREE.Group;
   setBand(rubin: Rubin): void;
   groups: Record<string, THREE.Object3D>;
+  /** the camera model inside the telescope (mechanisms, explode, filter exchange) */
+  cam: LSSTCam;
 }
 
 const BF = baffles as { name: string; z: number; inner: number; outer: number }[];
@@ -234,7 +236,8 @@ export function buildTelescope(rubin: Rubin): Telescope {
   // Mid-level baffle ring
   const mid = BF.find((b) => b.name === 'MidLevel')!;
   ota.add(annulusMesh(mid.inner, mid.outer, mid.z, MAT.black, 0.03));
-  ota.add(tube(5.0, 5.125, mid.z - 0.45, mid.z, MAT.paint));
+  // 3 mm inside the baffle's rim (r = 5.125 m): a flush outer face z-fights with the rim
+  ota.add(tube(5.0, mid.outer - 0.003, mid.z - 0.45, mid.z, MAT.paint));
 
   // ------------------------------------------------------------------ Top-end ring (I-beam: flanges are the two baffles)
   const ter = new THREE.Group();
@@ -346,5 +349,5 @@ export function buildTelescope(rubin: Rubin): Telescope {
   L('camera', 'LSSTCam', 'The largest digital camera ever built for astronomy: 3.2 gigapixels, 1.65 m wide, 3.7 m long, 3 t. It hangs upside-down in the middle of the telescope, through the hole in M2.', ocs(0.8, 0, 6.2));
   L('fp', 'Focal plane', '189 science CCDs in 21 rafts + 4 corner rafts for guiding and wavefront sensing. 64 cm across, flat to < 10 µm, kept at −100 °C.', ocs(-0.3, 0, zDet));
 
-  return { ota, labels, filter, setBand: buildFilter, groups };
+  return { ota, labels, filter, setBand: buildFilter, groups, cam: camModel };
 }

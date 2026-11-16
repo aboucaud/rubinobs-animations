@@ -33,6 +33,8 @@ Tools (`tools/`):
 | `export_prescription.py` | regenerates `src/data/prescription.json` from batoid (`pip install batoid`) |
 | `filter_colours.py` | regenerates `src/data/filter_colours.json` from the lsst/throughputs filter curves (downloaded on first use into `tools/throughputs/`, not versioned) |
 | `shot.cjs` | screenshot of a page with software WebGL, against `npm run preview`: `node tools/shot.cjs telescope/ name "__rubin.goView('Focal plane')"` → `shots/name.png`; add `"" 4000 phone` or `phone-land` for a phone in portrait or landscape |
+| `film.cjs` | renders the `film/` page, against `npm run preview`: `draft` (quick preview with titles), `master` (the long 1080p render, without text, resumable), `titles` (each title as a transparent image) and `compose` (master + titles → `shots/film.webm` AV1 and `shots/film.mp4` H.264). Changing a title only needs `titles` + `compose`. Step-by-step local guide, dependencies included: [`film/RENDERING.md`](film/RENDERING.md). |
+| `zfight-image.cjs`, `zfight.cjs` | find rendering glitches in the film, against `npm run dev`: `zfight-image.cjs 1280x720 6 12 …` renders each time twice with the near plane moved and marks the flickering pixels in magenta (`shots/zfight/`); `zfight.cjs 6 20` lists coplanar faces of different materials in the camera and the parts that poke out of the camera body |
 
 ## Pages
 
@@ -43,6 +45,7 @@ Tools (`tools/`):
 | `camera/` | `src/apps/camera.ts` | LSSTCam: exploded view, light through L1–L3, filter exchange, shutter, exposure and readout |
 | `filters/` | `src/apps/filters.ts` | the filter exchange system (carousel + autochanger), step by step with real timings |
 | `observatory/` | `src/apps/observatory.ts` | the summit, the rotating dome and the survey, from day to night |
+| `film/` | `src/apps/film.ts` | one continuous shot for a video: filter exchange, the camera closing, exploded view, the camera descending into the telescope, starlight down to the focal plane (not linked from the landing page) |
 
 Project notes for contributors and Claude Code (conventions, the two rules to keep the optimisations working): `CLAUDE.md`.
 

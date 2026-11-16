@@ -90,11 +90,46 @@ observatory 2564 → 658; peak JS heap during a dense ray-slider sweep 55.7 → 
 programs than it saved (state mismatch with the composer's render target), so pages render the first
 frame synchronously.
 
+## Modelling rule: no coplanar faces (Nov 2026)
+
+The glitches seen in the first 1080p film (grey/black flicker on the filter exchanger, stripes on
+the L1–L2 barrel, notches at the trunk's end, parts showing through the camera body) were not a
+renderer or depth-precision problem (near 0.02 m / far 2000 m is fine at these distances) but
+**geometry**: two parts of different materials with a face in the same plane (a beam end flush
+with a plate, vanes flush with a tube, a disc of exactly the skin's radius). The depth test cannot
+decide between them, so the winner changes from pixel to pixel and from frame to frame.
+- When parts touch, make one 1–2 mm smaller or recessed (see the comments "flush … z-fights" in
+  `fes.ts`, `lsstcam.ts`, `telescope.ts`). Same for concentric cylinders: never the same radius.
+- Everything inside LSSTCam must stay within the skin (r = 0.805 m) and in front of the back
+  flange (z = 5.535 m); the body was lengthened to 5.565 m to cover the carousel ring.
+- Check with `node tools/zfight-image.cjs 1280x720 <t…>` (flickering pixels in magenta) and
+  `node tools/zfight.cjs <t…>` (coplanar faces, parts poking out of the body), against `npm run dev`.
+  After the fixes: ~10–20 flickering pixels per 1280×720 frame in the opening (was 130–400),
+  only scattered edge pixels elsewhere.
+
 ## Sources
 
 Every repository, document, data set and visual reference the animations are built from is listed in
 `REFERENCES.md` (moved out of the README in Nov 2026; the README only links to it). Add any new source
 there in the same commit that uses it.
+
+## Film (`film/`, `src/apps/film.ts`, `tools/film.cjs`)
+
+One scene (the telescope, with LSSTCam at its true place) driven by a single film time `t`:
+`render(t)` sets every mechanism, the camera path and the caption for that instant, so frames can be
+rendered in any order except for the filter exchange, which is replayed forward (rewinding resets it).
+The storyboard is the data at the top of `film.ts`: `CAPTIONS`, `PATH` (camera keyframes, in the
+camera model's frame `'cam'`, which follows it while it moves, or the telescope frame `'ota'`) and the
+time ramps in `render`. The camera lies horizontally while it is assembled and turns upright before
+the descent (an upright variant with side panels was tried and rejected). **The storyboard is agreed in
+`film/STORYBOARD.md` first, with the user; the code then follows it.** The light slows down inside the camera (`SLOW`, `lightHead`) so its arrival on the CCDs is seen in the
+close-up. The film reuses the scene builders, so model changes show up in it for free;
+it re-applies its part visibility after `cam.update()` (see the pitfall above).
+Final videos are built in two stages (`tools/film.cjs`): `master` renders the film once, without text
+(`film/?notext`), in resumable 4 s segments; `titles` + `compose` then add the titles with ffmpeg, so
+title or language changes cost minutes, not a new 3D render. Only scene changes need a new `master`.
+Local rendering guide (dependencies, commands, what to rerun after which change): `film/RENDERING.md`;
+keep it in sync with `tools/film.cjs`.
 
 ## Tools
 
