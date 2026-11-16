@@ -13,7 +13,7 @@ import { RayBuilder, RayBundle } from '../scene/rays';
 import { ocs, ocsv } from '../scene/util';
 import { buildHuman } from '../scene/human';
 import { FESStep } from '../scene/fes';
-import { createViewer, easeInOutCubic as ease, faceCutPlane, glowTexture } from './common';
+import { createViewer, easeInOutCubic as ease, faceCutPlane, dotTexture } from './common';
 
 const QUERY = new URLSearchParams(location.search);
 const CAPTURE = QUERY.has('capture');
@@ -141,13 +141,13 @@ const PATH_TO: Record<string, number> = {};
   landing = { x: x / n, y: y / n };
   rays.material.uniforms.uColor.value.set(BAND_HEX[BAND]);
 }
-const spot = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: new THREE.Color(BAND_HEX[BAND]).multiplyScalar(2), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-spot.scale.setScalar(0.06);
+const spot = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTexture(), color: BAND_HEX[BAND], depthWrite: false, transparent: true }));
+spot.scale.setScalar(0.02); // a sharp 20 mm spot
 spot.renderOrder = 11;
 spot.position.copy(ocs(landing.x, landing.y, Rubin.forBand(BAND).surfaces.Detector.z0 - 0.002));
 tel.ota.add(spot);
-const star = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffffff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-star.scale.setScalar(2.2);
+const star = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTexture(), color: 0xffffff, depthWrite: false, transparent: true }));
+star.scale.setScalar(0.6);
 star.position.copy(ocsv([0, 0, 60]));
 tel.ota.add(star);
 

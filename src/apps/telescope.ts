@@ -8,7 +8,7 @@ import { RayBuilder, RayBundle, RayData, rayBytes, TraceCache } from '../scene/r
 import { ocs, ocsv } from '../scene/util';
 import { LAYOUT, ccdAt } from '../scene/focalplane';
 import { buildHuman } from '../scene/human';
-import { CameraTween, createLabels, createViewer, faceCutPlane, glowTexture, createGui } from './common';
+import { CameraTween, createLabels, createViewer, faceCutPlane, dotTexture, createGui } from './common';
 
 // ---------------------------------------------------------------- renderer & scene
 const { renderer, scene, camera, controls, composer, onResize } = createViewer({
@@ -110,12 +110,12 @@ function fadeBase(fade: boolean) {
 // ---------------------------------------------------------------- rays
 const rays = new RayBundle();
 tel.ota.add(rays.object);
-const spot = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffffff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-spot.scale.setScalar(0.06);
+const spot = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTexture(), color: 0xffffff, depthWrite: false, transparent: true }));
+spot.scale.setScalar(0.02); // a sharp 20 mm spot
 spot.renderOrder = 11;
 tel.ota.add(spot);
-const star = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffffff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-star.scale.setScalar(2.2);
+const star = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTexture(), color: 0xffffff, depthWrite: false, transparent: true }));
+star.scale.setScalar(0.6);
 tel.ota.add(star);
 
 type Landing = { x: number; y: number; ok: number; total: number; blocked: Record<string, number> };
@@ -168,7 +168,7 @@ function retrace() {
   const rubin = Rubin.forBand(BAND);
   const col = new THREE.Color(BAND_HEX[BAND]);
   rays.material.uniforms.uColor.value.copy(col);
-  spot.material.color.copy(col).multiplyScalar(2);
+  spot.material.color.copy(col);
   spot.position.copy(ocs(landing.x, landing.y, rubin.surfaces.Detector.z0 - 0.002));
   const [thx, thy] = fieldAngles();
   const d = Rubin.fieldDirection(thx, thy);

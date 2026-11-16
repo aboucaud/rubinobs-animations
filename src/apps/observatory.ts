@@ -11,12 +11,11 @@ import { CameraTween, createLabels, createViewer, createGui } from './common';
 const TIME_SCALE = 6; // animation runs 6× faster than reality during the survey
 
 // ---------------------------------------------------------------- renderer & scene
-const { renderer, scene, camera, controls, composer, bloom } = createViewer({
+const { renderer, scene, camera, controls, composer } = createViewer({
   fov: 45,
   near: 0.3,
   far: 20000,
   background: 0x03050b,
-  bloom: [0.5, 0.4, 1.6],
   logarithmicDepthBuffer: true,
 });
 controls.maxDistance = 1500;
@@ -141,7 +140,7 @@ azGroup.add(buildAzimuth());
   scene.add(buildHuman(new THREE.Vector3(-2.7, SITE.azFloor - 0.6, -13.2), new THREE.Vector3(0, 0, 0), 1.75, inside));
 }
 
-// starlight: a glowing column along the optical axis, plus live-traced rays inside the telescope
+// starlight: a faint column along the optical axis, plus live-traced rays inside the telescope
 const beamMat = new THREE.ShaderMaterial({
   uniforms: { uOpacity: { value: 0 }, uTime: { value: 0 } },
   vertexShader: /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
@@ -220,7 +219,6 @@ function applyTimeOfDay() {
   const fogC = (scene.fog as THREE.Fog).color.setRGB(0.72, 0.77, 0.84).multiplyScalar(0.08 + 0.92 * day);
   if (low > 0.5 && el > -6) fogC.lerp(SUNSET_FOG, 0.35 * day);
   scene.environmentIntensity = 0.15 + 0.6 * day;
-  bloom!.strength = 0.08 + 0.6 * (1 - day);
   envDirty = true;
 }
 
@@ -418,7 +416,6 @@ for (const k of Object.keys(VIEWS)) fv.add({ [k]: () => goView(k) }, k);
 const fd = gui.addFolder('Display');
 fd.add(state, 'cutaway').name('cut the dome open');
 fd.add(state, 'labels').name('labels');
-fd.add(bloom!, 'strength', 0, 2, 0.05).name('glow');
 const fp = gui.addFolder('Pointing (when not surveying)');
 fp.add(state, 'manualEl', 15, 90, 0.5).name('elevation (°)');
 fp.add(state, 'manualAz', -270, 270, 1).name('azimuth (°)');

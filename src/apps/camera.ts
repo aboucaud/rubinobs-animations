@@ -19,7 +19,6 @@ const { renderer, scene, camera, controls, composer } = createViewer({
   exposure: 0.95,
   background: 0x0a0d14,
   roomEnvironment: 0.4,
-  bloom: [0.8, 0.35, 1.4],
 });
 controls.minDistance = 0.2;
 controls.maxDistance = 25;
