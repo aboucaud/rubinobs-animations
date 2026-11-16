@@ -138,8 +138,8 @@ function compose([masterFile = 'shots/film-master.mp4', outBase = 'shots/film'])
     const size = [st.width, st.height];
     const k = caps.length + 1;
     inputs.push('-loop', '1', '-t', String(card.seconds + 0.5), '-i', path.join(dir, card.file));
-    chain.push(`[${last}]format=yuv420p,setsar=1[vf]`);
-    chain.push(`[${k}:v]scale=${size[0]}:${size[1]},fps=${fps},format=yuv420p,setsar=1[card]`);
+    chain.push(`[${last}]fps=${fps},format=yuv420p,setsar=1,settb=AVTB[vf]`);
+    chain.push(`[${k}:v]scale=${size[0]}:${size[1]},fps=${fps},format=yuv420p,setsar=1,settb=AVTB[card]`);
     chain.push(`[vf][card]xfade=transition=fade:duration=0.5:offset=${(film - 0.5).toFixed(3)}[vend]`);
     last = 'vend';
   }
