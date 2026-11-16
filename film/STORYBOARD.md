@@ -236,7 +236,7 @@ de la page télescope), puis plan quasi fixe jusqu'à la fin.
   5. …then through the lenses and filter, down to the 3.2-gigapixel focal plane
 - **D5 — Début et fin** : réglée. Pas de carton au début. Carton final de 3 s (fondu enchaîné de
   0,5 s) : « Vera C. Rubin Observatory », une ligne de description et l'adresse du site
-  (`END_CARD` dans `film.ts`). Logo Rubin seulement si la vidéo est approuvée. Film : 47 s au total.
+  (`END_CARD` dans `film.ts`), et en bas, en petit et en gris, « Animation: Alexandre Boucaud ». Logo Rubin seulement si la vidéo est approuvée. Film : 47 s au total.
 - **D6 — Durée** : réglée, 44 s.
 - **D7 — Extrait court** : réglée. 31,5 → 42 s (de M2/M3 jusqu'aux CCD, 10,5 s), sans titre, léger
   fondu au noir (0,3 s) au début et à la fin, 1280×720 (`node tools/film.cjs loop`).
