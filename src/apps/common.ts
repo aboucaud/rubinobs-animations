@@ -100,7 +100,45 @@ export function createViewer(o: ViewerOptions) {
     for (const f of onResize) f();
   });
 
+  // loading screen (the page's thumbnail, in its HTML): fades out once the page has drawn a frame
+  const loading = document.getElementById('loading');
+  if (loading)
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        loading.classList.add('done');
+        setTimeout(() => loading.remove(), 600);
+      }),
+    );
+  showHint(canvas);
+
   return { canvas, renderer, scene, camera, controls, composer, onResize };
+}
+
+/** First visit only: how to move around, until the first drag, pinch or scroll. */
+function showHint(canvas: HTMLCanvasElement) {
+  const hint = document.getElementById('hint');
+  if (!hint) return;
+  try {
+    if (localStorage.getItem('hint-seen')) return;
+  } catch {
+    // storage unavailable (private mode, some embeds): show the hint every time
+  }
+  hint.textContent = matchMedia('(pointer: coarse)').matches
+    ? 'Drag to turn · pinch to zoom · tap a label'
+    : 'Drag to turn · scroll to zoom · right-drag to pan · click a label';
+  hint.hidden = false;
+  const done = () => {
+    hint.classList.add('gone');
+    canvas.removeEventListener('pointerdown', done);
+    canvas.removeEventListener('wheel', done);
+    try {
+      localStorage.setItem('hint-seen', '1');
+    } catch {
+      // see above
+    }
+  };
+  canvas.addEventListener('pointerdown', done);
+  canvas.addEventListener('wheel', done, { passive: true });
 }
 
 // ---------------------------------------------------------------- labels

@@ -44,6 +44,11 @@ Every page must stay usable on a phone in portrait and landscape: no panel may c
   and `landing.css`. One UI accent: Rubin teal (`--accent`); band colours are kept for light and filters.
   Filter buttons have three states: in the beam (filled band colour), available (outlined), not possible now
   (dashed). Text is 12 px minimum (11 px for labels and captions on phones).
+- Every page's `<head>` has the favicon (`public/favicon.svg`), `theme-color`, a description and Open Graph /
+  Twitter tags with an absolute `og:image` from `public/thumbs/` (a new page needs them too, and its thumbnail).
+  The four animation pages also have `#loading` (their thumbnail under a veil, removed by `createViewer` after
+  the first frame) and `#hint` (first-visit help, until the first drag or scroll; `localStorage` key `hint-seen`).
+  `film/3d/` has neither: it is the page the film is rendered from.
 - `src/scene/human.ts` — `buildHuman(pos, lookAt, height)`: one-mesh standing figure (1.75 m reference)
   used for scale on the telescope, camera and observatory pages. Place figures where they do not hide
   the subject in the preset views, and outside any volume swept by a moving part.
