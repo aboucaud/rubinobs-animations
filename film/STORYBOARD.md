@@ -231,16 +231,14 @@ de la page télescope), puis plan quasi fixe jusqu'à la fin.
 - **D5 — Début et fin** : carton titre au début ? carton final (crédits, sources, lien vers le
   site) ? Pas de logo officiel Rubin sans autorisation.
 - **D6 — Durée** : 44 s convient-il ?
-- **D7 — Extrait court** : en plus de la vidéo complète, un extrait de 6 – 8 s en boucle ? Quel passage ?
-- **D8 — Diffusion sur le site** : où montrer la vidéo, et comment héberger les fichiers ?
-  - Emplacement : (a) une carte de plus sur la page d'accueil, qui mène à la page `film/` ;
-    (b) la vidéo en tête de la page d'accueil, en boucle et sans son, au-dessus des cartes ;
-    (c) les deux. La page `film/` jouerait alors la vidéo (WebM AV1, MP4 en secours, image
-    d'attente), au lieu du rendu 3D en direct, trop lourd sur un téléphone. Elle garderait un
-    lien vers la version 3D en direct.
-  - Hébergement : les fichiers dans `public/` (servis par GitHub Pages, rien de plus à faire,
-    mais chaque nouvelle version ajoute ~12 Mo à l'historique git). Alternatives écartées : Git LFS
-    (GitHub Pages ne sert pas les fichiers LFS), pièce jointe d'une release GitHub (servie en
-    téléchargement : lecture dans la page non garantie).
-  - Proposition : (c), avec seulement le WebM AV1 et une image d'attente sur l'accueil
-    (l'extrait court de D7 s'il est retenu, sinon le film complet) ; le MP4 en secours sur la page `film/`.
+- **D7 — Extrait court** : retenu (nécessaire pour l'accueil, voir D8). Reste à choisir le passage,
+  la durée (6 – 10 s) et s'il porte un titre ou non.
+- **D8 — Diffusion sur le site** : réglée, option (c). Un extrait court en boucle (voir D7) en tête
+  de la page d'accueil, plus une carte vers la page `film/`. Celle-ci joue le film complet en vidéo
+  (WebM AV1, MP4 en secours, image d'attente), avec un lien vers la version 3D en direct. Les
+  fichiers vont dans `public/`, servis par GitHub Pages.
+  Restent à préciser : D8a (emplacement exact sur l'accueil) et D8b (comportement de la vidéo).
+- **D8a — Place sur l'accueil** : bandeau pleine largeur au-dessus des cartes, ou vidéo à côté du
+  texte d'introduction ? Carte « The film » en première ou en dernière position ?
+- **D8b — Comportement** : lecture automatique, sans son, en boucle ; arrêt si l'utilisateur a
+  demandé à réduire les animations (`prefers-reduced-motion`), où seule l'image d'attente s'affiche ?
