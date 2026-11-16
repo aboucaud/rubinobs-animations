@@ -7,7 +7,7 @@ import { bakeRays, RayBundle, RayData } from '../scene/rays';
 import { ocs } from '../scene/util';
 import { FocalPlaneImage } from '../scene/exposure';
 import { buildHuman } from '../scene/human';
-import { CameraTween, createLabels, createViewer, easeInOutCubic as ease, faceCutPlane, createGui } from './common';
+import { CameraTween, createLabels, createViewer, easeInOutCubic as ease, faceCutPlane, createGui, addChips } from './common';
 
 const bandText = (b: Band) => `${b} · ${BAND_INFO[b].range} · ${BAND_INFO[b].note}`;
 
@@ -274,15 +274,14 @@ function goView(name: string) {
 }
 
 const gui = createGui('LSSTCam');
-const fv = gui.addFolder('Views');
-for (const k of Object.keys(VIEWS)) fv.add({ [k]: () => goView(k) }, k);
+addChips(gui, 'Views', Object.keys(VIEWS), goView);
 const fo = gui.addFolder('Display');
-fo.add(state, 'cutaway').name('cutaway');
-fo.add(state, 'rays').name('light rays');
-fo.add(state, 'labels').name('labels');
-fo.add(state, 'glass').name('lenses');
-fo.add(state, 'speed', 0.1, 3, 0.05).name('light speed (m/s)');
-fo.add({ swap: () => { if (queue.length) return; swapLoader(cam.state.home.y !== undefined ? 'u' : 'y'); } }, 'swap').name('daytime: swap u ↔ y (loader)');
+fo.add(state, 'cutaway').name('Cutaway');
+fo.add(state, 'rays').name('Light rays');
+fo.add(state, 'labels').name('Labels');
+fo.add(state, 'glass').name('Lenses');
+fo.add(state, 'speed', 0.1, 3, 0.05).name('Light speed (m/s)');
+fo.add({ swap: () => { if (queue.length) return; swapLoader(cam.state.home.y !== undefined ? 'u' : 'y'); } }, 'swap').name('Swap u ↔ y in the loader (daytime)');
 
 function swapLoader(incoming: Band) {
   cam.fes.swapLoader(incoming);

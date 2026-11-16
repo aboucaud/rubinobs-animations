@@ -6,7 +6,7 @@ import { buildLSSTCam } from '../scene/lsstcam';
 import { FESStep } from '../scene/fes';
 import { cutPlane } from '../scene/materials';
 import { ocs } from '../scene/util';
-import { CameraTween, createLabels, createViewer, faceCutPlane, createGui } from './common';
+import { CameraTween, createLabels, createViewer, faceCutPlane, createGui, addChips } from './common';
 
 const bandText = (b: Band) => `${b} · ${BAND_INFO[b].note}`;
 
@@ -206,15 +206,14 @@ function goView(name: string) {
   gui.controllersRecursive().forEach((c) => c.updateDisplay());
 }
 const gui = createGui('Filter exchange');
-const fv = gui.addFolder('Views');
-for (const k of Object.keys(VIEWS)) fv.add({ [k]: () => goView(k) }, k);
+addChips(gui, 'Views', Object.keys(VIEWS), goView);
 const fd = gui.addFolder('Display');
-fd.add(state, 'body').name('camera body').onChange(applyVisibility);
+fd.add(state, 'body').name('Camera body').onChange(applyVisibility);
 fd.add(state, 'lenses').name('L1–L2 lenses').onChange(applyVisibility);
-fd.add(state, 'cryostat').name('cryostat & L3').onChange(applyVisibility);
-fd.add(state, 'shutter').name('shutter').onChange(applyVisibility);
-fd.add(state, 'cutaway').name('cutaway');
-fd.add(state, 'labels').name('labels');
+fd.add(state, 'cryostat').name('Cryostat & L3').onChange(applyVisibility);
+fd.add(state, 'shutter').name('Shutter').onChange(applyVisibility);
+fd.add(state, 'cutaway').name('Cutaway');
+fd.add(state, 'labels').name('Labels');
 
 // ---------------------------------------------------------------- loop
 const clock = new THREE.Clock();

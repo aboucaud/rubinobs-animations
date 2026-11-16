@@ -38,7 +38,12 @@ Every page must stay usable on a phone in portrait and landscape: no panel may c
   materials, textures, rays, band colours (`bands.ts`: the single source for band colours and texts).
 - `src/apps/` — one script per page. `common.ts` holds what every page shares: `createViewer`
   (renderer, scene, camera, controls, post-processing, resize), `createLabels`, `CameraTween`,
-  `faceCutPlane`, `dotTexture`, `createGui`, `initPhoneLayout` / `isPhone`. A new page should be built on it, not copy boilerplate.
+  `faceCutPlane`, `dotTexture`, `createGui`, `addChips` (views and presets as chips), `initPhoneLayout` / `isPhone`.
+  A new page should be built on it, not copy boilerplate.
+- `src/tokens.css` — shared design tokens (colours, radii, the self-hosted Inter font), imported by `style.css`
+  and `landing.css`. One UI accent: Rubin teal (`--accent`); band colours are kept for light and filters.
+  Filter buttons have three states: in the beam (filled band colour), available (outlined), not possible now
+  (dashed). Text is 12 px minimum (11 px for labels and captions on phones).
 - `src/scene/human.ts` — `buildHuman(pos, lookAt, height)`: one-mesh standing figure (1.75 m reference)
   used for scale on the telescope, camera and observatory pages. Place figures where they do not hide
   the subject in the preset views, and outside any volume swept by a moving part.

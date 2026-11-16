@@ -49,5 +49,5 @@ Used only to sample colours and shapes; no pixel of these images is in the site.
 
 ## Software
 
-- [three.js](https://github.com/mrdoob/three.js) (WebGL rendering, post-processing, sky model), [lil-gui](https://github.com/georgealways/lil-gui), [Vite](https://github.com/vitejs/vite), [TypeScript](https://github.com/microsoft/TypeScript)
+- [three.js](https://github.com/mrdoob/three.js) (WebGL rendering, post-processing, sky model), [lil-gui](https://github.com/georgealways/lil-gui), [Vite](https://github.com/vitejs/vite), [TypeScript](https://github.com/microsoft/TypeScript), [Inter](https://github.com/rsms/inter) typeface (SIL Open Font License, self-hosted via [Fontsource](https://github.com/fontsource/font-files))
 - [Playwright](https://github.com/microsoft/playwright) for the screenshots (`tools/shot.cjs`)

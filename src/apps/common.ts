@@ -38,6 +38,18 @@ export function createGui(title: string) {
   return gui;
 }
 
+/** A folder of buttons laid out as chips (views, preset pointings); the last one picked is highlighted. */
+export function addChips(gui: GUI, title: string, names: string[], pick: (name: string) => void) {
+  const f = gui.addFolder(title);
+  f.domElement.classList.add('chips');
+  const ctrls = names.map((k) => f.add({ [k]: () => mark(k) }, k));
+  function mark(k: string) {
+    ctrls.forEach((c, i) => c.domElement.classList.toggle('on', names[i] === k));
+    pick(k);
+  }
+  return f;
+}
+
 export interface ViewerOptions {
   fov: number;
   near: number;
