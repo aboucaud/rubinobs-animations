@@ -21,6 +21,15 @@ const CAPTURE = QUERY.has('capture');
 // title change never needs a new 3D render); ?title=i: only title i, on a transparent page
 const NOTEXT = QUERY.has('notext');
 const TITLE = QUERY.get('title');
+// ?endcard: the closing card alone (opaque), appended after the film by tools/film.cjs compose
+const ENDCARD = QUERY.has('endcard');
+/** closing card (storyboard D5): no official Rubin logo until the film is approved */
+const END_CARD = {
+  seconds: 3,
+  title: 'Vera C. Rubin Observatory',
+  subtitle: 'Interactive animations of the Simonyi Survey Telescope and the LSST Camera',
+  url: 'aboucaud.github.io/rubinobs-animations',
+};
 
 // ---------------------------------------------------------------- scene (as on the telescope page)
 const { renderer, scene, camera, controls, composer } = createViewer({
@@ -455,7 +464,14 @@ function render(t: number) {
 }
 
 resetFES();
-if (TITLE !== null) {
+if (ENDCARD) {
+  (document.getElementById('c') as HTMLCanvasElement).style.display = 'none';
+  const card = document.getElementById('endcard')!;
+  card.querySelector('h1')!.textContent = END_CARD.title;
+  card.querySelector('p')!.textContent = END_CARD.subtitle;
+  card.querySelector('b')!.textContent = END_CARD.url;
+  card.style.display = 'flex';
+} else if (TITLE !== null) {
   // one title alone on a transparent page, for tools/film.cjs to composite over the clean video
   for (const el of [document.documentElement, document.body]) el.style.background = 'transparent';
   (document.getElementById('c') as HTMLCanvasElement).style.display = 'none';
@@ -472,4 +488,4 @@ if (TITLE !== null) {
   };
   loop();
 }
-(window as any).__film = { render, duration: DURATION, captions: CAPTIONS, renderer, composer, scene, camera, tel, PATH_TO, lightHead, ready: true };
+(window as any).__film = { render, duration: DURATION, captions: CAPTIONS, endCard: END_CARD, renderer, composer, scene, camera, tel, PATH_TO, lightHead, ready: true };

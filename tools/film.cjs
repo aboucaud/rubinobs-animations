@@ -11,6 +11,8 @@
 //        → shots/film-titles/title-<i>.png + titles.json (timings)
 //   node tools/film.cjs compose [master.mp4] [out base]         master + titles → final videos
 //        → shots/film.webm (AV1, for the web) and shots/film.mp4 (H.264, plays everywhere)
+//   node tools/film.cjs loop [from-to] [out base]               short text-free loop for the home page
+//        → shots/film-loop.webm / .mp4 / .jpg (default 31.5-42 s, 1280×720)
 // A title change only needs `titles` + `compose` (minutes), never a new `master` (hours).
 // Step-by-step guide, dependencies included: film/RENDERING.md
 const { chromium } = require('playwright');
@@ -103,7 +105,13 @@ async function titles([size = '1920x1080']) {
     await t.b.close();
   }
   fs.writeFileSync(path.join(dir, 'titles.json'), JSON.stringify(caps.map(([a, b2, text], i) => ({ from: a, to: b2, text, file: `title-${i}.png` })), null, 1));
-  console.log(`wrote ${caps.length} titles in ${dir}`);
+  // closing card (storyboard D5), opaque
+  const e = await openFilm(size, 'endcard');
+  const card = await e.p.evaluate(() => window.__film.endCard);
+  await e.p.screenshot({ path: path.join(dir, 'endcard.png') });
+  await e.b.close();
+  fs.writeFileSync(path.join(dir, 'endcard.json'), JSON.stringify({ ...card, file: 'endcard.png' }, null, 1));
+  console.log(`wrote ${caps.length} titles and the end card in ${dir}`);
 }
 
 function compose([masterFile = 'shots/film-master.mp4', outBase = 'shots/film']) {
@@ -120,6 +128,21 @@ function compose([masterFile = 'shots/film-master.mp4', outBase = 'shots/film'])
     chain.push(`[${last}][t${i}]overlay=enable='between(t,${c.from},${c.to})':shortest=1[v${i}]`);
     last = `v${i}`;
   });
+  // the closing card cross-fades in (0.5 s) after the last frame of the film
+  const endFile = path.join(dir, 'endcard.json');
+  if (fs.existsSync(endFile)) {
+    const card = JSON.parse(fs.readFileSync(endFile, 'utf8'));
+    const film = +execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', masterFile]).toString();
+    const st = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate,width,height', '-of', 'json', masterFile]).toString()).streams[0];
+    const fps = st.r_frame_rate;
+    const size = [st.width, st.height];
+    const k = caps.length + 1;
+    inputs.push('-loop', '1', '-t', String(card.seconds + 0.5), '-i', path.join(dir, card.file));
+    chain.push(`[${last}]format=yuv420p,setsar=1[vf]`);
+    chain.push(`[${k}:v]scale=${size[0]}:${size[1]},fps=${fps},format=yuv420p,setsar=1[card]`);
+    chain.push(`[vf][card]xfade=transition=fade:duration=0.5:offset=${(film - 0.5).toFixed(3)}[vend]`);
+    last = 'vend';
+  }
   const filter = chain.join(';');
   const run = (args, out) => {
     execFileSync('ffmpeg', ['-y', '-loglevel', 'error', ...inputs, '-filter_complex', filter, '-map', `[${last}]`, ...args, out], { stdio: 'inherit' });
@@ -129,10 +152,26 @@ function compose([masterFile = 'shots/film-master.mp4', outBase = 'shots/film'])
   run(H264_WEB, `${outBase}.mp4`);
 }
 
+/** short loop for the home page (storyboard D7): cut from the text-free master, light fade to black
+ *  at both ends, 1280×720, no titles; plus a still (poster) for reduced motion and loading */
+function loop([range = '31.5-42', outBase = 'shots/film-loop', masterFile = 'shots/film-master.mp4', posterAt = '41']) {
+  const [t0, t1] = range.split('-').map(Number);
+  const d = t1 - t0;
+  const vf = `scale=1280:720:flags=lanczos,fade=t=in:st=0:d=0.3,fade=t=out:st=${(d - 0.3).toFixed(2)}:d=0.3,format=yuv420p`;
+  const run = (args, out) => {
+    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', String(t0), '-t', String(d), '-i', masterFile, '-vf', vf, '-an', ...args, out], { stdio: 'inherit' });
+    console.log(`wrote ${out} (${(fs.statSync(out).size / 1e6).toFixed(1)} MB)`);
+  };
+  run(['-c:v', 'libsvtav1', '-preset', '5', '-crf', '38'], `${outBase}.webm`);
+  run(['-c:v', 'libx264', '-preset', 'slow', '-crf', '24', '-movflags', '+faststart'], `${outBase}.mp4`);
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', posterAt, '-i', masterFile, '-frames:v', '1', '-vf', 'scale=1280:720:flags=lanczos', '-q:v', '3', `${outBase}.jpg`]);
+  console.log(`wrote ${outBase}.jpg (poster, film time ${posterAt} s)`);
+}
+
 const [cmd, ...args] = process.argv.slice(2);
-const cmds = { draft, master, titles, compose };
+const cmds = { draft, master, titles, compose, loop };
 if (!cmds[cmd]) {
-  console.error('usage: node tools/film.cjs draft|master|titles|compose …  (see the header of this file)');
+  console.error('usage: node tools/film.cjs draft|master|titles|compose|loop …  (see the header of this file)');
   process.exit(1);
 }
 Promise.resolve(cmds[cmd](args)).catch((e) => {

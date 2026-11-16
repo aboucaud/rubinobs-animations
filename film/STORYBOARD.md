@@ -227,18 +227,20 @@ de la page télescope), puis plan quasi fixe jusqu'à la fin.
   La vraie procédure d'installation reste à reproduire si tu le souhaites.
 - **D2 — Lentilles et filtre au plan 7** : réglée en v3 (visibles pendant la traversée, puis fondu).
 - **D3 — Fluidité** : réglée en v3 (trajectoire lissée).
-- **D4 — Titres** : textes à valider. Une version française en plus ?
-- **D5 — Début et fin** : carton titre au début ? carton final (crédits, sources, lien vers le
-  site) ? Pas de logo officiel Rubin sans autorisation.
-- **D6 — Durée** : 44 s convient-il ?
-- **D7 — Extrait court** : retenu (nécessaire pour l'accueil, voir D8). Reste à choisir le passage,
-  la durée (6 – 10 s) et s'il porte un titre ou non.
+- **D4 — Titres** : anglais seulement pour l'instant (traduction plus tard, avec le site). Textes en
+  cours de validation, un par un.
+- **D5 — Début et fin** : réglée. Pas de carton au début. Carton final de 3 s (fondu enchaîné de
+  0,5 s) : « Vera C. Rubin Observatory », une ligne de description et l'adresse du site
+  (`END_CARD` dans `film.ts`). Logo Rubin seulement si la vidéo est approuvée. Film : 47 s au total.
+- **D6 — Durée** : réglée, 44 s.
+- **D7 — Extrait court** : réglée. 31,5 → 42 s (de M2/M3 jusqu'aux CCD, 10,5 s), sans titre, léger
+  fondu au noir (0,3 s) au début et à la fin, 1280×720 (`node tools/film.cjs loop`).
 - **D8 — Diffusion sur le site** : réglée, option (c). Un extrait court en boucle (voir D7) en tête
   de la page d'accueil, plus une carte vers la page `film/`. Celle-ci joue le film complet en vidéo
   (WebM AV1, MP4 en secours, image d'attente), avec un lien vers la version 3D en direct. Les
   fichiers vont dans `public/`, servis par GitHub Pages.
-  Restent à préciser : D8a (emplacement exact sur l'accueil) et D8b (comportement de la vidéo).
-- **D8a — Place sur l'accueil** : bandeau pleine largeur au-dessus des cartes, ou vidéo à côté du
-  texte d'introduction ? Carte « The film » en première ou en dernière position ?
-- **D8b — Comportement** : lecture automatique, sans son, en boucle ; arrêt si l'utilisateur a
-  demandé à réduire les animations (`prefers-reduced-motion`), où seule l'image d'attente s'affiche ?
+- **D8a — Place sur l'accueil** : réglée. Bandeau large sous le texte d'introduction, au-dessus des
+  cartes ; carte « The film » en première position.
+- **D8b — Comportement** : réglée. Lecture automatique, sans son, en boucle ; image fixe seule si
+  `prefers-reduced-motion`.
+- **D8c — Intégration** : réglée. PR séparée, après la fusion de la PR 13.

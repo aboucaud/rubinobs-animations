@@ -54,11 +54,14 @@ node tools/film.cjs draft 640x360 15 shots/p6.mp4 34-44   # seulement de 34 à 4
 # b) le master : 1080p, 30 i/s, sans texte (le rendu long)
 node tools/film.cjs master 1920x1080 30              # → shots/film-master.mp4
 
-# c) les titres, chacun en PNG transparent (une minute)
+# c) les titres, chacun en PNG transparent, et le carton final (une minute)
 node tools/film.cjs titles 1920x1080                 # → shots/film-titles/
 
-# d) l'assemblage master + titres (environ 5 min)
+# d) l'assemblage master + titres + carton final (environ 5 min)
 node tools/film.cjs compose                          # → shots/film.webm (AV1) + shots/film.mp4 (H.264)
+
+# e) l'extrait en boucle de la page d'accueil, découpé dans le master (une minute)
+node tools/film.cjs loop                             # 31,5 → 42 s → shots/film-loop.webm / .mp4 / .jpg
 ```
 
 **Durée du master.** Elle était d'environ 1 h 45 dans le conteneur cloud, avec le rendu WebGL
@@ -84,7 +87,8 @@ segments sont réutilisés.
 | Modification | À relancer |
 |---|---|
 | Texte, timing ou langue des titres (`CAPTIONS` dans `src/apps/film.ts`) | `npm run build`, `titles`, `compose` (quelques minutes) |
-| Style des titres (`film/index.html`) | idem |
+| Style des titres ou du carton final (`film/index.html`, `END_CARD` dans `film.ts`) | idem |
+| Passage de l'extrait en boucle | `loop 30-40` (début-fin en secondes), sans rien d'autre |
 | Scène, caméra, temps, modèles 3D | `npm run build`, `rm -rf shots/film-master`, `master`, puis `compose` |
 | Qualité ou poids des fichiers finaux | `compose` seulement : ajuster `-crf` dans `compose()` de `tools/film.cjs` (AV1 : 35 ; MP4 : 20 ; plus haut = plus léger) |
 
