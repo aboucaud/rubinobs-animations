@@ -189,6 +189,7 @@ const STRUCTURE_LABELS = new Set(['cell', 'ter', 'spider', 'm2baffle']);
 const updateLabels = createLabels(tel.labels, camera, controls, {
   defaultParent: tel.ota,
   margin: 1.05,
+  rank: ['M1', 'M2', 'M3', 'camera', 'fp', 'spider', 'ter', 'cell', 'm2baffle'],
   visible: (l, dist) => dist < 45 && (state.mount || !STRUCTURE_LABELS.has(l.id)),
 });
 

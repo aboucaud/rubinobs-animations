@@ -177,7 +177,11 @@ const updateLabels = createLabels(
   cam.labels.filter((l) => LABEL_IDS.has(l.id)),
   camera,
   controls,
-  { defaultParent: cam.group, visible: (l) => (l.parent ?? cam.group).visible },
+  {
+    defaultParent: cam.group,
+    rank: ['filter', 'carousel', 'autochanger', 'carrier', 'online', 'rails', 'drive', 'shutter', 'L3', 'fp', 'cryostat'],
+    visible: (l) => (l.parent ?? cam.group).visible,
+  },
 );
 
 // ---------------------------------------------------------------- views
