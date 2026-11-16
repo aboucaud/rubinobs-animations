@@ -15,7 +15,20 @@
       <p class="lede">Interactive 3D animations of the Simonyi Survey Telescope and the LSST Camera. Every ray you see is computed live from the telescope's real optical design, from the night sky down to the 3.2-gigapixel camera.</p>
     </header>
 
+    <a class="teaser" href="./film/index.html">
+      <video id="teaser"></video>
+      <span class="teaser-label">Watch the film · 47 s →</span>
+    </a>
+
     <section class="grid">
+      <a class="card" href="./film/index.html">
+        <div class="thumb" style="background-image:url('./thumbs/film.jpg')"></div>
+        <div class="body">
+          <span class="tag video">Film</span>
+          <h2>From the filter to the stars</h2>
+          <p>A 47-second film: a filter change, the camera built around it and installed on the telescope, then starlight followed all the way down to the focal plane.</p>
+        </div>
+      </a>
       <a class="card" href="./telescope/index.html">
         <div class="thumb" style="background-image:url('./thumbs/telescope.jpg')"></div>
         <div class="body">
@@ -64,6 +77,10 @@
     </footer>
   </main>
   <canvas id="stars"></canvas>
+  <script type="module">
+    import { MEDIA, mountVideo } from '/src/media.ts';
+    mountVideo(document.getElementById('teaser'), MEDIA.loop, true);
+  </script>
   <script type="module">
     const c = document.getElementById('stars');
     const g = c.getContext('2d');

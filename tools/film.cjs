@@ -20,7 +20,7 @@ const { spawn, execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const URL = 'http://localhost:4173/film/';
+const URL = 'http://localhost:4173/film/3d/';
 // Software WebGL (SwiftShader) by default: identical everywhere, slow. FILM_GL=gpu tries the
 // machine's GPU instead (much faster where headless Chromium can use it). CHROME=/path/to/chrome
 // uses that browser instead of Playwright's own Chromium.

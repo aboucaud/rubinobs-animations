@@ -4,25 +4,29 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Rubin Observatory — from the filter to the stars (film)</title>
-  <style>
-    #caption { position: fixed; left: 50%; top: 6%; transform: translateX(-50%); width: max-content; max-width: 92vw; text-align: center;
-      font: 600 clamp(14px, 3.1vh, 34px)/1.35 system-ui, sans-serif; color: #f1f4f8; text-shadow: 0 1px 6px #000, 0 0 2px #000;
-      transition: opacity .4s; pointer-events: none; }
-    /* closing card (?endcard), 1920×1080 reference; sizes follow the viewport height */
-    #endcard { display: none; position: fixed; inset: 0; flex-direction: column; align-items: center; justify-content: center;
-      gap: 2.2vh; background: #05070a; color: #f1f4f8; font-family: system-ui, sans-serif; text-align: center; }
-    #endcard h1 { margin: 0; font: 600 5.2vh/1.1 system-ui, sans-serif; letter-spacing: .02em; }
-    #endcard p { margin: 0; font-size: 2.6vh; color: #b8c2cf; max-width: 80vw; }
-    #endcard b { margin-top: 3vh; font-weight: 500; font-size: 2.4vh; color: #7fb6ff; letter-spacing: .02em; }
-    #endcard small { position: absolute; left: 0; right: 0; top: 88%; font-size: 1.6vh; color: #8a94a3; letter-spacing: .03em; }
-    #clock { position: fixed; right: 12px; top: 10px; font: 11px monospace; opacity: .5; }
-  </style>
+  <meta name="description" content="A 47-second film: the LSST Camera's filter changer, the camera built around it, its installation on the Simonyi telescope, and starlight down to the focal plane." />
+  <link rel="stylesheet" href="/src/landing.css" />
 </head>
-<body>
-  <canvas id="c"></canvas>
-  <div id="caption"></div>
-  <div id="clock"></div>
-  <div id="endcard"><h1></h1><p></p><b></b><small></small></div>
-  <script type="module" src="/src/apps/film.ts"></script>
+<body class="film-page">
+  <main>
+    <p class="back"><a href="../index.html">← All animations</a></p>
+    <header class="hero">
+      <p class="kicker">Film · 47 s</p>
+      <h1>From the filter to the stars</h1>
+      <p class="lede">The LSST Camera's filter changer swaps a filter, the camera is built around it and installed on the Simonyi telescope, then the light of a star bounces off three mirrors and crosses three lenses and a filter, down to the 3.2-gigapixel focal plane.</p>
+    </header>
+    <video id="film" class="film" controls></video>
+    <p class="film-links">
+      <a href="./3d/index.html">Watch it computed live in 3D</a>
+      <span>(the same scene rendered in your browser: needs a good graphics card)</span>
+    </p>
+    <footer>
+      <p>Rendered from the same models and ray tracer as the interactive pages. Filter exchange shown 10× faster than reality; light slowed down to be seen. Not an official Rubin Observatory product.</p>
+    </footer>
+  </main>
+  <script type="module">
+    import { MEDIA, mountVideo } from '/src/media.ts';
+    mountVideo(document.getElementById('film'), MEDIA.film);
+  </script>
 </body>
 </html>

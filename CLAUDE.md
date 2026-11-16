@@ -113,7 +113,7 @@ Every repository, document, data set and visual reference the animations are bui
 `REFERENCES.md` (moved out of the README in Nov 2026; the README only links to it). Add any new source
 there in the same commit that uses it.
 
-## Film (`film/`, `src/apps/film.ts`, `tools/film.cjs`)
+## Film (`film/3d/`, `src/apps/film.ts`, `tools/film.cjs`; video pages: `film/`, `src/media.ts`)
 
 One scene (the telescope, with LSSTCam at its true place) driven by a single film time `t`:
 `render(t)` sets every mechanism, the camera path and the caption for that instant, so frames can be
@@ -126,10 +126,15 @@ the descent (an upright variant with side panels was tried and rejected). **The 
 close-up. The film reuses the scene builders, so model changes show up in it for free;
 it re-applies its part visibility after `cam.update()` (see the pitfall above).
 Final videos are built in two stages (`tools/film.cjs`): `master` renders the film once, without text
-(`film/?notext`), in resumable 4 s segments; `titles` + `compose` then add the titles with ffmpeg, so
+(`film/3d/?notext`), in resumable 4 s segments; `titles` + `compose` then add the titles with ffmpeg, so
 title or language changes cost minutes, not a new 3D render. Only scene changes need a new `master`.
 Local rendering guide (dependencies, commands, what to rerun after which change): `film/RENDERING.md`;
 keep it in sync with `tools/film.cjs`.
+On the site, `film/` plays the rendered video and the landing page's banner a 10 s loop of it
+(`mountVideo` in `src/media.ts`: AV1 then H.264, poster only with `prefers-reduced-motion`). The
+videos are **hosted outside the repository** (they would grow the git history at every render): only
+their addresses, all in `src/media.ts`, and the posters (`src/media/`) are in git. After a new
+render, upload `shots/film.*` and `shots/film-loop.*` there; replace the posters only if the scene changed.
 
 ## Tools
 

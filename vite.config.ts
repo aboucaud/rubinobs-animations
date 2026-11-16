@@ -17,6 +17,7 @@ export default defineConfig({
         observatory: resolve(import.meta.dirname, 'observatory/index.html'),
         filters: resolve(import.meta.dirname, 'filters/index.html'),
         film: resolve(import.meta.dirname, 'film/index.html'),
+        film3d: resolve(import.meta.dirname, 'film/3d/index.html'),
       },
       output: {
         manualChunks: (id: string) => (id.includes('node_modules/three/') ? 'three' : id.includes('node_modules/lil-gui/') ? 'gui' : undefined),

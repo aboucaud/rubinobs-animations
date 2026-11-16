@@ -38,7 +38,8 @@ npm run build      # vérification TypeScript + build dans dist/
 npm run preview    # sert dist/ sur http://localhost:4173 ; laisser tourner
 ```
 
-Pour vérifier, ouvre http://localhost:4173/film/ dans un navigateur : le film se joue en boucle.
+Pour vérifier, ouvre http://localhost:4173/film/3d/ dans un navigateur : le film se joue en boucle, calculé en direct.
+(`film/` est la page publique, qui joue la vidéo déjà rendue.)
 Le script attend ce serveur sur le port **4173** exactement : ferme tout autre `preview` déjà lancé.
 
 ## 4. Rendre (terminal 2)
@@ -113,3 +114,16 @@ node tools/zfight.cjs 6 20                        # faces coplanaires, pièces q
   `libsvtav1` de `compose()`.
 - **Image noire ou vide avec `FILM_GL=gpu`** : le GPU n'est pas utilisable en mode sans fenêtre.
   Relance sans `FILM_GL`.
+
+## 8. Mettre la vidéo en ligne
+
+Les vidéos ne sont pas dans le dépôt : elles sont hébergées ailleurs, et le site ne connaît que leurs
+adresses, réunies dans `src/media.ts` (`VIDEO_BASE`). Après un nouveau rendu :
+1. dépose `shots/film.webm`, `shots/film.mp4`, `shots/film-loop.webm` et `shots/film-loop.mp4` sur
+   l'hébergement, sous les mêmes noms (ou change `VIDEO_BASE` si l'adresse change) ;
+2. si la scène a changé, remplace aussi les images d'attente `src/media/film-poster.jpg` (image du
+   master à 33 s) et `src/media/film-loop.jpg` (créée par `loop`), et la vignette `public/thumbs/film.jpg`.
+
+L'hébergement doit servir les fichiers en HTTPS, avec le bon type (`video/webm`, `video/mp4`), les
+requêtes « Range » et sans forcer le téléchargement. Pour vérifier une adresse :
+`curl -sI -H "Range: bytes=0-1" <adresse>` doit répondre `206`, avec `Content-Type: video/...`.
