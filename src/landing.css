@@ -5,6 +5,11 @@ html, body { margin: 0; min-height: 100%; background: radial-gradient(ellipse at
 #stars { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
 main { max-width: 1100px; margin: 0 auto; padding: max(48px, env(safe-area-inset-top)) 22px 40px; }
 .hero { max-width: 720px; margin-bottom: 40px; }
+/* language switch (i18n.ts): top of the landing page, after the back link on the film page */
+nav.lang { display: flex; gap: 4px; margin: 0 0 18px; }
+nav.lang a { font-size: 13px; font-weight: 600; letter-spacing: .04em; color: var(--muted); text-decoration: none; padding: 2px 7px; border-radius: 6px; }
+nav.lang a:hover { color: #fff; }
+nav.lang a[aria-current] { color: var(--accent-text); outline: 1px solid var(--accent-text); }
 .kicker { text-transform: uppercase; letter-spacing: .14em; font-size: 12px; color: var(--accent-text); margin: 0 0 10px; }
 h1 { font-size: clamp(36px, 6vw, 64px); line-height: 1.05; margin: 0 0 16px; font-weight: 700; color: #fff; }
 .lede { font-size: 18px; color: #c3cddd; margin: 0; }

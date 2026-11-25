@@ -35,6 +35,23 @@ Every page must stay usable on a phone in portrait and landscape: no panel may c
 - Panels have `z-index: 2`, labels `1`: a label never draws over a panel.
 - Before committing a UI change, take `phone` and `phone-land` shots of the pages it touches.
 
+## Translations (Nov 2026): every new text needs French and Spanish
+
+The site is in English, French and Spanish. Page code writes **English only**; `src/i18n.ts` (imported by
+`common.ts`, the landing and the film page) translates text as it reaches the page — static HTML, `innerHTML`
+updates, labels and their tips, lil-gui names, `title` attributes — from `src/i18n/fr.json` and `es.json`.
+- Keys are the English text with white space collapsed, one text node at a time: `Shutter: <b>${x}</b>`
+  gives the keys `Shutter:` and the value. Keep a phrase in one text node when its word order matters.
+- Variable parts: `{0}`, `{1}` in a key (`"Exposing: {0} / 30 s"`); numbers in them get the language's
+  decimal comma, other values are translated if they are keys. Generic `{0} · {1}` splits are last in the files.
+- A new or changed English text must be added to **both** files in the same commit (changing an English
+  text orphans its old key: remove it). Check with `npm run dev` (console: `i18n: no fr text for …`) or
+  `node tools/i18n.cjs fr` / `es`, which drives every page and lists what is missing.
+- Text drawn by CSS uses a variable set by `i18n.ts` (`--i18n-more`). `film/3d/` has `data-no-translate`
+  (the film is rendered from it in English). Official names: see the naming rules; French and Spanish
+  forms in the dictionaries.
+- French and Spanish texts are longer: take `phone` / `phone-land` shots with `?lang=fr` too.
+
 ## Code layout
 
 - `src/optics/` — sequential ray tracer (validated against batoid, do not change without `npm run validate`).

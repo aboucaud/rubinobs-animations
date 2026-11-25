@@ -9,6 +9,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto 0; height: 120px; p
 header { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 14px; pointer-events: none; }
 header a.home { pointer-events: auto; color: var(--accent-text); text-decoration: none; font-size: 12px; display: inline-block; margin-bottom: 4px; }
 header a.home:hover { color: #fff; }
+/* language switch (i18n.ts), after the home link */
+nav.lang { pointer-events: auto; display: inline-flex; gap: 2px; margin-left: 10px; vertical-align: top; }
+nav.lang a { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--muted); text-decoration: none; padding: 0 4px; border-radius: 4px; }
+nav.lang a:hover { color: #fff; }
+nav.lang a[aria-current] { color: var(--accent-text); outline: 1px solid var(--accent-text); }
 header h1 { margin: 0; font-size: 15px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
 header p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
 #info { position: fixed; left: 14px; top: calc(max(12px, env(safe-area-inset-top)) + 62px); max-width: 330px;
@@ -66,7 +71,7 @@ header p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
 #info:empty, #bar:empty { display: none; }
 /* first-visit hint (createViewer), just above the bottom bar */
 #hint { position: fixed; left: 50%; bottom: calc(max(14px, env(safe-area-inset-bottom)) + var(--bar-h, 64px) + 14px); translate: -50% 0;
-  pointer-events: none; padding: 8px 14px; border-radius: 999px; font-size: 13px; white-space: nowrap; max-width: calc(100vw - 28px);
+  pointer-events: none; padding: 8px 14px; border-radius: 18px; font-size: 13px; width: max-content; max-width: calc(100vw - 28px); text-align: center;
   background: var(--panel); border: 1px solid var(--border); transition: opacity .4s; }
 #hint.gone { opacity: 0; }
 /* panels stay above the 3D labels */
@@ -118,7 +123,8 @@ body.phone #bar .short { display: inline; }
    body.phone is set by initPhoneLayout (common.ts) for narrow (portrait) or short (landscape)
    screens. Rule: on a phone, no panel may cover another one, and the animation keeps the middle
    of the screen. Check new UI with the phone screenshots described in CLAUDE.md. */
-body.phone header { max-width: calc(100vw - 170px); }
+body.phone header { max-width: calc(100vw - 125px); }
+body.phone nav.lang { margin-left: 6px; gap: 0; }
 body.phone header h1 { font-size: 13px; letter-spacing: .05em; }
 body.phone header p { display: none; }
 body.phone .lil-gui.lil-root { --width: min(260px, 70vw); max-height: 70dvh; }
@@ -127,8 +133,8 @@ body.phone .lil-gui.lil-root.lil-closed { width: auto; }
 body.phone #info { top: calc(max(12px, env(safe-area-inset-top)) + 42px); max-width: min(330px, calc(100vw - 28px));
   font-size: 11px; padding: 6px 10px; cursor: pointer; }
 body.phone #info .band { font-size: 17px; }
-body.phone #info .band::after { content: "▸ more"; margin-left: auto; padding-left: 8px; font-size: 11px; font-weight: 400; color: var(--muted); }
-body.phone #info.open .band::after { content: "▾ less"; }
+body.phone #info .band::after { content: var(--i18n-more, "▸ more"); margin-left: auto; padding-left: 8px; font-size: 11px; font-weight: 400; color: var(--muted); }
+body.phone #info.open .band::after { content: var(--i18n-less, "▾ less"); }
 body.phone #info:not(.open) > :not(.band):not(.key) { display: none; }
 body.phone #inset { width: 120px; height: 120px; }
 body.phone #bar { gap: 4px; padding: 6px; }
