@@ -47,6 +47,9 @@ header p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
 .lil-gui.chips > .lil-children > .lil-controller { margin: 0; padding: 0; }
 .lil-gui.chips > .lil-children > .lil-controller button { width: auto; padding: 0 9px; white-space: nowrap; }
 .lil-gui.chips > .lil-children > .lil-controller.on button { background: var(--accent); }
+/* chips without a heading, directly under their folder's controls (addChips with an empty title) */
+.lil-gui.chips.flat > .lil-title { display: none; }
+.lil-gui .lil-gui .lil-gui.chips.flat > .lil-children { margin-left: 0; border-left: none; }
 /* loading screen: the page's thumbnail under a dark veil, until the first frame (createViewer) */
 #loading { position: fixed; inset: 0; z-index: 2; display: grid; place-items: end center; background: var(--bg) center / cover no-repeat;
   transition: opacity .5s; }

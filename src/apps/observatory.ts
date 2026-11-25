@@ -415,7 +415,7 @@ function goView(name: string) {
   state.cutaway = !!v.cut;
   gui.controllersRecursive().forEach((c) => c.updateDisplay());
 }
-const gui = createGui('Observatory');
+const gui = createGui();
 addChips(gui, 'Views', Object.keys(VIEWS), goView);
 const fd = gui.addFolder('Display');
 fd.add(state, 'cutaway').name('Cut the dome open');
