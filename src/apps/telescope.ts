@@ -59,7 +59,6 @@ const state = {
   fieldAz: 0,
   rings: 7,
   speed: 2.0,
-  continuous: true, // false while a single wavefront crosses the telescope
   showPaths: false,
   cutaway: true,
   labels: true,
@@ -109,6 +108,7 @@ function fadeBase(fade: boolean) {
 
 // ---------------------------------------------------------------- rays
 const rays = new RayBundle();
+rays.material.uniforms.uContinuous.value = 0; // light comes as single wavefronts only
 tel.ota.add(rays.object);
 const spot = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTexture(), color: 0xffffff, depthWrite: false, transparent: true }));
 spot.scale.setScalar(0.02); // a sharp 20 mm spot
@@ -125,7 +125,7 @@ type Traced = { rays: RayData; landing: Landing };
 // (≈ 130 default fans, or ≈ 15 of the densest 3D bundles) bounds the memory the cache can hold.
 const traces = new TraceCache<Traced>(2 * 1024 * 1024, (t) => rayBytes(t.rays) + 256);
 let landing: Landing = { x: 0, y: 0, ok: 0, total: 0, blocked: {} };
-let head = 0;
+let head = 0; // metres travelled by the wavefront: the page opens by sending one
 
 function fieldAngles() {
   const th = (state.fieldAngle * Math.PI) / 180;
@@ -321,7 +321,6 @@ bar.innerHTML = `
   <span class="sep">Show</span>${SWITCHES.map(([k, yes, no]) => `<span class="seg"><button data-switch="${k}" data-value="0">${no}</button><button data-switch="${k}" data-value="1">${yes}</button></span>`).join('')}
   <span class="sep">View</span>${Object.entries(QUICK_VIEWS).map(([v, short]) => `<button data-view="${v}">${short}</button>`).join('')}`;
 document.getElementById('bFire')!.onclick = () => {
-  state.continuous = false; // back to continuous light once the wavefront has landed (frame loop)
   head = 0;
 };
 bar.querySelectorAll<HTMLButtonElement>('button[data-switch]').forEach((b) => {
@@ -366,16 +365,11 @@ function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   head += dt * state.speed;
   const u = rays.material.uniforms;
-  u.uContinuous.value = state.continuous ? 1 : 0;
   u.uHead.value = head;
   u.uBase.value = state.showPaths ? 0.07 : 0.0;
-  // one wavefront: once it has landed and the spot has faded, the light flows continuously again
-  if (!state.continuous && head > rays.maxDist + 6) {
-    state.continuous = true;
-    head = 0;
-  }
+  if (head > rays.maxDist + 6) head = rays.maxDist + 6; // landed: wait for the next wavefront
   // spot brightness follows arrivals
-  const arrival = state.continuous ? 1 : Math.max(0, Math.min(1, (head - rays.meanOkLength) / 0.3)) * Math.exp(-Math.max(0, head - rays.meanOkLength - 0.3) / 2);
+  const arrival = Math.max(0, Math.min(1, (head - rays.meanOkLength) / 0.3)) * Math.exp(-Math.max(0, head - rays.meanOkLength - 0.3) / 2);
   spot.material.opacity = arrival;
 
   // pointing: preset slews drive the elevation slider, which the tube follows (eased)
