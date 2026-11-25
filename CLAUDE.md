@@ -22,7 +22,7 @@ Every page must stay usable on a phone in portrait and landscape: no panel may c
 - `initPhoneLayout()` (`common.ts`, called by `createViewer`; a 2D page calls it itself) is the single
   source of truth: it sets `body.phone` for narrow *or* short screens (`max-width: 720px, max-height: 500px`).
   Phone CSS keys on `body.phone`, never on its own `@media` width query; JS uses `isPhone()`.
-- Settings menus come from `createGui(title)` (closed by default on phones), not `new GUI()`.
+- Settings menus come from `createGui()` (titled "Settings" on every page, closed by default on phones), not `new GUI()`.
   lil-gui 0.21 class names are `lil-root`, `lil-closed`, `lil-title`.
 - `#info` shows only its key line on a phone: the `.band` line and any child with class `key`.
   Tapping it shows the rest. Put new essential state in a `.key` line, details in plain lines.

@@ -205,7 +205,7 @@ function goView(name: string) {
   applyVisibility();
   gui.controllersRecursive().forEach((c) => c.updateDisplay());
 }
-const gui = createGui('Filter exchange');
+const gui = createGui();
 addChips(gui, 'Views', Object.keys(VIEWS), goView);
 const fd = gui.addFolder('Display');
 fd.add(state, 'body').name('Camera body').onChange(applyVisibility);

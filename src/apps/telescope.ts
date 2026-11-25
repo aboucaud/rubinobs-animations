@@ -63,7 +63,7 @@ const state = {
   showPaths: false,
   cutaway: true,
   labels: true,
-  glass: true, // lenses & filters shown; only the 'Focal plane' view hides them
+  glass: true, // lenses & filter shown (menu); the 'Focal plane' view hides them, any other view shows them
   elevation: 90,
   azimuth: 0,
   mount: true,
@@ -290,6 +290,7 @@ function goView(name: string) {
   const v = VIEWS[name];
   tween.start(tel.ota.localToWorld(new THREE.Vector3(...v.pos)), tel.ota.localToWorld(new THREE.Vector3(...v.tgt)));
   state.glass = v.glass ?? true;
+  glassCtrl.updateDisplay();
   if (v.cut !== undefined) state.cutaway = v.cut;
   markView(name);
   syncBar();
@@ -298,13 +299,25 @@ function goView(name: string) {
 // ---------------------------------------------------------------- GUI
 // views on the bar (with their short names there); the others are in the menu
 const QUICK_VIEWS: Record<string, string> = { Overview: 'Overview', 'Light path (side)': 'Light path', 'Inside the camera': 'Camera' };
-const gui = createGui('Simonyi Telescope');
+const gui = createGui();
 const fLight = gui.addFolder('Light');
 fLight.add(state, 'rings', 3, 14, 1).name('Ray density').onChange(requestRetrace);
 fLight.add(state, 'speed', 0.2, 8, 0.1).name('Light speed (m/s)').onChange(updateInfo);
-fLight.add(state, 'showPaths').name('Full light paths');
+fLight.add(state, 'showPaths').name('Show light paths');
+const fPoint = gui.addFolder('Pointing');
+// preset pointings: the elevation slider glides to the target (ease in-out); dragging it cancels
+const POINTINGS: Record<string, number> = { Zenith: 90, '35° elevation': 35, Horizon: 0 };
+let slew: { from: number; to: number; t: number; dur: number } | null = null;
+const elevationCtrl = fPoint.add(state, 'elevation', 0, 90, 0.5).name('Elevation (°)').onChange(() => (slew = null));
+fPoint.add(state, 'azimuth', -270, 270, 1).name('Azimuth (°)');
+addChips(fPoint, '', Object.keys(POINTINGS), (name) => {
+  const el = POINTINGS[name];
+  slew = { from: state.elevation, to: el, t: 0, dur: 1 + Math.abs(el - state.elevation) / 30 };
+});
+const fDisplay = gui.addFolder('Display');
+fDisplay.add(state, 'labels').name('Labels');
+const glassCtrl = fDisplay.add(state, 'glass').name('Lenses & filter');
 const markMenuView = addChips(gui, 'Extra views', Object.keys(VIEWS).filter((v) => !(v in QUICK_VIEWS)), goView);
-gui.addFolder('Display').add(state, 'labels').name('Labels');
 
 // ---------------------------------------------------------------- bottom bar: wavefront, display switches, quick views
 /** a button text, shortened on phones */
@@ -345,16 +358,6 @@ function syncBar() {
   });
   bar.querySelectorAll<HTMLButtonElement>('button[data-view]').forEach((b) => b.classList.toggle('on', b.dataset.view === currentView));
 }
-const fPoint = gui.addFolder('Pointing');
-// preset pointings: the elevation slider glides to the target (ease in-out); dragging it cancels
-const POINTINGS: Record<string, number> = { Zenith: 90, '35° elevation': 35, Horizon: 0 };
-let slew: { from: number; to: number; t: number; dur: number } | null = null;
-fPoint.add(state, 'elevation', 0, 90, 0.5).name('Elevation (°)').onChange(() => (slew = null));
-fPoint.add(state, 'azimuth', -270, 270, 1).name('Azimuth (°)');
-addChips(fPoint, 'Presets', Object.keys(POINTINGS), (name) => {
-  const el = POINTINGS[name];
-  slew = { from: state.elevation, to: el, t: 0, dur: 1 + Math.abs(el - state.elevation) / 30 };
-});
 
 // ---------------------------------------------------------------- loop
 const clock = new THREE.Clock();
@@ -383,7 +386,7 @@ function frame() {
     slew.t = Math.min(1, slew.t + dt / slew.dur);
     const e = slew.t * slew.t * (3 - 2 * slew.t);
     state.elevation = Math.round((slew.from + (slew.to - slew.from) * e) * 10) / 10;
-    fPoint.controllers[0].updateDisplay();
+    elevationCtrl.updateDisplay();
     if (slew.t === 1) slew = null;
   }
   const ease = 1 - Math.exp(-dt * 5);

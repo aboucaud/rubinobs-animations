@@ -31,20 +31,22 @@ export function initPhoneLayout() {
   if (bar) new ResizeObserver(() => document.body.style.setProperty('--bar-h', `${bar.offsetHeight}px`)).observe(bar);
 }
 
-/** The settings panel, closed by default on phones. */
-export function createGui(title: string) {
-  const gui = new GUI({ title });
+/** The settings panel ("Settings" on every page: the page title is in the header), closed by default on phones. */
+export function createGui() {
+  const gui = new GUI({ title: 'Settings' });
   if (isPhone()) gui.close();
   return gui;
 }
 
 /**
  * A folder of buttons laid out as chips (views, preset pointings); the last one picked is highlighted.
+ * With an empty title the chips sit directly under the parent folder's controls (no heading, no indent).
  * Returns the highlighter, for pages that can also pick from elsewhere (the telescope's bottom bar).
  */
 export function addChips(gui: GUI, title: string, names: string[], pick: (name: string) => void) {
   const f = gui.addFolder(title);
   f.domElement.classList.add('chips');
+  if (!title) f.domElement.classList.add('flat');
   const ctrls = names.map((k) => f.add({ [k]: () => (mark(k), pick(k)) }, k));
   function mark(k: string) {
     ctrls.forEach((c, i) => c.domElement.classList.toggle('on', names[i] === k));
