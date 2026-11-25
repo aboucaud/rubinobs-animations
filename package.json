@@ -2,15 +2,30 @@
   "name": "rubinobs-animations",
   "version": "0.1.0",
   "description": "Interactive, physically accurate animations of the Vera C. Rubin Observatory, the Simonyi Survey Telescope and LSSTCam",
+  "license": "MIT",
+  "author": "Alexandre Boucaud",
+  "homepage": "https://aboucaud.github.io/rubinobs-animations/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aboucaud/rubinobs-animations"
+  },
+  "keywords": [
+    "rubin-observatory",
+    "lsst",
+    "astronomy",
+    "outreach",
+    "three.js",
+    "webgl",
+    "ray-tracing"
+  ],
+  "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -p . && vite build",
     "preview": "vite preview",
     "validate": "tsx tools/validate.ts"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
     "lil-gui": "^0.21.0",
@@ -21,7 +36,5 @@
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.5"
-  },
-  "private": true,
-  "type": "module"
+  }
 }

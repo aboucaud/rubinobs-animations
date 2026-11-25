@@ -133,6 +133,10 @@ Every repository, document, data set and visual reference the animations are bui
 `REFERENCES.md` (moved out of the README in Nov 2026; the README only links to it). Add any new source
 there in the same commit that uses it.
 
+Licences: code MIT (`LICENSE`), content CC BY 4.0 (`LICENSE-CONTENT.md`: film, thumbnails, posters, favicon, page
+texts). A new third-party data source or asset must have a licence that allows redistribution; note it in
+`LICENSE-CONTENT.md` if its data ships with the site.
+
 ## Film (`film/3d/`, `src/apps/film.ts`, `tools/film.cjs`; video pages: `film/`, `src/media.ts`)
 
 One scene (the telescope, with LSSTCam at its true place) driven by a single film time `t`:
