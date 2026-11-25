@@ -108,6 +108,7 @@ function addSwitch() {
     a.title = NAMES[l];
     a.lang = l;
     if (l === LANG) a.setAttribute('aria-current', 'true');
+    a.addEventListener('click', () => store(l)); // also where the query string is dropped (embeds)
     nav.append(a);
   }
   const home = document.querySelector('header a.home, .back');
