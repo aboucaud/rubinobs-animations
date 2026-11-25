@@ -205,7 +205,7 @@ function updateInfo() {
   const blockedTxt = Object.entries(landing.blocked)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
-    .map(([k, v]) => `${prettyObsc(k)} ${v}`)
+    .map(([k, v]) => `<span>${prettyObsc(k)}</span> ${v}`) // one text node per name, for the translations
     .join(', ');
   const travelNs = ((rays.meanOkLength - (12.5 - 9.818)) / 0.299792458).toFixed(0);
   info.innerHTML = `
