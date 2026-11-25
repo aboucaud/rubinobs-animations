@@ -63,6 +63,12 @@ Shared modules: `src/optics/` (ray tracer), `src/scene/` (telescope, camera, fil
 - Scale: standing adults (1.65–1.78 m, `src/scene/human.ts`) on the azimuth platform (telescope page), beside the camera cart (camera page), at the drum entrance and on the telescope floor (observatory page).
 - Schematic: the mount (TMA), mirror cell, centre section and camera internals (carousel sockets, autochanger rails, shutter frame, cryostat interior, utility trunk), dome and summit buildings. These will be replaced as better geometry (NOIRLab CAD, LSSTCam drawings) becomes available.
 
+## Licence
+
+- **Code:** [MIT](LICENSE).
+- **Content** (film, images, thumbnails, page texts): [CC BY 4.0](LICENSE-CONTENT.md). Reuse and adapt freely, with credit: *Rubin Observatory outreach animations, A. Boucaud and contributors, CC BY 4.0*.
+- Third-party software and data keep their own licences (batoid BSD-2, obs_lsst GPL-3, three.js MIT, Inter OFL); details in [LICENSE-CONTENT.md](LICENSE-CONTENT.md).
+
 ## References
 
 Every repository, document, data set and visual reference the animations are built from is listed in [REFERENCES.md](REFERENCES.md).
