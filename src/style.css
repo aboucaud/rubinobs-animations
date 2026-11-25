@@ -85,6 +85,16 @@ header, #info, #steps, #bar, #insetWrap, #hint { z-index: 2; }
 #bar button[data-band] { color: var(--c); min-width: 34px; border-color: color-mix(in srgb, var(--c) 50%, transparent); }
 #bar button.active, #bar button.active:disabled { background: var(--c); border-color: var(--c); color: #0a0e18; opacity: 1; }
 #bar button:disabled { opacity: .4; cursor: default; border-style: dashed; }
+/* two-way switch (telescope page): two buttons joined, the current side on */
+#bar .seg { display: inline-flex; }
+#bar .seg button:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+#bar .seg button:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin-left: -1px; }
+/* the current side of a switch and the current view (telescope page): teal outline, unlike the filled action button */
+#bar button.on { color: var(--accent-text); background: rgba(46,127,130,.2); border-color: var(--accent-hi); }
+/* a bar on a page with the focal-plane inset at bottom left: centred in the space to its right */
+#bar.beside-inset { left: 198px; right: 14px; max-width: none; }
+#bar .short, body.phone #bar .long { display: none; }
+body.phone #bar .short { display: inline; }
 #bar .sep { font-size: 12px; color: var(--muted); margin-left: 6px; }
 #bar .slider { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-left: 6px; }
 #bar input[type=range] { accent-color: var(--accent-hi); }
@@ -118,11 +128,13 @@ body.phone #info .band::after { content: "▸ more"; margin-left: auto; padding-
 body.phone #info.open .band::after { content: "▾ less"; }
 body.phone #info:not(.open) > :not(.band):not(.key) { display: none; }
 body.phone #inset { width: 120px; height: 120px; }
-body.phone #insetWrap div { max-width: 120px; }
 body.phone #bar { gap: 4px; padding: 6px; }
 body.phone #bar button { padding: 6px 8px; font-size: 12px; min-height: 36px; }
 body.phone #bar .sep { display: none; }
 body.phone #bar input[type=range] { width: 80px; }
+body.phone #bar.beside-inset { left: 0; right: 0; max-width: calc(100vw - 28px); }
+body.phone #insetWrap { bottom: calc(max(14px, env(safe-area-inset-bottom)) + var(--bar-h, 0px) + 8px); }
+body.phone #insetWrap div { max-width: 120px; }
 /* panels that sit just above the bottom bar (--bar-h is kept up to date by initPhoneLayout) */
 body.phone #steps, body.phone #tip { top: auto; bottom: calc(max(14px, env(safe-area-inset-bottom)) + var(--bar-h, 0px) + 8px); }
 body.phone #steps { left: 14px; right: 14px; width: auto; max-height: 22vh; }
@@ -135,4 +147,8 @@ body.phone .label { font-size: 11px; padding: 3px 6px; }
   body.phone #bar { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; }
   body.phone #bar > * { flex: none; }
   body.phone #info { max-width: min(300px, 40vw); }
+}
+@media (orientation: portrait) {
+  /* the first-visit hint goes above the focal-plane inset, not over its caption */
+  body.phone:has(#insetWrap) #hint { bottom: calc(max(14px, env(safe-area-inset-bottom)) + var(--bar-h, 0px) + 190px); }
 }

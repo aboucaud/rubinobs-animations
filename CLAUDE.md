@@ -28,6 +28,10 @@ Every page must stay usable on a phone in portrait and landscape: no panel may c
   Tapping it shows the rest. Put new essential state in a `.key` line, details in plain lines.
 - Panels that sit above the bottom bar use `var(--bar-h)` (kept up to date by `initPhoneLayout`).
   In landscape the bar is one row that scrolls sideways.
+- Bottom-bar buttons can carry a phone text: `<span class="long">…</span><span class="short">…</span>`.
+  Two-way switches (`.seg`) and views on a bar mark their current choice with class `on` (teal outline); the filled teal button is the action.
+  A page with the focal-plane inset (telescope) gives its bar class `beside-inset`; on phones the inset sits
+  above the bar instead.
 - Panels have `z-index: 2`, labels `1`: a label never draws over a panel.
 - Before committing a UI change, take `phone` and `phone-land` shots of the pages it touches.
 
@@ -38,7 +42,7 @@ Every page must stay usable on a phone in portrait and landscape: no panel may c
   materials, textures, rays, band colours (`bands.ts`: the single source for band colours and texts).
 - `src/apps/` — one script per page. `common.ts` holds what every page shares: `createViewer`
   (renderer, scene, camera, controls, post-processing, resize), `createLabels`, `CameraTween`,
-  `faceCutPlane`, `dotTexture`, `createGui`, `addChips` (views and presets as chips), `initPhoneLayout` / `isPhone`.
+  `faceCutPlane`, `dotTexture`, `createGui`, `addChips` (views and presets as chips; returns a highlighter for pages that also pick a view from their bar), `initPhoneLayout` / `isPhone`.
   A new page should be built on it, not copy boilerplate.
 - `src/tokens.css` — shared design tokens (colours, radii, the self-hosted Inter font), imported by `style.css`
   and `landing.css`. One UI accent: Rubin teal (`--accent`); band colours are kept for light and filters.
