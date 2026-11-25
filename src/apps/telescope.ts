@@ -59,8 +59,8 @@ const state = {
   fieldAz: 0,
   rings: 7,
   speed: 2.0,
-  continuous: true,
-  showPaths: true,
+  continuous: true, // false while a single wavefront crosses the telescope
+  showPaths: false,
   cutaway: true,
   labels: true,
   glass: true, // lenses & filters shown; only the 'Focal plane' view hides them
@@ -291,22 +291,60 @@ function goView(name: string) {
   tween.start(tel.ota.localToWorld(new THREE.Vector3(...v.pos)), tel.ota.localToWorld(new THREE.Vector3(...v.tgt)));
   state.glass = v.glass ?? true;
   if (v.cut !== undefined) state.cutaway = v.cut;
-  gui.controllersRecursive().forEach((c) => c.updateDisplay());
+  markView(name);
+  syncBar();
 }
 
 // ---------------------------------------------------------------- GUI
+// views on the bar (with their short names there); the others are in the menu
+const QUICK_VIEWS: Record<string, string> = { Overview: 'Overview', 'Light path (side)': 'Light path', 'Inside the camera': 'Camera' };
 const gui = createGui('Simonyi Telescope');
 const fLight = gui.addFolder('Light');
 fLight.add(state, 'rings', 3, 14, 1).name('Ray density').onChange(requestRetrace);
 fLight.add(state, 'speed', 0.2, 8, 0.1).name('Light speed (m/s)').onChange(updateInfo);
-fLight.add(state, 'continuous').name('Continuous light');
 fLight.add(state, 'showPaths').name('Full light paths');
-fLight.add({ fire: () => ((state.continuous = false), (head = 0), gui.controllersRecursive().forEach((c) => c.updateDisplay())) }, 'fire').name('Send one wavefront');
-addChips(gui, 'Views', Object.keys(VIEWS), goView);
-const fView = gui.addFolder('Display');
-fView.add(state, 'cutaway').name('Cutaway');
-fView.add(state, 'labels').name('Labels');
-fView.add(state, 'mount').name('Mount & structure');
+const markMenuView = addChips(gui, 'Extra views', Object.keys(VIEWS).filter((v) => !(v in QUICK_VIEWS)), goView);
+gui.addFolder('Display').add(state, 'labels').name('Labels');
+
+// ---------------------------------------------------------------- bottom bar: wavefront, display switches, quick views
+/** a button text, shortened on phones */
+const txt = (long: string, short: string) => `<span class="long">${long}</span><span class="short">${short}</span>`;
+// two-way switches: [state key, text when true, text when false]
+const SWITCHES = [
+  ['cutaway', 'Cutaway', 'Full'],
+  ['mount', 'Mount', 'Mirrors'],
+] as const;
+type Switch = (typeof SWITCHES)[number][0];
+const bar = document.getElementById('bar')!;
+bar.innerHTML = `
+  <button id="bFire" class="primary">${txt('Send one wavefront', 'Wavefront')}</button>
+  <span class="sep">Show</span>${SWITCHES.map(([k, yes, no]) => `<span class="seg"><button data-switch="${k}" data-value="0">${no}</button><button data-switch="${k}" data-value="1">${yes}</button></span>`).join('')}
+  <span class="sep">View</span>${Object.entries(QUICK_VIEWS).map(([v, short]) => `<button data-view="${v}">${short}</button>`).join('')}`;
+document.getElementById('bFire')!.onclick = () => {
+  state.continuous = false; // back to continuous light once the wavefront has landed (frame loop)
+  head = 0;
+};
+bar.querySelectorAll<HTMLButtonElement>('button[data-switch]').forEach((b) => {
+  b.onclick = () => {
+    state[b.dataset.switch as Switch] = b.dataset.value === '1';
+    syncBar();
+  };
+});
+bar.querySelectorAll<HTMLButtonElement>('button[data-view]').forEach((b) => (b.onclick = () => goView(b.dataset.view!)));
+let currentView = '';
+function markView(name: string) {
+  currentView = name;
+  markMenuView(name);
+}
+/** bar buttons show the state: the current side of each switch and the current view highlighted */
+function syncBar() {
+  bar.querySelectorAll<HTMLButtonElement>('button[data-switch]').forEach((b) => {
+    const on = state[b.dataset.switch as Switch] === (b.dataset.value === '1');
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+  bar.querySelectorAll<HTMLButtonElement>('button[data-view]').forEach((b) => b.classList.toggle('on', b.dataset.view === currentView));
+}
 const fPoint = gui.addFolder('Pointing');
 // preset pointings: the elevation slider glides to the target (ease in-out); dragging it cancels
 const POINTINGS: Record<string, number> = { Zenith: 90, '35° elevation': 35, Horizon: 0 };
@@ -331,7 +369,11 @@ function frame() {
   u.uContinuous.value = state.continuous ? 1 : 0;
   u.uHead.value = head;
   u.uBase.value = state.showPaths ? 0.07 : 0.0;
-  if (!state.continuous && head > rays.maxDist + 6) head = rays.maxDist + 6;
+  // one wavefront: once it has landed and the spot has faded, the light flows continuously again
+  if (!state.continuous && head > rays.maxDist + 6) {
+    state.continuous = true;
+    head = 0;
+  }
   // spot brightness follows arrivals
   const arrival = state.continuous ? 1 : Math.max(0, Math.min(1, (head - rays.meanOkLength) / 0.3)) * Math.exp(-Math.max(0, head - rays.meanOkLength - 0.3) / 2);
   spot.material.opacity = arrival;
