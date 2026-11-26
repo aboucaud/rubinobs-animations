@@ -220,11 +220,10 @@ export function buildLSSTCam(rubin: Rubin, opts: { uniformSensors?: boolean } = 
 
   // ---------------------------------------------------------------- filter exchange system (IN2P3/CNRS)
   const fes = buildFES();
-  group.add(fes.carousel, fes.autochanger, fes.filterRoot, fes.fixed);
+  group.add(fes.carousel, fes.autochanger, fes.filterRoot);
   parts.carousel = fes.carousel;
   parts.autochanger = fes.autochanger;
   parts.filters = fes.filterRoot;
-  parts.fesFixed = fes.fixed;
   labels.push(...fes.labels);
 
   // ---------------------------------------------------------------- utility trunk + hexapod/rotator
@@ -275,7 +274,7 @@ export function buildLSSTCam(rubin: Rubin, opts: { uniformSensors?: boolean } = 
   function update() {
     const ex = state.explode;
     // exploded offsets along the optical axis
-    const dz: Record<string, number> = { l1l2: -1.25, shutter: -0.55, cryostat: 0.25, autochanger: 0, fesFixed: 0.95, trunk: 1.7, hexapod: 2.1, body: 0 };
+    const dz: Record<string, number> = { l1l2: -1.25, shutter: -0.55, cryostat: 0.25, autochanger: 0, trunk: 1.7, hexapod: 2.1, body: 0 };
     for (const [k, v] of Object.entries(dz)) parts[k].position.copy(ocs(0, 0, v * ex));
     (parts.body as THREE.Group).visible = ex < 0.02;
     parts.autochanger.visible = ex < 0.6;
