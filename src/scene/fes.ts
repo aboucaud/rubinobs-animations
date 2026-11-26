@@ -323,7 +323,6 @@ export function buildFES(): FilterExchanger {
     const bracket = box(0.2, -0.735, zR - 0.1, 0.08, 0.02, 0.12, M.dark);
     fixed.add(bracket);
   }
-  L('drive', 'Carousel drive', 'A motor and brake turn the carousel ring through its gear. Before a filter can leave, the carousel is realigned to better than 0.1 mm with the autochanger.', ocs(0.2, -0.74, zR - 0.1), fixed);
 
   const autochanger = new THREE.Group();
   autochanger.name = 'autochanger';
@@ -448,7 +447,6 @@ export function buildFES(): FilterExchanger {
     onlineClamps.push({ m, sx });
   }
   L('autochanger', 'Autochanger', 'Pulls the chosen filter out of the standby socket and guides it, with two pins per side running in two grooves, around the front of the cryostat into the beam: about 1 m in total, the main 91 cm in about 6 s, never more than 1.5 g.', ocs(X + 0.05, 0.2, 4.4), autochanger);
-  L('rails', 'Guide grooves', 'The pins run in grooves cut in the side plates: straight along the top, then along a large circle that turns the filter through 90° around the front of the cryostat, then straight down into the beam.', ocs(X, 0.6, 4.9), autochanger);
   L('carrier', 'Filter carrier', 'The V-shaped beam and the four trucks belong to the moving part of the autochanger: they grip the filter by its pins and travel with it between the carousel and the beam.', ocs(0, 0.42, 4.2), carrier);
   L('online', 'Online clamps', 'Hold the filter in the beam, a few millimetres in front of the shutter and L3, repeatable to better than 0.1 mm.', ocs(X, -0.2, 4.3), autochanger);
 

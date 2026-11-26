@@ -645,7 +645,7 @@ function buildDome(): Dome {
 
   const labels = [
     { title: 'Rotating dome', text: '30 m wide, built by EIE (Italy). It turns independently of the telescope at up to 1.5°/s and is clad in corrugated aluminium.', pos: new THREE.Vector3(-W, 14, 0) },
-    { title: 'Slit', text: 'An 11 m wide opening running up the front and over the top. Two roof doors slide sideways to open it.', pos: new THREE.Vector3(0, H + 0.5, -2) },
+    { title: 'Dome shutter', text: 'An 11 m wide opening running up the front and over the top. Two roof doors slide sideways to open it.', pos: new THREE.Vector3(0, H + 0.5, -2) },
     { title: 'Light/wind screen', text: 'A moving screen inside the slit that leaves just the opening the beam needs (11 × 10 m), blocking wind and stray light.', pos: new THREE.Vector3(0, S.chinTop + 0.5, S.chinZ) },
     { title: 'Vents', text: '34 louvered vents open in under 30 s to flush warm air out of the dome, so the air in front of the mirror stays at night-time temperature.', pos: new THREE.Vector3(W + 0.2, 12, -2.5) },
   ];

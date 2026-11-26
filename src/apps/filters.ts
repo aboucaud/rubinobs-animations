@@ -172,14 +172,14 @@ document.getElementById('bSwap')!.onclick = () => {
 };
 
 // labels: only the FES ones (+ cryostat / L3 for context)
-const LABEL_IDS = new Set(['carrier', 'carousel', 'drive', 'autochanger', 'rails', 'online', 'filter', 'shutter', 'L3', 'cryostat', 'fp']);
+const LABEL_IDS = new Set(['carrier', 'carousel', 'autochanger', 'online', 'filter', 'shutter', 'L3', 'cryostat', 'fp']);
 const updateLabels = createLabels(
   cam.labels.filter((l) => LABEL_IDS.has(l.id)),
   camera,
   controls,
   {
     defaultParent: cam.group,
-    rank: ['filter', 'carousel', 'autochanger', 'carrier', 'online', 'rails', 'drive', 'shutter', 'L3', 'fp', 'cryostat'],
+    rank: ['filter', 'carousel', 'autochanger', 'carrier', 'online', 'shutter', 'L3', 'fp', 'cryostat'],
     visible: (l) => (l.parent ?? cam.group).visible,
   },
 );

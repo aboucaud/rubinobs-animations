@@ -186,9 +186,10 @@ function filterSteps(target: Band | null): Step[] {
 }
 
 // ---------------------------------------------------------------- labels
-const updateLabels = createLabels(cam.labels, camera, controls, {
+// the carrier and the online clamps are labelled on the filter exchange page only
+const updateLabels = createLabels(cam.labels.filter((l) => l.id !== 'carrier' && l.id !== 'online'), camera, controls, {
   defaultParent: cam.group,
-  rank: ['L1', 'L2', 'L3', 'filter', 'shutter', 'fp', 'body', 'cryostat', 'rafts', 'carousel', 'autochanger', 'hexapod', 'trunk', 'drive', 'rails', 'carrier', 'online'],
+  rank: ['L1', 'L2', 'L3', 'filter', 'shutter', 'fp', 'body', 'cryostat', 'rafts', 'carousel', 'autochanger', 'hexapod', 'trunk'],
   visible: (l, dist, camD) => (l.parent ?? cam.group).visible && dist < 1.6 * camD + 0.4,
 });
 

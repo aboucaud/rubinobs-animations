@@ -316,7 +316,6 @@ function tick(dt: number) {
 type L = { title: string; text: string; pos: THREE.Vector3; parent: THREE.Object3D };
 const LABELS: L[] = [
   ...obs.dome.labels.map((l) => ({ ...l, parent: obs.dome.group })),
-  { title: 'Lower enclosure', text: 'Fixed concrete drum, 30 m across. The dome rotates on bogies on top of it; the telescope pier rises inside, isolated from the building.', pos: new THREE.Vector3(SITE.drumR, 8, 4), parent: obs.root },
   { title: 'Service & operations building', text: 'About 3,000 m²: control room, mirror coating chamber, clean room for the camera, and a 72.5-tonne platform lift that carries mirrors and the camera up to the telescope floor, five levels up.', pos: new THREE.Vector3(42, 8, 0), parent: obs.root },
   { title: 'Auxiliary Telescope', text: 'A 1.2 m telescope on its own hill. It takes spectra of bright stars all night to measure how much the atmosphere dims each colour.', pos: new THREE.Vector3(68.7, 4, -115.8), parent: obs.root },
   { title: 'Simonyi Survey Telescope', text: '8.4 m primary mirror, 350 t moving mass. It slews 3.5° and settles in about 5 s, then takes a 30 s exposure, around 1,000 times a night.', pos: new THREE.Vector3(0, 10, 0), parent: tel.ota },
@@ -324,7 +323,7 @@ const LABELS: L[] = [
 const updateLabels = createLabels(LABELS, camera, controls, {
   defaultParent: obs.root,
   short: false,
-  rank: ['Simonyi Survey Telescope', 'Auxiliary Telescope', 'Service & operations building', 'Lower enclosure'],
+  rank: ['Simonyi Survey Telescope', 'Auxiliary Telescope', 'Service & operations building'],
   visible: (_l, d, camD) => d < 1.7 * camD + 20,
 });
 
