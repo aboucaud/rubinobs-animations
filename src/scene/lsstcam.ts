@@ -101,7 +101,7 @@ export function buildLSSTCam(rubin: Rubin, opts: { uniformSensors?: boolean } = 
     l1l2.add(bolts);
   }
   L('L1', 'L1 — 1.57 m lens', 'The largest high-performance optical lens ever made: fused silica, 1.57 m wide, 82 mm thick. It is the camera’s front window to the telescope.', ocs(0, -0.84, zL1e + 0.06), l1l2);
-  L('L2', 'L2 lens', '1.1 m fused-silica lens with one aspheric face. L1 and L2 share one assembly; a stack of black vanes behind L1 stops stray light.', ocs(0.58, 0, zL2 + 0.03), l1l2);
+  L('L2', 'L2', '1.1 m fused-silica lens with one aspheric face. L1 and L2 share one assembly; a stack of black vanes behind L1 stops stray light.', ocs(0.58, 0, zL2 + 0.03), l1l2);
 
   // ---------------------------------------------------------------- camera body (skin + front flange + internal rings)
   const body = mk('body');
@@ -163,7 +163,7 @@ export function buildLSSTCam(rubin: Rubin, opts: { uniformSensors?: boolean } = 
       parts.blades.add(m);
       blades.push({ m, side, k });
     }
-  L('shutter', 'Shutter', 'Two stacks of three telescoping carbon blades. One stack slides away to open, the other slides in from the opposite side to close, so every pixel gets exactly the same exposure. ~1 s per stroke.', ocs(0.62, -0.4, zSh), shutter);
+  L('shutter', 'Shutter', 'Two stacks of three telescoping carbon blades. One stack slides away to open, the other slides in from the opposite side to close, so every pixel gets exactly the same exposure. 0.9 s per stroke.', ocs(0.62, -0.4, zSh), shutter);
 
   // ---------------------------------------------------------------- cryostat + L3 + focal plane + raft towers
   const cryo = mk('cryostat');
