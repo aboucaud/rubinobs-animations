@@ -202,7 +202,6 @@ export interface FilterExchanger {
   carousel: THREE.Group;
   autochanger: THREE.Group;
   filterRoot: THREE.Group;
-  fixed: THREE.Group;
   filters: Record<Band, THREE.Group>;
   state: FESState;
   labels: Label[];
@@ -308,22 +307,7 @@ export function buildFES(): FilterExchanger {
   }
   L('carousel', 'Carousel', 'Stores five filters standing in a pentagon around the cryostat. A Ø1.4 m ring with 550 teeth turns it 1/5 or 2/5 of a turn to bring the chosen filter to the top "standby" socket. Each socket holds its filter with self-locking clamps.', ocs(0, -0.74, zR + 0.05), carousel);
 
-  // ================================================================ fixed parts: carousel drive, autochanger frame
-  const fixed = new THREE.Group();
-  fixed.name = 'fes-fixed';
-  {
-    // in front of the ring and within r < 0.78 m: behind it or further out, the drive would poke
-    // out of the back or the side of the camera body
-    const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.16, 24), M.motor);
-    motor.position.copy(ocs(0.2, -0.71, zR - 0.1));
-    fixed.add(motor);
-    const pinion = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 24), M.steel);
-    pinion.position.copy(ocs(0.2, -0.71, zR - 0.005));
-    fixed.add(pinion);
-    const bracket = box(0.2, -0.735, zR - 0.1, 0.08, 0.02, 0.12, M.dark);
-    fixed.add(bracket);
-  }
-
+  // ================================================================ autochanger
   const autochanger = new THREE.Group();
   autochanger.name = 'autochanger';
   const X = FES.plateX;
@@ -463,7 +447,6 @@ export function buildFES(): FilterExchanger {
   // bake the static meshes of each rigid assembly (moving pieces and clamps are kept apart)
   // moving / toggled parts must be in the keep list (see optimize.ts, CLAUDE.md)
   mergeStatic(carousel, socketClamps.flat());
-  mergeStatic(fixed);
   mergeStatic(autochanger, [carrier, ...carriages, ...links, ...trucks.map((t) => t.m), ...latches.map((l) => l.m), ...onlineClamps.map((c) => c.m)]);
 
   // ================================================================ state & update
@@ -698,5 +681,5 @@ export function buildFES(): FilterExchanger {
   }
 
   instantBeam('r');
-  return { carousel, autochanger, filterRoot, fixed, filters, state, labels, update, stepsTo, instantBeam, swapLoader };
+  return { carousel, autochanger, filterRoot, filters, state, labels, update, stepsTo, instantBeam, swapLoader };
 }
